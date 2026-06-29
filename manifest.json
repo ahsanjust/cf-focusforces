@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FocusForces",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Ignite your focus: stealth tags, integrated timer, and Zen Mode for distraction-free competitive programming. Made by Ahsan_.",
   "permissions": [
     "storage",
@@ -39,7 +39,7 @@
         "https://codeforces.com/gym/*/problem/*",
         "https://codeforces.com/group/*/contest/*/problem/*"
       ],
-      "js": ["timer-utils.js", "content.js"],
+      "js": ["timer-utils.js", "content.js", "submitify.js"],
       "css": ["content.css"]
     }
   ],
