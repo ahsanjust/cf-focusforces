@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusForces</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="hero" role="banner">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-content">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" fill="rgba(255,255,255,0.95)" stroke="none"/>
+          <path d="M2 12l10 5 10-5M2 17l10 5 10-5" stroke="rgba(255,255,255,0.7)" fill="none"/>
+        </svg>
+      </div>
+      <div class="hero-text">
+        <h1>FocusForces</h1>
+        <span class="hero-subtitle">Focus. Track. Compete.</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="controls-section" aria-label="Settings">
+    <div class="toggle-group">
+      <div class="toggle-info">
+        <span class="toggle-label">Zen Mode</span>
+        <span class="toggle-desc">Distraction-free problem solving</span>
+      </div>
+      <div class="controls-actions">
+        <button id="theme-toggle" class="theme-btn" type="button" aria-label="Theme: System">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+          </svg>
+        </button>
+        <label class="switch" for="zen-toggle" title="Toggle Zen Mode">
+          <input type="checkbox" id="zen-toggle" aria-label="Toggle Zen Mode">
+          <span class="switch-track">
+            <span class="switch-thumb"></span>
+          </span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="contests-section" aria-label="Upcoming contests">
+    <div id="contest-list" class="contest-list" aria-live="polite" aria-atomic="false">
+      <div class="state-message shimmer" aria-label="Loading contests">Loading contests…</div>
+    </div>
+  </section>
+
+  <footer class="footer" role="contentinfo">
+    <span>
+      <a href="https://codeforces.com/apiHelp" target="_blank" rel="noopener">Codeforces</a> ·
+      <a href="https://www.codechef.com/" target="_blank" rel="noopener">CodeChef</a> ·
+      <a href="https://atcoder.jp/" target="_blank" rel="noopener">AtCoder</a> ·
+      <a href="https://leetcode.com/" target="_blank" rel="noopener">LeetCode</a>
+    </span>
+    <span class="made-by">Made by <a href="https://codeforces.com/profile/Ahsan_" target="_blank" rel="noopener">Ahsan_</a></span>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

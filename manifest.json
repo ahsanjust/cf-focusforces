@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "FocusForces",
+  "version": "1.1.0",
+  "description": "Ignite your focus: stealth tags, integrated timer, and Zen Mode for distraction-free competitive programming. Made by Ahsan_.",
+  "permissions": [
+    "storage",
+    "alarms",
+    "notifications",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://codeforces.com/*",
+    "https://www.codechef.com/*",
+    "https://atcoder.jp/*",
+    "https://leetcode.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://codeforces.com/problemset/problem/*",
+        "https://codeforces.com/contest/*/problem/*",
+        "https://codeforces.com/gym/*/problem/*",
+        "https://codeforces.com/group/*/contest/*/problem/*"
+      ],
+      "js": ["timer-utils.js", "content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/notify.wav"],
+      "matches": ["https://codeforces.com/*"]
+    }
+  ]
+}
