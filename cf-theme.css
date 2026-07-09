@@ -37,11 +37,21 @@ body[data-ff-theme="light"] a:hover {
 
 body[data-ff-theme="light"] input[type="text"],
 body[data-ff-theme="light"] input[type="password"],
+body[data-ff-theme="light"] input[type="number"],
+body[data-ff-theme="light"] input[type="search"],
+body[data-ff-theme="light"] input[type="email"],
+body[data-ff-theme="light"] input[type="url"],
+body[data-ff-theme="light"] input:not([type]),
 body[data-ff-theme="light"] textarea,
 body[data-ff-theme="light"] select {
   background-color: #f8f9fb !important;
   border-color: #d1d5db !important;
   color: #111827 !important;
+}
+
+body[data-ff-theme="light"] ::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="light"] button,
@@ -148,11 +158,21 @@ body[data-ff-theme="dark"] a:hover {
 
 body[data-ff-theme="dark"] input[type="text"],
 body[data-ff-theme="dark"] input[type="password"],
+body[data-ff-theme="dark"] input[type="number"],
+body[data-ff-theme="dark"] input[type="search"],
+body[data-ff-theme="dark"] input[type="email"],
+body[data-ff-theme="dark"] input[type="url"],
+body[data-ff-theme="dark"] input:not([type]),
 body[data-ff-theme="dark"] textarea,
 body[data-ff-theme="dark"] select {
   background-color: #1c1c30 !important;
   border-color: #2e2e4a !important;
   color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] ::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="dark"] button,
@@ -259,11 +279,21 @@ body[data-ff-theme="amoled"] a:hover {
 
 body[data-ff-theme="amoled"] input[type="text"],
 body[data-ff-theme="amoled"] input[type="password"],
+body[data-ff-theme="amoled"] input[type="number"],
+body[data-ff-theme="amoled"] input[type="search"],
+body[data-ff-theme="amoled"] input[type="email"],
+body[data-ff-theme="amoled"] input[type="url"],
+body[data-ff-theme="amoled"] input:not([type]),
 body[data-ff-theme="amoled"] textarea,
 body[data-ff-theme="amoled"] select {
   background-color: #161616 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] ::placeholder {
+  color: #6b7280 !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="amoled"] button,
@@ -370,11 +400,21 @@ body[data-ff-theme="blue"] a:hover {
 
 body[data-ff-theme="blue"] input[type="text"],
 body[data-ff-theme="blue"] input[type="password"],
+body[data-ff-theme="blue"] input[type="number"],
+body[data-ff-theme="blue"] input[type="search"],
+body[data-ff-theme="blue"] input[type="email"],
+body[data-ff-theme="blue"] input[type="url"],
+body[data-ff-theme="blue"] input:not([type]),
 body[data-ff-theme="blue"] textarea,
 body[data-ff-theme="blue"] select {
   background-color: #f4f7fb !important;
   border-color: #d0daea !important;
   color: #1e293b !important;
+}
+
+body[data-ff-theme="blue"] ::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="blue"] button,
@@ -481,11 +521,21 @@ body[data-ff-theme="minimal"] a:hover {
 
 body[data-ff-theme="minimal"] input[type="text"],
 body[data-ff-theme="minimal"] input[type="password"],
+body[data-ff-theme="minimal"] input[type="number"],
+body[data-ff-theme="minimal"] input[type="search"],
+body[data-ff-theme="minimal"] input[type="email"],
+body[data-ff-theme="minimal"] input[type="url"],
+body[data-ff-theme="minimal"] input:not([type]),
 body[data-ff-theme="minimal"] textarea,
 body[data-ff-theme="minimal"] select {
   background-color: #fafafa !important;
   border-color: #dcdcdc !important;
   color: #1a1a1a !important;
+}
+
+body[data-ff-theme="minimal"] ::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="minimal"] button,
@@ -592,11 +642,21 @@ body[data-ff-theme="contrast"] a:hover {
 
 body[data-ff-theme="contrast"] input[type="text"],
 body[data-ff-theme="contrast"] input[type="password"],
+body[data-ff-theme="contrast"] input[type="number"],
+body[data-ff-theme="contrast"] input[type="search"],
+body[data-ff-theme="contrast"] input[type="email"],
+body[data-ff-theme="contrast"] input[type="url"],
+body[data-ff-theme="contrast"] input:not([type]),
 body[data-ff-theme="contrast"] textarea,
 body[data-ff-theme="contrast"] select {
   background-color: #1e1e1e !important;
   border-color: #888888 !important;
   color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] ::placeholder {
+  color: #a0a0a0 !important;
+  opacity: 1 !important;
 }
 
 body[data-ff-theme="contrast"] button,
