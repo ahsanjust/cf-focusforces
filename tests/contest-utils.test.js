@@ -82,7 +82,7 @@ describe('timeUntil', () => {
         const future = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
         const result = timeUntil(future);
         expect(result).not.toBeNull();
-        expect(result).toMatch(/\dh \dm/);
+        expect(result).toMatch(/\d+h \d+m/);
     });
 
     test('returns null for a past time', () => {

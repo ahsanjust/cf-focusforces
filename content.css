@@ -1,4 +1,4 @@
-/* FocusForces – Content Styles  ·  v7 – Theme-Aware */
+/* FocusForces – Content Styles  ·  v8 – Theme-Aware (synced with popup) */
 
 /* ── Utility ──────────────────────────────────── */
 .ff-hidden,
@@ -24,89 +24,89 @@
   container-type: inline-size;
   container-name: ff-card;
 
-  /* Light theme defaults */
+  /* Light theme defaults — matches popup.css :root */
   --ff-accent: #6c5ce7;
-  --ff-accent-dark: #4f3cc9;
-  --ff-text: #1a1a2e;
-  --ff-text-secondary: #555;
-  --ff-text-tertiary: #777;
-  --ff-bg: #fff;
-  --ff-bg-hover: #f5f5f5;
-  --ff-bg-input: #fff;
-  --ff-border: #ccc;
-  --ff-border-focus: #3B5998;
-  --ff-shadow: rgba(59, 89, 152, 0.15);
-  --ff-btn-bg: #f5f5f5;
-  --ff-btn-border: #ccc;
-  --ff-btn-hover: #e8e8e8;
-  --ff-btn-primary-bg: #3B5998;
+  --ff-accent-dark: #5a48d6;
+  --ff-text: #111827;
+  --ff-text-secondary: #6b7280;
+  --ff-text-tertiary: #9ca3af;
+  --ff-bg: #ffffff;
+  --ff-bg-hover: #fafbfc;
+  --ff-bg-input: #f8f9fb;
+  --ff-border: #e2e5ea;
+  --ff-border-focus: #6c5ce7;
+  --ff-shadow: rgba(108, 92, 231, 0.15);
+  --ff-btn-bg: #f3f4f6;
+  --ff-btn-border: #d1d5db;
+  --ff-btn-hover: #e5e7eb;
+  --ff-btn-primary-bg: #6c5ce7;
   --ff-btn-primary-text: #fff;
-  --ff-btn-primary-border: #2d4373;
-  --ff-danger: #c0392b;
-  --ff-danger-glow: rgba(192, 57, 43, 0.25);
+  --ff-btn-primary-border: #5a48d6;
+  --ff-danger: #dc2626;
+  --ff-danger-glow: rgba(220, 38, 38, 0.2);
 }
 
 #ff-timer-card[data-theme="dark"],
 #ff-scout-card[data-theme="dark"] {
   --ff-accent: #a78bfa;
-  --ff-accent-dark: #7c3aed;
+  --ff-accent-dark: #8b5cf6;
   --ff-text: #e8e8f0;
-  --ff-text-secondary: #9da0b5;
-  --ff-text-tertiary: #5e6278;
-  --ff-bg: #141421;
-  --ff-bg-hover: #191929;
-  --ff-bg-input: #1a1a2e;
-  --ff-border: #2e2e4a;
+  --ff-text-secondary: #a0a3b8;
+  --ff-text-tertiary: #757890;
+  --ff-bg: #171728;
+  --ff-bg-hover: #1c1c30;
+  --ff-bg-input: #1c1c30;
+  --ff-border: #282842;
   --ff-border-focus: #a78bfa;
   --ff-shadow: rgba(0, 0, 0, 0.3);
-  --ff-btn-bg: #1a1a2e;
+  --ff-btn-bg: #1c1c30;
   --ff-btn-border: #2e2e4a;
-  --ff-btn-hover: #222236;
-  --ff-btn-primary-bg: #7c3aed;
+  --ff-btn-hover: #282842;
+  --ff-btn-primary-bg: #8b5cf6;
   --ff-btn-primary-text: #fff;
-  --ff-btn-primary-border: #6d28d9;
+  --ff-btn-primary-border: #7c3aed;
   --ff-danger: #f87171;
   --ff-danger-glow: rgba(248, 113, 113, 0.25);
 }
 
 #ff-timer-card[data-theme="amoled"],
 #ff-scout-card[data-theme="amoled"] {
-  --ff-accent: #bb86fc;
-  --ff-accent-dark: #9558e0;
+  --ff-accent: #c9a0ff;
+  --ff-accent-dark: #a855f7;
   --ff-text: #e8e8f0;
-  --ff-text-secondary: #9da0b5;
-  --ff-text-tertiary: #5e6278;
-  --ff-bg: #0a0a0a;
-  --ff-bg-hover: #111111;
-  --ff-bg-input: #111111;
-  --ff-border: #1a1a1a;
-  --ff-border-focus: #bb86fc;
+  --ff-text-secondary: #a0a3b8;
+  --ff-text-tertiary: #7a7d92;
+  --ff-bg: #111111;
+  --ff-bg-hover: #161616;
+  --ff-bg-input: #161616;
+  --ff-border: #222222;
+  --ff-border-focus: #c9a0ff;
   --ff-shadow: rgba(0, 0, 0, 0.5);
-  --ff-btn-bg: #111111;
-  --ff-btn-border: #1a1a1a;
-  --ff-btn-hover: #1a1a1a;
-  --ff-btn-primary-bg: #9558e0;
-  --ff-btn-primary-text: #fff;
-  --ff-btn-primary-border: #7b3fc7;
-  --ff-danger: #ff5252;
-  --ff-danger-glow: rgba(255, 82, 82, 0.3);
+  --ff-btn-bg: #161616;
+  --ff-btn-border: #222222;
+  --ff-btn-hover: #222222;
+  --ff-btn-primary-bg: #c9a0ff;
+  --ff-btn-primary-text: #1a1a1a;
+  --ff-btn-primary-border: #a855f7;
+  --ff-danger: #f87171;
+  --ff-danger-glow: rgba(248, 113, 113, 0.3);
 }
 
 #ff-timer-card[data-theme="blue"],
 #ff-scout-card[data-theme="blue"] {
   --ff-accent: #2563eb;
   --ff-accent-dark: #1d4ed8;
-  --ff-text: #1a2332;
-  --ff-text-secondary: #4a5568;
-  --ff-text-tertiary: #a0aec0;
-  --ff-bg: #fff;
+  --ff-text: #1e293b;
+  --ff-text-secondary: #475569;
+  --ff-text-tertiary: #94a3b8;
+  --ff-bg: #ffffff;
   --ff-bg-hover: #f8fafc;
-  --ff-bg-input: #f8fafc;
-  --ff-border: #d2dce6;
+  --ff-bg-input: #f4f7fb;
+  --ff-border: #d0daea;
   --ff-border-focus: #2563eb;
-  --ff-shadow: rgba(37, 99, 235, 0.15);
+  --ff-shadow: rgba(37, 99, 235, 0.14);
   --ff-btn-bg: #f1f5f9;
-  --ff-btn-border: #d2dce6;
+  --ff-btn-border: #d0daea;
   --ff-btn-hover: #e2e8f0;
   --ff-btn-primary-bg: #2563eb;
   --ff-btn-primary-text: #fff;
@@ -117,48 +117,48 @@
 
 #ff-timer-card[data-theme="minimal"],
 #ff-scout-card[data-theme="minimal"] {
-  --ff-accent: #374151;
-  --ff-accent-dark: #1f2937;
-  --ff-text: #111827;
-  --ff-text-secondary: #6b7280;
-  --ff-text-tertiary: #9ca3af;
-  --ff-bg: #fff;
+  --ff-accent: #333333;
+  --ff-accent-dark: #1a1a1a;
+  --ff-text: #1a1a1a;
+  --ff-text-secondary: #555555;
+  --ff-text-tertiary: #737373;
+  --ff-bg: #ffffff;
   --ff-bg-hover: #fafafa;
   --ff-bg-input: #fafafa;
-  --ff-border: #e5e7eb;
-  --ff-border-focus: #374151;
+  --ff-border: #dcdcdc;
+  --ff-border-focus: #333333;
   --ff-shadow: rgba(0, 0, 0, 0.05);
-  --ff-btn-bg: #f9fafb;
-  --ff-btn-border: #e5e7eb;
-  --ff-btn-hover: #f3f4f6;
-  --ff-btn-primary-bg: #374151;
+  --ff-btn-bg: #f0f0f0;
+  --ff-btn-border: #dcdcdc;
+  --ff-btn-hover: #e0e0e0;
+  --ff-btn-primary-bg: #333333;
   --ff-btn-primary-text: #fff;
-  --ff-btn-primary-border: #1f2937;
+  --ff-btn-primary-border: #1a1a1a;
   --ff-danger: #dc2626;
   --ff-danger-glow: rgba(220, 38, 38, 0.15);
 }
 
 #ff-timer-card[data-theme="contrast"],
 #ff-scout-card[data-theme="contrast"] {
-  --ff-accent: #ffdd00;
-  --ff-accent-dark: #ccaa00;
+  --ff-accent: #facc15;
+  --ff-accent-dark: #eab308;
   --ff-text: #ffffff;
-  --ff-text-secondary: #e0e0e0;
-  --ff-text-tertiary: #b0b0b0;
-  --ff-bg: #0d0d0d;
-  --ff-bg-hover: #1a1a1a;
-  --ff-bg-input: #1a1a1a;
-  --ff-border: #ffffff;
-  --ff-border-focus: #ffdd00;
-  --ff-shadow: rgba(255, 221, 0, 0.15);
-  --ff-btn-bg: #1a1a1a;
-  --ff-btn-border: #ffffff;
+  --ff-text-secondary: #d4d4d4;
+  --ff-text-tertiary: #a0a0a0;
+  --ff-bg: #141414;
+  --ff-bg-hover: #1e1e1e;
+  --ff-bg-input: #1e1e1e;
+  --ff-border: #888888;
+  --ff-border-focus: #facc15;
+  --ff-shadow: rgba(250, 204, 21, 0.18);
+  --ff-btn-bg: #1e1e1e;
+  --ff-btn-border: #888888;
   --ff-btn-hover: #333333;
-  --ff-btn-primary-bg: #ffdd00;
+  --ff-btn-primary-bg: #facc15;
   --ff-btn-primary-text: #000000;
-  --ff-btn-primary-border: #ccaa00;
-  --ff-danger: #ff3333;
-  --ff-danger-glow: rgba(255, 51, 51, 0.35);
+  --ff-btn-primary-border: #eab308;
+  --ff-danger: #f87171;
+  --ff-danger-glow: rgba(248, 113, 113, 0.3);
 }
 
 @container ff-card (max-width: 300px) {
