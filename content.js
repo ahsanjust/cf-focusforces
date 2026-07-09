@@ -74,15 +74,29 @@
     };
 
     // ── Theme ──────────────────────────────────────────
-    async function loadTheme() {
-        try {
-            const { ff_theme } = await chrome.storage.local.get('ff_theme');
+    // Apply (or clear) the theme marker on BOTH <html> and <body> so the
+    // Codeforces site theme (cf-theme.css) is active on EVERY page — not
+    // just the problem page. Setting it on <html> keeps the whole viewport
+    // themed even if Codeforces swaps out <body> during an AJAX / SPA-style
+    // navigation.
+    function applyThemeAttr(theme) {
+        const targets = [document.documentElement, document.body].filter(Boolean);
+        if (theme === 'default') {
+            targets.forEach(t => t.removeAttribute('data-ff-theme'));
+            return;
+        }
+        targets.forEach(t => t.setAttribute('data-ff-theme', theme));
+    }
+
+    function loadTheme() {
+        chrome.storage.local.get('ff_theme').then(({ ff_theme }) => {
             currentTheme = ff_theme || 'light';
             applyThemeToElements(currentTheme);
-            if (document.body) {
-                injectCFTheme(currentTheme);
-            }
-        } catch {}
+            applyThemeAttr(currentTheme);
+        }).catch(() => {
+            currentTheme = 'light';
+            applyThemeAttr(currentTheme);
+        });
     }
 
     function applyThemeToElements(theme) {
@@ -93,27 +107,93 @@
     }
 
     function injectCFTheme(theme) {
-        if (theme === 'default') {
-            if (document.body) {
-                document.body.removeAttribute('data-ff-theme');
-            }
-            return;
-        }
+        applyThemeAttr(theme);
+    }
 
-        if (document.body) {
-            document.body.setAttribute('data-ff-theme', theme);
+    // Re-apply the marker if it ever goes missing (e.g. Codeforces replaces
+    // <body>, or the body wasn't ready when the script first ran).
+    function ensureThemeApplied() {
+        const expected = currentTheme === 'default' ? null : currentTheme;
+        if (document.documentElement.getAttribute('data-ff-theme') !== expected) {
+            applyThemeAttr(currentTheme);
+        }
+        if (document.body && document.body.getAttribute('data-ff-theme') !== expected) {
+            applyThemeAttr(currentTheme);
         }
     }
+
+    // Programmatically inject cf-theme.css as a <style> tag at the end of <body>
+    // so it has the highest cascade priority over CF's own stylesheets and any
+    // SPA-injected styles.
+    let ffStyleEl = null;
+
+    async function injectThemeCSS() {
+        try {
+            const url = chrome.runtime.getURL('cf-theme.css');
+            const res = await fetch(url);
+            const css = await res.text();
+
+            if (ffStyleEl) ffStyleEl.remove();
+
+            ffStyleEl = document.createElement('style');
+            ffStyleEl.id = 'ff-theme-css';
+            ffStyleEl.textContent = css;
+
+            if (document.body) {
+                document.body.appendChild(ffStyleEl);
+            } else {
+                document.documentElement.appendChild(ffStyleEl);
+            }
+        } catch (e) {
+            console.warn('FocusForces: could not inject theme CSS', e);
+        }
+    }
+
+    // Inject CSS once the DOM is ready.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', injectThemeCSS);
+    } else {
+        injectThemeCSS();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureThemeApplied);
+    }
+
+    // Watch for <body> being replaced entirely (some CF pages re-render).
+    const themeGuard = new MutationObserver(ensureThemeApplied);
+    themeGuard.observe(document.documentElement, { childList: true });
+
+    // Re-apply the theme after client-side (History API) navigations so the
+    // whole site stays themed when moving between Codeforces pages.
+    const wrapHistory = (method) => {
+        const original = history[method];
+        history[method] = function (...args) {
+            const result = original.apply(this, args);
+            applyThemeAttr(currentTheme);
+            injectThemeCSS();
+            return result;
+        };
+    };
+    wrapHistory('pushState');
+    wrapHistory('replaceState');
+    window.addEventListener('popstate', () => {
+        applyThemeAttr(currentTheme);
+        injectThemeCSS();
+    });
 
     chrome.runtime.onMessage.addListener(req => {
         if (req.type === 'THEME_CHANGED') {
             currentTheme = req.theme;
             applyThemeToElements(currentTheme);
             injectCFTheme(currentTheme);
+            injectThemeCSS();
         }
     });
 
     loadTheme();
+    // Backup apply in case storage resolves after the first paint.
+    ensureThemeApplied();
 
     // ── API Layer ─────────────────────────────────────
     async function fetchProblemFromApi(contestId, index, cancelSignal) {
