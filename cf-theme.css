@@ -5,6 +5,11 @@
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="light"] {
+  --ff-card-bg: #ffffff;
+  --ff-card-bd: #e2e5ea;
+  --ff-fg: #111827;
+  --ff-muted: #6b7280;
+  --ff-input-bg: #f8f9fb;
   background-color: #f0f2f5 !important;
   color: #111827 !important;
 }
@@ -126,6 +131,11 @@ body[data-ff-theme="light"] .MathJax *:not(svg):not(svg *) {
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="dark"] {
+  --ff-card-bg: #171728;
+  --ff-card-bd: #282842;
+  --ff-fg: #e8e8f0;
+  --ff-muted: #a0a3b8;
+  --ff-input-bg: #1c1c30;
   background-color: #0e0e1a !important;
   color: #e8e8f0 !important;
 }
@@ -327,6 +337,11 @@ body[data-ff-theme="dark"] .prettyprint .atn {
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="amoled"] {
+  --ff-card-bg: #111111;
+  --ff-card-bd: #222222;
+  --ff-fg: #e8e8f0;
+  --ff-muted: #a0a3b8;
+  --ff-input-bg: #161616;
   background-color: #000000 !important;
   color: #e8e8f0 !important;
 }
@@ -527,6 +542,11 @@ body[data-ff-theme="amoled"] .prettyprint .atn {
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="blue"] {
+  --ff-card-bg: #ffffff;
+  --ff-card-bd: #d0daea;
+  --ff-fg: #1e293b;
+  --ff-muted: #475569;
+  --ff-input-bg: #f4f7fb;
   background-color: #eef2f7 !important;
   color: #1e293b !important;
 }
@@ -648,6 +668,11 @@ body[data-ff-theme="blue"] .MathJax *:not(svg):not(svg *) {
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="minimal"] {
+  --ff-card-bg: #ffffff;
+  --ff-card-bd: #dcdcdc;
+  --ff-fg: #1a1a1a;
+  --ff-muted: #555555;
+  --ff-input-bg: #fafafa;
   background-color: #f5f5f5 !important;
   color: #1a1a1a !important;
 }
@@ -769,6 +794,11 @@ body[data-ff-theme="minimal"] .MathJax *:not(svg):not(svg *) {
    ════════════════════════════════════════════════════ */
 
 body[data-ff-theme="contrast"] {
+  --ff-card-bg: #141414;
+  --ff-card-bd: #888888;
+  --ff-fg: #ffffff;
+  --ff-muted: #b0b0b0;
+  --ff-input-bg: #1e1e1e;
   background-color: #000000 !important;
   color: #ffffff !important;
 }
@@ -959,6 +989,88 @@ body[data-ff-theme="contrast"] .prettyprint .atv {
 
 body[data-ff-theme="contrast"] .prettyprint .com {
   color: #b0b0b0 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   COMPREHENSIVE CONTAINER COVERAGE
+   (CF is a JS-rendered SPA; this catch-all overrides every
+    known content/sidebar container, lists, captions, and blog/comment
+    boxes so none render with a default light background.)
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme] .roundbox,
+body[data-ff-theme] .roundbox-lt,
+body[data-ff-theme] .roundbox-rt,
+body[data-ff-theme] .roundbox-lb,
+body[data-ff-theme] .roundbox-rb,
+body[data-ff-theme] .sidebox,
+body[data-ff-theme] .sidebox-lt,
+body[data-ff-theme] .sidebox-rt,
+body[data-ff-theme] .sidebox-lb,
+body[data-ff-theme] .sidebox-rb,
+body[data-ff-theme] .formErrorDiv,
+body[data-ff-theme] .ttypography,
+body[data-ff-theme] .content,
+body[data-ff-theme] .content-with-sidebar,
+body[data-ff-theme] .pageContent,
+body[data-ff-theme] #pageContent,
+body[data-ff-theme] .problem-statement,
+body[data-ff-theme] .problem-statement .header,
+body[data-ff-theme] .contest-statement,
+body[data-ff-theme] .blogEntry,
+body[data-ff-theme] .blog-entry,
+body[data-ff-theme] .blog-entry-content,
+body[data-ff-theme] .comment-content,
+body[data-ff-theme] .comment-table,
+body[data-ff-theme] .post,
+body[data-ff-theme] .post-content,
+body[data-ff-theme] .news-item,
+body[data-ff-theme] .community-stats-box,
+body[data-ff-theme] .datatable,
+body[data-ff-theme] table,
+body[data-ff-theme] .standings,
+body[data-ff-theme] .problems,
+body[data-ff-theme] .menu-box,
+body[data-ff-theme] .menu-list,
+body[data-ff-theme] .menu-list li,
+body[data-ff-theme] .menu-list li a,
+body[data-ff-theme] .second-level-menu,
+body[data-ff-theme] .caption,
+body[data-ff-theme] .caption.titled,
+body[data-ff-theme] .sidebox .caption,
+body[data-ff-theme] .roundbox .titled,
+body[data-ff-theme] .info,
+body[data-ff-theme] .message,
+body[data-ff-theme] .messages,
+body[data-ff-theme] .notice,
+body[data-ff-theme] .alert,
+body[data-ff-theme] .sample-tests,
+body[data-ff-theme] .sample-test,
+body[data-ff-theme] .input,
+body[data-ff-theme] .output,
+body[data-ff-theme] .tag-box,
+body[data-ff-theme] .lang-chooser {
+  background: var(--ff-card-bg) !important;
+  background-image: none !important;
+  border-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Secondary text / muted labels inside containers */
+body[data-ff-theme] .text-label-gray,
+body[data-ff-theme] .text-label-muted,
+body[data-ff-theme] .text-label-yellow,
+body[data-ff-theme] .text-label-warning {
+  background: transparent !important;
+  color: var(--ff-muted) !important;
+}
+
+/* Sidebar nav links (CF sets these to black #000, invisible on dark) */
+body[data-ff-theme] .menu-list li a,
+body[data-ff-theme] .menu-list li a:hover,
+body[data-ff-theme] .menu-list li a:visited,
+body[data-ff-theme] .menu-list li a:active {
+  color: var(--ff-fg) !important;
 }
 
 /* ════════════════════════════════════════════════════
