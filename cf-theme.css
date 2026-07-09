@@ -242,6 +242,49 @@ body[data-ff-theme="dark"] .MathJax *:not(svg):not(svg *) {
   color: #e8e8f0 !important;
 }
 
+body[data-ff-theme="dark"] pre,
+body[data-ff-theme="dark"] code,
+body[data-ff-theme="dark"] .prettyprint,
+body[data-ff-theme="dark"] pre.prettyprint,
+body[data-ff-theme="dark"] .sample-tests,
+body[data-ff-theme="dark"] .sample-test {
+  background-color: #1c1c30 !important;
+  border-color: #2e2e4a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .pln,
+body[data-ff-theme="dark"] .prettyprint .pun,
+body[data-ff-theme="dark"] .prettyprint .opn,
+body[data-ff-theme="dark"] .prettyprint .clo {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .kwd,
+body[data-ff-theme="dark"] .prettyprint .fun {
+  color: #c4b5fd !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .typ,
+body[data-ff-theme="dark"] .prettyprint .lit,
+body[data-ff-theme="dark"] .prettyprint .dec,
+body[data-ff-theme="dark"] .prettyprint .var {
+  color: #82aaff !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .str,
+body[data-ff-theme="dark"] .prettyprint .atv {
+  color: #a5d6a7 !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .com {
+  color: #7a7d92 !important;
+}
+
+body[data-ff-theme="dark"] .prettyprint .atn {
+  color: #ffcb6b !important;
+}
+
 /* ════════════════════════════════════════════════════
    AMOLED THEME
    ════════════════════════════════════════════════════ */
@@ -361,6 +404,49 @@ body[data-ff-theme="amoled"] .MathJax_Display {
 
 body[data-ff-theme="amoled"] .MathJax *:not(svg):not(svg *) {
   color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] pre,
+body[data-ff-theme="amoled"] code,
+body[data-ff-theme="amoled"] .prettyprint,
+body[data-ff-theme="amoled"] pre.prettyprint,
+body[data-ff-theme="amoled"] .sample-tests,
+body[data-ff-theme="amoled"] .sample-test {
+  background-color: #161616 !important;
+  border-color: #222222 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .pln,
+body[data-ff-theme="amoled"] .prettyprint .pun,
+body[data-ff-theme="amoled"] .prettyprint .opn,
+body[data-ff-theme="amoled"] .prettyprint .clo {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .kwd,
+body[data-ff-theme="amoled"] .prettyprint .fun {
+  color: #dbb8ff !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .typ,
+body[data-ff-theme="amoled"] .prettyprint .lit,
+body[data-ff-theme="amoled"] .prettyprint .dec,
+body[data-ff-theme="amoled"] .prettyprint .var {
+  color: #82aaff !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .str,
+body[data-ff-theme="amoled"] .prettyprint .atv {
+  color: #a5d6a7 !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .com {
+  color: #7a7d92 !important;
+}
+
+body[data-ff-theme="amoled"] .prettyprint .atn {
+  color: #ffcb6b !important;
 }
 
 /* ════════════════════════════════════════════════════
@@ -724,6 +810,46 @@ body[data-ff-theme="contrast"] .MathJax_Display {
 
 body[data-ff-theme="contrast"] .MathJax *:not(svg):not(svg *) {
   color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] pre,
+body[data-ff-theme="contrast"] code,
+body[data-ff-theme="contrast"] .prettyprint,
+body[data-ff-theme="contrast"] pre.prettyprint,
+body[data-ff-theme="contrast"] .sample-tests,
+body[data-ff-theme="contrast"] .sample-test {
+  background-color: #1e1e1e !important;
+  border-color: #888888 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .prettyprint .pln,
+body[data-ff-theme="contrast"] .prettyprint .pun,
+body[data-ff-theme="contrast"] .prettyprint .opn,
+body[data-ff-theme="contrast"] .prettyprint .clo {
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .prettyprint .kwd,
+body[data-ff-theme="contrast"] .prettyprint .fun,
+body[data-ff-theme="contrast"] .prettyprint .atn {
+  color: #facc15 !important;
+}
+
+body[data-ff-theme="contrast"] .prettyprint .typ,
+body[data-ff-theme="contrast"] .prettyprint .lit,
+body[data-ff-theme="contrast"] .prettyprint .dec,
+body[data-ff-theme="contrast"] .prettyprint .var {
+  color: #7dd3fc !important;
+}
+
+body[data-ff-theme="contrast"] .prettyprint .str,
+body[data-ff-theme="contrast"] .prettyprint .atv {
+  color: #a5d6a7 !important;
+}
+
+body[data-ff-theme="contrast"] .prettyprint .com {
+  color: #b0b0b0 !important;
 }
 
 /* ════════════════════════════════════════════════════
