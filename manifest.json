@@ -33,12 +33,7 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://codeforces.com/problemset/problem/*",
-        "https://codeforces.com/contest/*/problem/*",
-        "https://codeforces.com/gym/*/problem/*",
-        "https://codeforces.com/group/*/contest/*/problem/*"
-      ],
+      "matches": ["https://codeforces.com/*"],
       "js": ["timer-utils.js", "content.js", "submitify.js"],
       "css": ["content.css", "cf-theme.css"]
     }

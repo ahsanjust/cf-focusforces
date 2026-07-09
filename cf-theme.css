@@ -151,7 +151,13 @@ body[data-ff-theme="dark"] .news-item {
 body[data-ff-theme="dark"] #header table,
 body[data-ff-theme="dark"] #header td,
 body[data-ff-theme="dark"] #header .logo,
-body[data-ff-theme="dark"] #header .lang-chooser {
+body[data-ff-theme="dark"] #header .lang-chooser,
+body[data-ff-theme="dark"] #header > div,
+body[data-ff-theme="dark"] #header > div > a,
+body[data-ff-theme="dark"] #header > div > a img,
+body[data-ff-theme="dark"] #header > div > a div,
+body[data-ff-theme="dark"] #header > div > a font,
+body[data-ff-theme="dark"] #header > div > a > * {
   background-color: #171728 !important;
   background-image: none !important;
   color: #e8e8f0 !important;
@@ -173,7 +179,8 @@ body[data-ff-theme="dark"] .roundbox .titled {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .second-level-menu {
+body[data-ff-theme="dark"] .second-level-menu,
+body[data-ff-theme="dark"] .menu-box {
   background-color: #171728 !important;
   border-color: #282842 !important;
 }
@@ -345,7 +352,13 @@ body[data-ff-theme="amoled"] .news-item {
 body[data-ff-theme="amoled"] #header table,
 body[data-ff-theme="amoled"] #header td,
 body[data-ff-theme="amoled"] #header .logo,
-body[data-ff-theme="amoled"] #header .lang-chooser {
+body[data-ff-theme="amoled"] #header .lang-chooser,
+body[data-ff-theme="amoled"] #header > div,
+body[data-ff-theme="amoled"] #header > div > a,
+body[data-ff-theme="amoled"] #header > div > a img,
+body[data-ff-theme="amoled"] #header > div > a div,
+body[data-ff-theme="amoled"] #header > div > a font,
+body[data-ff-theme="amoled"] #header > div > a > * {
   background-color: #111111 !important;
   background-image: none !important;
   color: #e8e8f0 !important;
@@ -781,7 +794,13 @@ body[data-ff-theme="contrast"] .news-item {
 body[data-ff-theme="contrast"] #header table,
 body[data-ff-theme="contrast"] #header td,
 body[data-ff-theme="contrast"] #header .logo,
-body[data-ff-theme="contrast"] #header .lang-chooser {
+body[data-ff-theme="contrast"] #header .lang-chooser,
+body[data-ff-theme="contrast"] #header > div,
+body[data-ff-theme="contrast"] #header > div > a,
+body[data-ff-theme="contrast"] #header > div > a img,
+body[data-ff-theme="contrast"] #header > div > a div,
+body[data-ff-theme="contrast"] #header > div > a font,
+body[data-ff-theme="contrast"] #header > div > a > * {
   background-color: #141414 !important;
   background-image: none !important;
   color: #ffffff !important;
