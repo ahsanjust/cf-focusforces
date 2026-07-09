@@ -136,16 +136,16 @@ body[data-ff-theme="dark"] select {
 body[data-ff-theme="dark"] button,
 body[data-ff-theme="dark"] input[type="submit"],
 body[data-ff-theme="dark"] input[type="button"] {
-  background-color: #8b5cf6 !important;
-  border-color: #8b5cf6 !important;
+  background-color: #7c3aed !important;
+  border-color: #7c3aed !important;
   color: #ffffff !important;
 }
 
 body[data-ff-theme="dark"] button:hover,
 body[data-ff-theme="dark"] input[type="submit"]:hover,
 body[data-ff-theme="dark"] input[type="button"]:hover {
-  background-color: #7c3aed !important;
-  border-color: #7c3aed !important;
+  background-color: #6d28d9 !important;
+  border-color: #6d28d9 !important;
 }
 
 body[data-ff-theme="dark"] .tab,

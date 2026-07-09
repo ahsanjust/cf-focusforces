@@ -29,7 +29,7 @@
   --ff-accent-dark: #5a48d6;
   --ff-text: #111827;
   --ff-text-secondary: #6b7280;
-  --ff-text-tertiary: #9ca3af;
+  --ff-text-tertiary: #767676;
   --ff-bg: #ffffff;
   --ff-bg-hover: #fafbfc;
   --ff-bg-input: #f8f9fb;
@@ -52,7 +52,7 @@
   --ff-accent-dark: #8b5cf6;
   --ff-text: #e8e8f0;
   --ff-text-secondary: #a0a3b8;
-  --ff-text-tertiary: #757890;
+  --ff-text-tertiary: #8a8da2;
   --ff-bg: #171728;
   --ff-bg-hover: #1c1c30;
   --ff-bg-input: #1c1c30;
@@ -62,7 +62,7 @@
   --ff-btn-bg: #1c1c30;
   --ff-btn-border: #2e2e4a;
   --ff-btn-hover: #282842;
-  --ff-btn-primary-bg: #8b5cf6;
+  --ff-btn-primary-bg: #7c3aed;
   --ff-btn-primary-text: #fff;
   --ff-btn-primary-border: #7c3aed;
   --ff-danger: #f87171;
@@ -98,7 +98,7 @@
   --ff-accent-dark: #1d4ed8;
   --ff-text: #1e293b;
   --ff-text-secondary: #475569;
-  --ff-text-tertiary: #94a3b8;
+  --ff-text-tertiary: #64748b;
   --ff-bg: #ffffff;
   --ff-bg-hover: #f8fafc;
   --ff-bg-input: #f4f7fb;

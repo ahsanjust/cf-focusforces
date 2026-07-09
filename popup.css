@@ -30,7 +30,7 @@
   --bg-input: #f8f9fb;
   --text-primary: #111827;
   --text-secondary: #6b7280;
-  --text-tertiary: #9ca3af;
+  --text-tertiary: #767676;
   --border-color: #e2e5ea;
   --border-subtle: #eef0f4;
   --tab-bg: #eaecf2;
@@ -39,9 +39,9 @@
   --accent-light: #a78bfa;
   --accent-glow: rgba(108, 92, 231, 0.15);
   --accent-subtle: rgba(108, 92, 231, 0.07);
-  --green: #10b981;
+  --green: #059669;
   --green-bg: rgba(16, 185, 129, 0.1);
-  --orange: #f59e0b;
+  --orange: #d97706;
   --orange-bg: rgba(245, 158, 11, 0.1);
   --red: #ef4444;
   --red-bg: rgba(239, 68, 68, 0.08);
@@ -78,7 +78,7 @@
   --bg-input: #1c1c30;
   --text-primary: #e8e8f0;
   --text-secondary: #a0a3b8;
-  --text-tertiary: #757890;
+  --text-tertiary: #8a8da2;
   --border-color: #282842;
   --border-subtle: #1e1e32;
   --tab-bg: #1a1a2c;
@@ -108,9 +108,9 @@
   --input-bg: #1c1c30;
   --input-border: #2e2e4a;
   --input-focus: #a78bfa;
-  --btn-primary-bg: #8b5cf6;
+  --btn-primary-bg: #7c3aed;
   --btn-primary-text: #ffffff;
-  --btn-primary-hover: #7c3aed;
+  --btn-primary-hover: #6d28d9;
   --btn-secondary-bg: #1c1c30;
   --btn-secondary-text: #a0a3b8;
   --btn-secondary-border: #2e2e4a;
@@ -174,7 +174,7 @@
   --bg-input: #f4f7fb;
   --text-primary: #1e293b;
   --text-secondary: #475569;
-  --text-tertiary: #94a3b8;
+  --text-tertiary: #64748b;
   --border-color: #d0daea;
   --border-subtle: #e4eaf2;
   --tab-bg: #dde5f0;
