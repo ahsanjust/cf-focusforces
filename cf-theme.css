@@ -178,6 +178,28 @@ body[data-ff-theme="dark"] table td {
   color: #e8e8f0 !important;
 }
 
+body[data-ff-theme="dark"] .MathJax,
+body[data-ff-theme="dark"] mjx-container,
+body[data-ff-theme="dark"] mjx-math {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .MathJax_SVG text,
+body[data-ff-theme="dark"] .MathJax_SVG use,
+body[data-ff-theme="dark"] .MathJax svg text,
+body[data-ff-theme="dark"] .MathJax svg use {
+  fill: #e8e8f0 !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="dark"] .MathJax_Display {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .MathJax *:not(svg):not(svg *) {
+  color: #e8e8f0 !important;
+}
+
 /* ════════════════════════════════════════════════════
    AMOLED THEME
    ════════════════════════════════════════════════════ */
@@ -264,6 +286,28 @@ body[data-ff-theme="amoled"] table th {
 body[data-ff-theme="amoled"] .datatable td,
 body[data-ff-theme="amoled"] table td {
   border-color: #222222 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .MathJax,
+body[data-ff-theme="amoled"] mjx-container,
+body[data-ff-theme="amoled"] mjx-math {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .MathJax_SVG text,
+body[data-ff-theme="amoled"] .MathJax_SVG use,
+body[data-ff-theme="amoled"] .MathJax svg text,
+body[data-ff-theme="amoled"] .MathJax svg use {
+  fill: #e8e8f0 !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="amoled"] .MathJax_Display {
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .MathJax *:not(svg):not(svg *) {
   color: #e8e8f0 !important;
 }
 
