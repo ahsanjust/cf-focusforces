@@ -97,13 +97,19 @@ describe('timeUntil', () => {
     test('formats days for > 24h', () => {
         const future = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
         const result = timeUntil(future);
-        expect(result).toMatch(/\dd \dh/);
+        expect(result).toMatch(/\d+d \d+h/);
     });
 
     test('formats minutes for < 1 hour', () => {
         const future = new Date(Date.now() + 30 * 60 * 1000).toISOString();
         const result = timeUntil(future);
         expect(result).toMatch(/^\d+m$/);
+    });
+
+    test('formats hours and minutes for 1-24h', () => {
+        const future = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+        const result = timeUntil(future);
+        expect(result).toMatch(/\d+h \d+m/);
     });
 });
 
