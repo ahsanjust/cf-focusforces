@@ -89,6 +89,28 @@ body[data-ff-theme="light"] table td {
   color: #111827 !important;
 }
 
+body[data-ff-theme="light"] .MathJax,
+body[data-ff-theme="light"] mjx-container,
+body[data-ff-theme="light"] mjx-math {
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] .MathJax_SVG text,
+body[data-ff-theme="light"] .MathJax_SVG use,
+body[data-ff-theme="light"] .MathJax svg text,
+body[data-ff-theme="light"] .MathJax svg use {
+  fill: #111827 !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="light"] .MathJax_Display {
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] .MathJax *:not(svg):not(svg *) {
+  color: #111827 !important;
+}
+
 /* ════════════════════════════════════════════════════
    DARK THEME
    ════════════════════════════════════════════════════ */
@@ -400,6 +422,28 @@ body[data-ff-theme="blue"] table td {
   color: #1e293b !important;
 }
 
+body[data-ff-theme="blue"] .MathJax,
+body[data-ff-theme="blue"] mjx-container,
+body[data-ff-theme="blue"] mjx-math {
+  color: #1e293b !important;
+}
+
+body[data-ff-theme="blue"] .MathJax_SVG text,
+body[data-ff-theme="blue"] .MathJax_SVG use,
+body[data-ff-theme="blue"] .MathJax svg text,
+body[data-ff-theme="blue"] .MathJax svg use {
+  fill: #1e293b !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="blue"] .MathJax_Display {
+  color: #1e293b !important;
+}
+
+body[data-ff-theme="blue"] .MathJax *:not(svg):not(svg *) {
+  color: #1e293b !important;
+}
+
 /* ════════════════════════════════════════════════════
    MINIMAL THEME
    ════════════════════════════════════════════════════ */
@@ -489,6 +533,28 @@ body[data-ff-theme="minimal"] table td {
   color: #1a1a1a !important;
 }
 
+body[data-ff-theme="minimal"] .MathJax,
+body[data-ff-theme="minimal"] mjx-container,
+body[data-ff-theme="minimal"] mjx-math {
+  color: #1a1a1a !important;
+}
+
+body[data-ff-theme="minimal"] .MathJax_SVG text,
+body[data-ff-theme="minimal"] .MathJax_SVG use,
+body[data-ff-theme="minimal"] .MathJax svg text,
+body[data-ff-theme="minimal"] .MathJax svg use {
+  fill: #1a1a1a !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="minimal"] .MathJax_Display {
+  color: #1a1a1a !important;
+}
+
+body[data-ff-theme="minimal"] .MathJax *:not(svg):not(svg *) {
+  color: #1a1a1a !important;
+}
+
 /* ════════════════════════════════════════════════════
    HIGH CONTRAST THEME
    ════════════════════════════════════════════════════ */
@@ -575,6 +641,28 @@ body[data-ff-theme="contrast"] table th {
 body[data-ff-theme="contrast"] .datatable td,
 body[data-ff-theme="contrast"] table td {
   border-color: #888888 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .MathJax,
+body[data-ff-theme="contrast"] mjx-container,
+body[data-ff-theme="contrast"] mjx-math {
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .MathJax_SVG text,
+body[data-ff-theme="contrast"] .MathJax_SVG use,
+body[data-ff-theme="contrast"] .MathJax svg text,
+body[data-ff-theme="contrast"] .MathJax svg use {
+  fill: #ffffff !important;
+  stroke: none !important;
+}
+
+body[data-ff-theme="contrast"] .MathJax_Display {
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .MathJax *:not(svg):not(svg *) {
   color: #ffffff !important;
 }
 
