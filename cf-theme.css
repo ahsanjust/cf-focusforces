@@ -1,0 +1,581 @@
+/* FocusForces – Codeforces Website Theme Overrides */
+
+/* ════════════════════════════════════════════════════
+   LIGHT THEME (default)
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="light"] {
+  background-color: #f5f6fa !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] .roundbox,
+body[data-ff-theme="light"] .sidebox,
+body[data-ff-theme="light"] .formErrorDiv,
+body[data-ff-theme="light"] .ttypography {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] #header,
+body[data-ff-theme="light"] #footer,
+body[data-ff-theme="light"] .community-stats-box,
+body[data-ff-theme="light"] .news-item {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] a {
+  color: #6c5ce7 !important;
+}
+
+body[data-ff-theme="light"] a:hover {
+  color: #4f3cc9 !important;
+}
+
+body[data-ff-theme="light"] input[type="text"],
+body[data-ff-theme="light"] input[type="password"],
+body[data-ff-theme="light"] textarea,
+body[data-ff-theme="light"] select {
+  background-color: #f9fafb !important;
+  border-color: #d1d5db !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] button,
+body[data-ff-theme="light"] input[type="submit"],
+body[data-ff-theme="light"] input[type="button"] {
+  background-color: #6c5ce7 !important;
+  border-color: #6c5ce7 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="light"] button:hover,
+body[data-ff-theme="light"] input[type="submit"]:hover,
+body[data-ff-theme="light"] input[type="button"]:hover {
+  background-color: #5b4bd5 !important;
+  border-color: #5b4bd5 !important;
+}
+
+body[data-ff-theme="light"] .tab,
+body[data-ff-theme="light"] .tabs {
+  background-color: #eef0f6 !important;
+  border-color: #e5e7eb !important;
+}
+
+body[data-ff-theme="light"] .tab.active {
+  background-color: #ffffff !important;
+  color: #6c5ce7 !important;
+}
+
+body[data-ff-theme="light"] .datatable,
+body[data-ff-theme="light"] table {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+body[data-ff-theme="light"] .datatable th,
+body[data-ff-theme="light"] table th {
+  background-color: #f5f6fa !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="light"] .datatable td,
+body[data-ff-theme="light"] table td {
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   DARK THEME
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="dark"] {
+  background-color: #0c0c14 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .roundbox,
+body[data-ff-theme="dark"] .sidebox,
+body[data-ff-theme="dark"] .formErrorDiv,
+body[data-ff-theme="dark"] .ttypography {
+  background-color: #141421 !important;
+  border-color: #222236 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] #header,
+body[data-ff-theme="dark"] #footer,
+body[data-ff-theme="dark"] .community-stats-box,
+body[data-ff-theme="dark"] .news-item {
+  background-color: #141421 !important;
+  border-color: #222236 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] a {
+  color: #a78bfa !important;
+}
+
+body[data-ff-theme="dark"] a:hover {
+  color: #c4b5fd !important;
+}
+
+body[data-ff-theme="dark"] input[type="text"],
+body[data-ff-theme="dark"] input[type="password"],
+body[data-ff-theme="dark"] textarea,
+body[data-ff-theme="dark"] select {
+  background-color: #1a1a2e !important;
+  border-color: #2e2e4a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] button,
+body[data-ff-theme="dark"] input[type="submit"],
+body[data-ff-theme="dark"] input[type="button"] {
+  background-color: #7c3aed !important;
+  border-color: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="dark"] button:hover,
+body[data-ff-theme="dark"] input[type="submit"]:hover,
+body[data-ff-theme="dark"] input[type="button"]:hover {
+  background-color: #6d28d9 !important;
+  border-color: #6d28d9 !important;
+}
+
+body[data-ff-theme="dark"] .tab,
+body[data-ff-theme="dark"] .tabs {
+  background-color: #181826 !important;
+  border-color: #222236 !important;
+}
+
+body[data-ff-theme="dark"] .tab.active {
+  background-color: #141421 !important;
+  color: #a78bfa !important;
+}
+
+body[data-ff-theme="dark"] .datatable,
+body[data-ff-theme="dark"] table {
+  background-color: #141421 !important;
+  border-color: #222236 !important;
+}
+
+body[data-ff-theme="dark"] .datatable th,
+body[data-ff-theme="dark"] table th {
+  background-color: #1a1a2e !important;
+  border-color: #222236 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="dark"] .datatable td,
+body[data-ff-theme="dark"] table td {
+  border-color: #222236 !important;
+  color: #e8e8f0 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   AMOLED THEME
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="amoled"] {
+  background-color: #000000 !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .roundbox,
+body[data-ff-theme="amoled"] .sidebox,
+body[data-ff-theme="amoled"] .formErrorDiv,
+body[data-ff-theme="amoled"] .ttypography {
+  background-color: #0a0a0a !important;
+  border-color: #1a1a1a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] #header,
+body[data-ff-theme="amoled"] #footer,
+body[data-ff-theme="amoled"] .community-stats-box,
+body[data-ff-theme="amoled"] .news-item {
+  background-color: #0a0a0a !important;
+  border-color: #1a1a1a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] a {
+  color: #bb86fc !important;
+}
+
+body[data-ff-theme="amoled"] a:hover {
+  color: #d4b5ff !important;
+}
+
+body[data-ff-theme="amoled"] input[type="text"],
+body[data-ff-theme="amoled"] input[type="password"],
+body[data-ff-theme="amoled"] textarea,
+body[data-ff-theme="amoled"] select {
+  background-color: #111111 !important;
+  border-color: #1a1a1a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] button,
+body[data-ff-theme="amoled"] input[type="submit"],
+body[data-ff-theme="amoled"] input[type="button"] {
+  background-color: #9558e0 !important;
+  border-color: #9558e0 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="amoled"] button:hover,
+body[data-ff-theme="amoled"] input[type="submit"]:hover,
+body[data-ff-theme="amoled"] input[type="button"]:hover {
+  background-color: #7b3fc7 !important;
+  border-color: #7b3fc7 !important;
+}
+
+body[data-ff-theme="amoled"] .tab,
+body[data-ff-theme="amoled"] .tabs {
+  background-color: #0a0a0a !important;
+  border-color: #1a1a1a !important;
+}
+
+body[data-ff-theme="amoled"] .tab.active {
+  background-color: #0a0a0a !important;
+  color: #bb86fc !important;
+}
+
+body[data-ff-theme="amoled"] .datatable,
+body[data-ff-theme="amoled"] table {
+  background-color: #0a0a0a !important;
+  border-color: #1a1a1a !important;
+}
+
+body[data-ff-theme="amoled"] .datatable th,
+body[data-ff-theme="amoled"] table th {
+  background-color: #111111 !important;
+  border-color: #1a1a1a !important;
+  color: #e8e8f0 !important;
+}
+
+body[data-ff-theme="amoled"] .datatable td,
+body[data-ff-theme="amoled"] table td {
+  border-color: #1a1a1a !important;
+  color: #e8e8f0 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   BLUE THEME
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="blue"] {
+  background-color: #e8eef5 !important;
+  color: #1e3a5f !important;
+}
+
+body[data-ff-theme="blue"] .roundbox,
+body[data-ff-theme="blue"] .sidebox,
+body[data-ff-theme="blue"] .formErrorDiv,
+body[data-ff-theme="blue"] .ttypography {
+  background-color: #f0f6fc !important;
+  border-color: #c5d5e8 !important;
+  color: #1e3a5f !important;
+}
+
+body[data-ff-theme="blue"] #header,
+body[data-ff-theme="blue"] #footer,
+body[data-ff-theme="blue"] .community-stats-box,
+body[data-ff-theme="blue"] .news-item {
+  background-color: #f0f6fc !important;
+  border-color: #c5d5e8 !important;
+  color: #1e3a5f !important;
+}
+
+body[data-ff-theme="blue"] a {
+  color: #2563eb !important;
+}
+
+body[data-ff-theme="blue"] a:hover {
+  color: #1d4ed8 !important;
+}
+
+body[data-ff-theme="blue"] input[type="text"],
+body[data-ff-theme="blue"] input[type="password"],
+body[data-ff-theme="blue"] textarea,
+body[data-ff-theme="blue"] select {
+  background-color: #e1ecf7 !important;
+  border-color: #a3c4e0 !important;
+  color: #1e3a5f !important;
+}
+
+body[data-ff-theme="blue"] button,
+body[data-ff-theme="blue"] input[type="submit"],
+body[data-ff-theme="blue"] input[type="button"] {
+  background-color: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="blue"] button:hover,
+body[data-ff-theme="blue"] input[type="submit"]:hover,
+body[data-ff-theme="blue"] input[type="button"]:hover {
+  background-color: #1d4ed8 !important;
+  border-color: #1d4ed8 !important;
+}
+
+body[data-ff-theme="blue"] .tab,
+body[data-ff-theme="blue"] .tabs {
+  background-color: #d0dced !important;
+  border-color: #c5d5e8 !important;
+}
+
+body[data-ff-theme="blue"] .tab.active {
+  background-color: #f0f6fc !important;
+  color: #2563eb !important;
+}
+
+body[data-ff-theme="blue"] .datatable,
+body[data-ff-theme="blue"] table {
+  background-color: #f0f6fc !important;
+  border-color: #c5d5e8 !important;
+}
+
+body[data-ff-theme="blue"] .datatable th,
+body[data-ff-theme="blue"] table th {
+  background-color: #dce9f5 !important;
+  border-color: #c5d5e8 !important;
+  color: #1e3a5f !important;
+}
+
+body[data-ff-theme="blue"] .datatable td,
+body[data-ff-theme="blue"] table td {
+  border-color: #c5d5e8 !important;
+  color: #1e3a5f !important;
+}
+
+/* ════════════════════════════════════════════════════
+   MINIMAL THEME
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="minimal"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="minimal"] .roundbox,
+body[data-ff-theme="minimal"] .sidebox,
+body[data-ff-theme="minimal"] .formErrorDiv,
+body[data-ff-theme="minimal"] .ttypography {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="minimal"] #header,
+body[data-ff-theme="minimal"] #footer,
+body[data-ff-theme="minimal"] .community-stats-box,
+body[data-ff-theme="minimal"] .news-item {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="minimal"] a {
+  color: #374151 !important;
+}
+
+body[data-ff-theme="minimal"] a:hover {
+  color: #1f2937 !important;
+}
+
+body[data-ff-theme="minimal"] input[type="text"],
+body[data-ff-theme="minimal"] input[type="password"],
+body[data-ff-theme="minimal"] textarea,
+body[data-ff-theme="minimal"] select {
+  background-color: #fafafa !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="minimal"] button,
+body[data-ff-theme="minimal"] input[type="submit"],
+body[data-ff-theme="minimal"] input[type="button"] {
+  background-color: #374151 !important;
+  border-color: #374151 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="minimal"] button:hover,
+body[data-ff-theme="minimal"] input[type="submit"]:hover,
+body[data-ff-theme="minimal"] input[type="button"]:hover {
+  background-color: #1f2937 !important;
+  border-color: #1f2937 !important;
+}
+
+body[data-ff-theme="minimal"] .tab,
+body[data-ff-theme="minimal"] .tabs {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+body[data-ff-theme="minimal"] .tab.active {
+  background-color: #ffffff !important;
+  color: #374151 !important;
+}
+
+body[data-ff-theme="minimal"] .datatable,
+body[data-ff-theme="minimal"] table {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+
+body[data-ff-theme="minimal"] .datatable th,
+body[data-ff-theme="minimal"] table th {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+body[data-ff-theme="minimal"] .datatable td,
+body[data-ff-theme="minimal"] table td {
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   HIGH CONTRAST THEME
+   ════════════════════════════════════════════════════ */
+
+body[data-ff-theme="contrast"] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .roundbox,
+body[data-ff-theme="contrast"] .sidebox,
+body[data-ff-theme="contrast"] .formErrorDiv,
+body[data-ff-theme="contrast"] .ttypography {
+  background-color: #0d0d0d !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] #header,
+body[data-ff-theme="contrast"] #footer,
+body[data-ff-theme="contrast"] .community-stats-box,
+body[data-ff-theme="contrast"] .news-item {
+  background-color: #0d0d0d !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] a {
+  color: #ffdd00 !important;
+}
+
+body[data-ff-theme="contrast"] a:hover {
+  color: #ffee55 !important;
+}
+
+body[data-ff-theme="contrast"] input[type="text"],
+body[data-ff-theme="contrast"] input[type="password"],
+body[data-ff-theme="contrast"] textarea,
+body[data-ff-theme="contrast"] select {
+  background-color: #1a1a1a !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] button,
+body[data-ff-theme="contrast"] input[type="submit"],
+body[data-ff-theme="contrast"] input[type="button"] {
+  background-color: #ffdd00 !important;
+  border-color: #ffdd00 !important;
+  color: #000000 !important;
+}
+
+body[data-ff-theme="contrast"] button:hover,
+body[data-ff-theme="contrast"] input[type="submit"]:hover,
+body[data-ff-theme="contrast"] input[type="button"]:hover {
+  background-color: #ccaa00 !important;
+  border-color: #ccaa00 !important;
+}
+
+body[data-ff-theme="contrast"] .tab,
+body[data-ff-theme="contrast"] .tabs {
+  background-color: #1a1a1a !important;
+  border-color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .tab.active {
+  background-color: #0d0d0d !important;
+  color: #ffdd00 !important;
+}
+
+body[data-ff-theme="contrast"] .datatable,
+body[data-ff-theme="contrast"] table {
+  background-color: #0d0d0d !important;
+  border-color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .datatable th,
+body[data-ff-theme="contrast"] table th {
+  background-color: #1a1a1a !important;
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+body[data-ff-theme="contrast"] .datatable td,
+body[data-ff-theme="contrast"] table td {
+  border-color: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* ════════════════════════════════════════════════════
+   GLOBAL OVERRIDES
+   ════════════════════════════════════════════════════ */
+
+[data-ff-theme] .roundbox,
+[data-ff-theme] .sidebox {
+  box-shadow: none !important;
+}
+
+[data-ff-theme] input:focus,
+[data-ff-theme] textarea:focus,
+[data-ff-theme] select:focus {
+  outline: 2px solid #6c5ce7 !important;
+  outline-offset: 2px !important;
+}
+
+body[data-ff-theme="dark"] input:focus,
+body[data-ff-theme="dark"] textarea:focus,
+body[data-ff-theme="dark"] select:focus {
+  outline-color: #a78bfa !important;
+}
+
+body[data-ff-theme="amoled"] input:focus,
+body[data-ff-theme="amoled"] textarea:focus,
+body[data-ff-theme="amoled"] select:focus {
+  outline-color: #bb86fc !important;
+}
+
+body[data-ff-theme="blue"] input:focus,
+body[data-ff-theme="blue"] textarea:focus,
+body[data-ff-theme="blue"] select:focus {
+  outline-color: #2563eb !important;
+}
+
+body[data-ff-theme="minimal"] input:focus,
+body[data-ff-theme="minimal"] textarea:focus,
+body[data-ff-theme="minimal"] select:focus {
+  outline-color: #374151 !important;
+}
+
+body[data-ff-theme="contrast"] input:focus,
+body[data-ff-theme="contrast"] textarea:focus,
+body[data-ff-theme="contrast"] select:focus {
+  outline-color: #ffdd00 !important;
+}

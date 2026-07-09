@@ -1,4 +1,4 @@
-/* FocusForces – Content Styles  ·  v6 – Premium Redesign */
+/* FocusForces – Content Styles  ·  v7 – Theme-Aware */
 
 /* ── Utility ──────────────────────────────────── */
 .ff-hidden,
@@ -6,7 +6,6 @@
   display: none !important;
 }
 
-/* Screen reader only text */
 .ff-sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -19,11 +18,147 @@
   border: 0 !important;
 }
 
-/* ── Container Query Support ──────────────────── */
+/* ── Theme Variables (scoped to injected cards) ── */
 #ff-scout-card,
 #ff-timer-card {
   container-type: inline-size;
   container-name: ff-card;
+
+  /* Light theme defaults */
+  --ff-accent: #6c5ce7;
+  --ff-accent-dark: #4f3cc9;
+  --ff-text: #1a1a2e;
+  --ff-text-secondary: #555;
+  --ff-text-tertiary: #777;
+  --ff-bg: #fff;
+  --ff-bg-hover: #f5f5f5;
+  --ff-bg-input: #fff;
+  --ff-border: #ccc;
+  --ff-border-focus: #3B5998;
+  --ff-shadow: rgba(59, 89, 152, 0.15);
+  --ff-btn-bg: #f5f5f5;
+  --ff-btn-border: #ccc;
+  --ff-btn-hover: #e8e8e8;
+  --ff-btn-primary-bg: #3B5998;
+  --ff-btn-primary-text: #fff;
+  --ff-btn-primary-border: #2d4373;
+  --ff-danger: #c0392b;
+  --ff-danger-glow: rgba(192, 57, 43, 0.25);
+}
+
+#ff-timer-card[data-theme="dark"],
+#ff-scout-card[data-theme="dark"] {
+  --ff-accent: #a78bfa;
+  --ff-accent-dark: #7c3aed;
+  --ff-text: #e8e8f0;
+  --ff-text-secondary: #9da0b5;
+  --ff-text-tertiary: #5e6278;
+  --ff-bg: #141421;
+  --ff-bg-hover: #191929;
+  --ff-bg-input: #1a1a2e;
+  --ff-border: #2e2e4a;
+  --ff-border-focus: #a78bfa;
+  --ff-shadow: rgba(0, 0, 0, 0.3);
+  --ff-btn-bg: #1a1a2e;
+  --ff-btn-border: #2e2e4a;
+  --ff-btn-hover: #222236;
+  --ff-btn-primary-bg: #7c3aed;
+  --ff-btn-primary-text: #fff;
+  --ff-btn-primary-border: #6d28d9;
+  --ff-danger: #f87171;
+  --ff-danger-glow: rgba(248, 113, 113, 0.25);
+}
+
+#ff-timer-card[data-theme="amoled"],
+#ff-scout-card[data-theme="amoled"] {
+  --ff-accent: #bb86fc;
+  --ff-accent-dark: #9558e0;
+  --ff-text: #e8e8f0;
+  --ff-text-secondary: #9da0b5;
+  --ff-text-tertiary: #5e6278;
+  --ff-bg: #0a0a0a;
+  --ff-bg-hover: #111111;
+  --ff-bg-input: #111111;
+  --ff-border: #1a1a1a;
+  --ff-border-focus: #bb86fc;
+  --ff-shadow: rgba(0, 0, 0, 0.5);
+  --ff-btn-bg: #111111;
+  --ff-btn-border: #1a1a1a;
+  --ff-btn-hover: #1a1a1a;
+  --ff-btn-primary-bg: #9558e0;
+  --ff-btn-primary-text: #fff;
+  --ff-btn-primary-border: #7b3fc7;
+  --ff-danger: #ff5252;
+  --ff-danger-glow: rgba(255, 82, 82, 0.3);
+}
+
+#ff-timer-card[data-theme="blue"],
+#ff-scout-card[data-theme="blue"] {
+  --ff-accent: #2563eb;
+  --ff-accent-dark: #1d4ed8;
+  --ff-text: #1a2332;
+  --ff-text-secondary: #4a5568;
+  --ff-text-tertiary: #a0aec0;
+  --ff-bg: #fff;
+  --ff-bg-hover: #f8fafc;
+  --ff-bg-input: #f8fafc;
+  --ff-border: #d2dce6;
+  --ff-border-focus: #2563eb;
+  --ff-shadow: rgba(37, 99, 235, 0.15);
+  --ff-btn-bg: #f1f5f9;
+  --ff-btn-border: #d2dce6;
+  --ff-btn-hover: #e2e8f0;
+  --ff-btn-primary-bg: #2563eb;
+  --ff-btn-primary-text: #fff;
+  --ff-btn-primary-border: #1d4ed8;
+  --ff-danger: #dc2626;
+  --ff-danger-glow: rgba(220, 38, 38, 0.2);
+}
+
+#ff-timer-card[data-theme="minimal"],
+#ff-scout-card[data-theme="minimal"] {
+  --ff-accent: #374151;
+  --ff-accent-dark: #1f2937;
+  --ff-text: #111827;
+  --ff-text-secondary: #6b7280;
+  --ff-text-tertiary: #9ca3af;
+  --ff-bg: #fff;
+  --ff-bg-hover: #fafafa;
+  --ff-bg-input: #fafafa;
+  --ff-border: #e5e7eb;
+  --ff-border-focus: #374151;
+  --ff-shadow: rgba(0, 0, 0, 0.05);
+  --ff-btn-bg: #f9fafb;
+  --ff-btn-border: #e5e7eb;
+  --ff-btn-hover: #f3f4f6;
+  --ff-btn-primary-bg: #374151;
+  --ff-btn-primary-text: #fff;
+  --ff-btn-primary-border: #1f2937;
+  --ff-danger: #dc2626;
+  --ff-danger-glow: rgba(220, 38, 38, 0.15);
+}
+
+#ff-timer-card[data-theme="contrast"],
+#ff-scout-card[data-theme="contrast"] {
+  --ff-accent: #ffdd00;
+  --ff-accent-dark: #ccaa00;
+  --ff-text: #ffffff;
+  --ff-text-secondary: #e0e0e0;
+  --ff-text-tertiary: #b0b0b0;
+  --ff-bg: #0d0d0d;
+  --ff-bg-hover: #1a1a1a;
+  --ff-bg-input: #1a1a1a;
+  --ff-border: #ffffff;
+  --ff-border-focus: #ffdd00;
+  --ff-shadow: rgba(255, 221, 0, 0.15);
+  --ff-btn-bg: #1a1a1a;
+  --ff-btn-border: #ffffff;
+  --ff-btn-hover: #333333;
+  --ff-btn-primary-bg: #ffdd00;
+  --ff-btn-primary-text: #000000;
+  --ff-btn-primary-border: #ccaa00;
+  --ff-danger: #ff3333;
+  --ff-danger-glow: rgba(255, 51, 51, 0.35);
 }
 
 @container ff-card (max-width: 300px) {
@@ -36,7 +171,6 @@
    SCOUT CARD
    ══════════════════════════════════════════════════ */
 
-/* Tag containers */
 .ff-scout-tag-container {
   padding: 8px 0 4px;
   display: flex;
@@ -46,26 +180,24 @@
   align-items: center;
 }
 
-/* Tag elements — match native CF tag styling but slightly elevated */
 .ff-scout-tag-container .roundbox {
   margin: 2px;
   padding: 2px 6px;
-  background-color: #f0f0f0;
+  background-color: var(--ff-bg-hover);
   border: none;
   border-radius: 3px;
   transition: background-color 0.15s ease;
 }
 
 .ff-scout-tag-container .roundbox:hover {
-  background-color: #e2e2e2;
+  background-color: var(--ff-border);
 }
 
 .ff-scout-tag-container .tag-box {
   font-size: 11.5px !important;
-  color: inherit;
+  color: var(--ff-text);
 }
 
-/* ── Tag Buttons ──────────────────────────────── */
 .ff-scout-buttons {
   display: flex;
   gap: 8px;
@@ -75,9 +207,9 @@
 .ff-scout-btn {
   flex: 1;
   padding: 5px 10px;
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ccc;
+  background: var(--ff-btn-bg);
+  color: var(--ff-text);
+  border: 1px solid var(--ff-btn-border);
   border-radius: 3px;
   cursor: pointer;
   font-size: 12px;
@@ -89,16 +221,16 @@
 }
 
 .ff-scout-btn:hover:not(:disabled) {
-  background: #e8e8e8;
-  border-color: #bbb;
+  background: var(--ff-btn-hover);
+  border-color: var(--ff-border);
 }
 
 .ff-scout-btn:active:not(:disabled) {
-  background: #dcdcdc;
+  background: var(--ff-border);
 }
 
 .ff-scout-btn:focus-visible {
-  outline: 2px solid #3B5998;
+  outline: 2px solid var(--ff-border-focus);
   outline-offset: 1px;
 }
 
@@ -107,7 +239,6 @@
   cursor: not-allowed;
 }
 
-/* Loading shimmer for API retry state */
 .ff-scout-btn.loading {
   opacity: 0.65;
   cursor: not-allowed;
@@ -141,11 +272,10 @@
   text-align: center;
 }
 
-/* ── Timer Display ─────────────────────────────── */
 .ff-timer-display {
   font-size: 30px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--ff-text);
   font-family: 'SF Mono', 'Fira Code', 'Courier New', Courier, monospace;
   margin-bottom: 14px;
   letter-spacing: 2px;
@@ -155,10 +285,9 @@
   border-radius: 6px;
 }
 
-/* Danger state — pulsing red */
 .ff-timer-display.danger {
-  color: #c0392b;
-  text-shadow: 0 0 12px rgba(192, 57, 43, 0.25);
+  color: var(--ff-danger);
+  text-shadow: 0 0 12px var(--ff-danger-glow);
   animation: pulse-danger 1.1s ease-in-out infinite;
 }
 
@@ -167,7 +296,6 @@
   50%       { opacity: 0.72; }
 }
 
-/* ── Timer Inputs ──────────────────────────────── */
 .ff-timer-inputs {
   display: flex;
   justify-content: center;
@@ -175,7 +303,7 @@
   gap: 8px;
   margin-bottom: 12px;
   font-size: 13px;
-  color: #555;
+  color: var(--ff-text-secondary);
 }
 
 .ff-timer-inputs label {
@@ -188,42 +316,40 @@
   width: 50px;
   padding: 5px 4px;
   text-align: center;
-  border: 1px solid #ccc;
+  border: 1px solid var(--ff-border);
   border-radius: 3px;
   font-size: 14px;
-  background: #fff;
-  color: #333;
+  background: var(--ff-bg-input);
+  color: var(--ff-text);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
   font-family: inherit;
 }
 
 .ff-timer-inputs input:focus {
   outline: none;
-  border-color: #3B5998;
-  box-shadow: 0 0 0 2px rgba(59, 89, 152, 0.15);
+  border-color: var(--ff-border-focus);
+  box-shadow: 0 0 0 2px var(--ff-shadow);
 }
 
 .ff-timer-inputs input:disabled {
-  background: #f5f5f5;
-  color: #999;
+  background: var(--ff-bg-hover);
+  color: var(--ff-text-tertiary);
   cursor: not-allowed;
 }
 
-/* ── Timer Controls ────────────────────────────── */
 .ff-timer-controls {
   display: flex;
   justify-content: center;
   gap: 8px;
 }
 
-/* Base timer button */
 .ff-timer-btn {
   padding: 5px 16px;
   font-size: 12px;
   cursor: pointer;
-  border: 1px solid #ccc;
-  background: #f5f5f5;
-  color: #444;
+  border: 1px solid var(--ff-btn-border);
+  background: var(--ff-btn-bg);
+  color: var(--ff-text);
   border-radius: 3px;
   font-weight: 500;
   font-family: inherit;
@@ -231,46 +357,33 @@
 }
 
 .ff-timer-btn:hover:not(:disabled) {
-  background: #e8e8e8;
-  border-color: #bbb;
+  background: var(--ff-btn-hover);
+  border-color: var(--ff-border);
 }
 
 .ff-timer-btn:active:not(:disabled) {
-  background: #dcdcdc;
+  background: var(--ff-border);
 }
 
 .ff-timer-btn:focus-visible {
-  outline: 2px solid #3B5998;
+  outline: 2px solid var(--ff-border-focus);
   outline-offset: 1px;
 }
 
-/* Primary (Start / Resume) — accent blue to distinguish from Reset */
 .ff-timer-btn.primary {
-  background: #3B5998;
-  color: #fff;
-  border-color: #2d4373;
-  box-shadow: 0 1px 3px rgba(59, 89, 152, 0.28);
+  background: var(--ff-btn-primary-bg);
+  color: var(--ff-btn-primary-text);
+  border-color: var(--ff-btn-primary-border);
+  box-shadow: 0 1px 3px var(--ff-shadow);
 }
 
 .ff-timer-btn.primary:hover:not(:disabled) {
-  background: #2d4373;
-  border-color: #1e2f52;
-  box-shadow: 0 2px 6px rgba(59, 89, 152, 0.38);
+  filter: brightness(0.9);
+  box-shadow: 0 2px 6px var(--ff-shadow);
 }
 
 .ff-timer-btn.primary:active:not(:disabled) {
-  background: #24386a;
-}
-
-/* Pause state — muted amber */
-.ff-timer-btn.pausing {
-  background: #f5f0e8;
-  color: #8b6914;
-  border-color: #dbb96e;
-}
-
-.ff-timer-btn.pausing:hover:not(:disabled) {
-  background: #ede5d4;
+  filter: brightness(0.8);
 }
 
 .ff-timer-btn:disabled {

@@ -41,6 +41,16 @@ function shouldNotify5(msLeft, durationMs) {
 }
 
 /**
+ * Check whether the "1 Minute Left" notification should fire.
+ * @param {number} msLeft    milliseconds remaining
+ * @param {number} durationMs total timer duration
+ * @returns {boolean}
+ */
+function shouldNotify1(msLeft, durationMs) {
+  return msLeft <= 1 * 60 * 1000 && durationMs >= 1 * 60 * 1000;
+}
+
+/**
  * Check whether the danger CSS class should be applied (<= 5 min remaining).
  * @param {number} msLeft milliseconds remaining
  * @returns {boolean}
@@ -63,17 +73,18 @@ function computeRemainingMs(mm, ss) {
 
 /**
  * Create a fresh default timer state.
- * @returns {{ status: string, endTime: number, remainingMs: number, durationMs: number, notified10: boolean, notified5: boolean }}
+ * @returns {{ status: string, mode: string, endTime: number, elapsed: number, lastStarted: number, durationMs: number, remainingMs: number, notifiedMilestones: string[] }}
  */
 function defaultTimerState() {
   return {
     status: 'STOPPED',
+    mode: 'countdown',
     endTime: 0,
-    remainingMs: 0,
+    elapsed: 0,
+    lastStarted: 0,
     durationMs: 0,
-    notified10: false,
-    notified5: false,
-    _dangerActive: false
+    remainingMs: 0,
+    notifiedMilestones: []
   };
 }
 
@@ -85,7 +96,7 @@ function defaultTimerState() {
  *
  * @param {object} state     current timer state
  * @param {number} now       current wall-clock time (Date.now())
- * @returns {{ state: object, actions: string[], notification?: { title: string, message: string } }}
+ * @returns {{ state: object, actions: string[] }}
  */
 function tickState(state, now) {
   if (state.status !== 'RUNNING') {
@@ -96,23 +107,7 @@ function tickState(state, now) {
   const nextState = { ...state };
   const actions = [];
 
-  // Danger styling threshold (5 min)
   const shouldBeDanger = isDanger(msLeft);
-  if (shouldBeDanger !== nextState._dangerActive) {
-    nextState._dangerActive = shouldBeDanger;
-    actions.push(shouldBeDanger ? 'DANGER_ON' : 'DANGER_OFF');
-  }
-
-  // Milestone notifications — check BEFORE finish so backgrounded tabs
-  // don't skip 10min/5min when they come back and find msLeft <= 0.
-  if (!nextState.notified10 && shouldNotify10(msLeft, state.durationMs)) {
-    nextState.notified10 = true;
-    actions.push('NOTIFY_10');
-  }
-  if (!nextState.notified5 && shouldNotify5(msLeft, state.durationMs)) {
-    nextState.notified5 = true;
-    actions.push('NOTIFY_5');
-  }
 
   if (msLeft <= 0) {
     nextState.status = 'STOPPED';
@@ -120,6 +115,27 @@ function tickState(state, now) {
     nextState.endTime = 0;
     actions.push('FINISHED');
     return { state: nextState, actions };
+  }
+
+  if (shouldBeDanger) actions.push('DANGER_ON');
+  else actions.push('DANGER_OFF');
+
+  const milestones = [...(nextState.notifiedMilestones || [])];
+
+  if (!milestones.includes('10min') && shouldNotify10(msLeft, state.durationMs)) {
+    milestones.push('10min');
+    nextState.notifiedMilestones = milestones;
+    actions.push('NOTIFY_10');
+  }
+  if (!milestones.includes('5min') && shouldNotify5(msLeft, state.durationMs)) {
+    milestones.push('5min');
+    nextState.notifiedMilestones = milestones;
+    actions.push('NOTIFY_5');
+  }
+  if (!milestones.includes('1min') && shouldNotify1(msLeft, state.durationMs)) {
+    milestones.push('1min');
+    nextState.notifiedMilestones = milestones;
+    actions.push('NOTIFY_1');
   }
 
   return { state: nextState, actions };
@@ -130,6 +146,7 @@ if (typeof module !== 'undefined' && module.exports) {
     formatTime,
     shouldNotify10,
     shouldNotify5,
+    shouldNotify1,
     isDanger,
     computeRemainingMs,
     defaultTimerState,

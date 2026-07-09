@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "FocusForces",
-  "version": "1.2.0",
-  "description": "Ignite your focus: stealth tags, integrated timer, and Zen Mode for distraction-free competitive programming. Made by Ahsan_.",
+  "version": "2.0.0",
+  "description": "Universal focus timer, contest tracker, and distraction-free coding. Multiple themes, persistent timer, and smart notifications. Made by Ahsan_.",
   "permissions": [
     "storage",
     "alarms",
@@ -40,12 +40,12 @@
         "https://codeforces.com/group/*/contest/*/problem/*"
       ],
       "js": ["timer-utils.js", "content.js", "submitify.js"],
-      "css": ["content.css"]
+      "css": ["content.css", "cf-theme.css"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/notify.wav"],
+      "resources": ["assets/notify.wav", "cf-theme.css"],
       "matches": ["https://codeforces.com/*"]
     }
   ]

@@ -1,6 +1,6 @@
 /**
  * FocusForces — Content Script
- * Zen Mode • Tag Toggler • Precision Timer
+ * Zen Mode, Tag Toggler (Scout), Precision Timer, Theme Sync
  */
 
 (function() {
@@ -8,7 +8,6 @@
 
     // ── Constants & Config ─────────────────────────────
     const CONFIG = {
-        TIMER_STATE_KEY: 'ff_timer_state',
         ZEN_SELECTORS: [
             '.community-stats-box',
             '.roundbox.menu-box:not(:first-child)',
@@ -19,49 +18,35 @@
         PROBLEMS_FETCH_TIMEOUT_MS: 15000,
         CONTEST_STANDINGS_TIMEOUT_MS: 5000,
         TAGS_POLL_INTERVAL_MS: 300,
-        TAGS_POLL_MAX_MS: 8000
+        TAGS_POLL_MAX_MS: 8000,
+        TIMER_STORAGE_KEY: 'ff_timer_state'
     };
 
-    // ── State Management ─────────────────────────────
+    // ── State ──────────────────────────────────────────
     let zenModeEnabled = false;
     let problemCachePromise = null;
     let cachedAudioCtx = null;
+    let currentTheme = 'light';
 
-    // ── Audio Setup ─────────────────────────────────
+    // ── Audio ──────────────────────────────────────────
     const notifySound = new Audio(chrome.runtime.getURL('assets/notify.wav'));
 
-    /**
-     * Lazily create and cache a single AudioContext for synthesized beeps.
-     * This avoids creating a fresh context (which is expensive) on every
-     * notification, and prevents the leak window from the previous design
-     * where each call relied on a setTimeout-based close().
-     */
     const getAudioContext = () => {
         if (cachedAudioCtx) return cachedAudioCtx;
         cachedAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
         return cachedAudioCtx;
     };
 
-    /**
-     * Play the notification sound, falling back to a synthesized beep via the
-     * Web Audio API if the audio file cannot play (e.g. corrupted, blocked, or
-     * missing from the extension bundle).
-     */
     const playNotificationSound = async () => {
-        // Attempt 1: play the bundled WAV file
         try {
             await notifySound.play();
             return;
         } catch (_) {
-            try { notifySound.currentTime = 0; } catch (_) { /* ignore */ }
+            try { notifySound.currentTime = 0; } catch (_) {}
         }
-
-        // Attempt 2: synthesize a tone with the Web Audio API
         try {
             const ctx = getAudioContext();
-            if (ctx.state === 'suspended') {
-                await ctx.resume();
-            }
+            if (ctx.state === 'suspended') await ctx.resume();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
@@ -72,12 +57,9 @@
             osc.start(ctx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
             osc.stop(ctx.currentTime + 0.4);
-        } catch (_) {
-            // Both attempts failed — notification works without sound too
-        }
+        } catch (_) {}
     };
 
-    // ── Utility Functions ────────────────────────────
     const safeSendNotification = async (title, message) => {
         try {
             await chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY', title, message });
@@ -91,18 +73,56 @@
         }
     };
 
-    // ── API Layer ─────────────────────────────────
+    // ── Theme ──────────────────────────────────────────
+    async function loadTheme() {
+        try {
+            const { ff_theme } = await chrome.storage.local.get('ff_theme');
+            currentTheme = ff_theme || 'light';
+            applyThemeToElements(currentTheme);
+            if (document.body) {
+                injectCFTheme(currentTheme);
+            }
+        } catch {}
+    }
+
+    function applyThemeToElements(theme) {
+        const timerCard = document.getElementById('ff-timer-card');
+        const scoutCard = document.getElementById('ff-scout-card');
+        if (timerCard) timerCard.setAttribute('data-theme', theme);
+        if (scoutCard) scoutCard.setAttribute('data-theme', theme);
+    }
+
+    function injectCFTheme(theme) {
+        if (theme === 'default') {
+            if (document.body) {
+                document.body.removeAttribute('data-ff-theme');
+            }
+            return;
+        }
+
+        if (document.body) {
+            document.body.setAttribute('data-ff-theme', theme);
+        }
+    }
+
+    chrome.runtime.onMessage.addListener(req => {
+        if (req.type === 'THEME_CHANGED') {
+            currentTheme = req.theme;
+            applyThemeToElements(currentTheme);
+            injectCFTheme(currentTheme);
+        }
+    });
+
+    loadTheme();
+
+    // ── API Layer ─────────────────────────────────────
     async function fetchProblemFromApi(contestId, index, cancelSignal) {
         const normalizedIndex = index.toUpperCase();
-
-        // Helper: combine cancelSignal with a timeout signal.
         const withCancel = (timeoutMs) =>
             cancelSignal
                 ? AbortSignal.any([cancelSignal, AbortSignal.timeout(timeoutMs)])
                 : AbortSignal.timeout(timeoutMs);
 
-        // Strategy 1: Use contest.standings when we know the contest ID.
-        // This is MUCH faster and more targeted than fetching ALL problems.
         if (contestId !== null) {
             try {
                 const res = await fetch(
@@ -119,12 +139,10 @@
                     }
                 }
             } catch (e) {
-                console.debug('contest.standings API failed, falling back to problemset.problems:', String(e));
+                console.debug('contest.standings API failed:', String(e));
             }
         }
 
-        // Strategy 2: Fall back to problemset.problems (full set, slower).
-        // Cache the result across calls so we only fetch it once.
         if (!problemCachePromise) {
             problemCachePromise = (async () => {
                 try {
@@ -206,7 +224,7 @@
         }
     });
 
-    // ── Tag Toggler ────────────────────────────────
+    // ── Tag Toggler (Scout) ─────────────────────────
     function initTagToggler() {
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) return;
@@ -216,6 +234,7 @@
             card = document.createElement('div');
             card.className = 'roundbox sidebox';
             card.id = 'ff-scout-card';
+            card.setAttribute('data-theme', currentTheme);
             card.innerHTML = `
                 <div class="roundbox-lt">&nbsp;</div>
                 <div class="roundbox-rt">&nbsp;</div>
@@ -277,7 +296,6 @@
         let apiFailed = false;
 
         const findTagBox = () => {
-            // sidebar is available from the initTagToggler closure
             if (sidebar) {
                 const nativeBox = [...sidebar.querySelectorAll('.sidebox')]
                     .find(box => {
@@ -288,18 +306,15 @@
                     });
                 if (nativeBox) return nativeBox;
 
-                // Fallback within sidebar: find any container that has tag-box spans
                 const tagBoxBySpans = [...sidebar.querySelectorAll('.sidebox')]
                     .find(box => box.querySelectorAll('span.tag-box').length > 0);
                 if (tagBoxBySpans) return tagBoxBySpans;
             }
 
-            // Last resort: find tag-box elements anywhere on the page
             const firstTag = document.querySelector('span.tag-box');
             if (firstTag) {
                 return firstTag.closest('.roundbox') || firstTag.parentElement;
             }
-
             return null;
         };
 
@@ -312,9 +327,6 @@
             const tags = [...tagBox.querySelectorAll('span.tag-box')];
             if (!tags.length) return false;
 
-            // Hide the native tag box ONLY if it's a dedicated sidebox element.
-            // If we fell back to a generic container (e.g. the problem area),
-            // don't hide it — just copy the tags into our containers.
             if (tagBox.classList.contains('sidebox')) {
                 tagBox.style.display = 'none';
             }
@@ -340,20 +352,29 @@
             return true;
         };
 
+        let apiAbortController = null;
+        let poll, obs;
+
+        const stopPolling = () => {
+            clearInterval(poll);
+            obs.disconnect();
+        };
+
+        const onTagsFoundFromDom = () => {
+            apiAbortController?.abort();
+            stopPolling();
+        };
+
         const loadTagsFromApi = async () => {
             if (tagsProcessed) return;
 
-            // ── Immediate DOM-first check ──
-            // For gym/problem pages, Codeforces renders tags server-side in the
-            // page HTML. Check the DOM immediately (no await) — if tags are found,
-            // we skip the API call entirely. This makes gym contest pages instant.
             if (processTagsFromDOM()) {
                 onTagsFoundFromDom();
                 return;
             }
 
             apiFailed = false;
-            noTagsLabel.textContent = 'Fetching from API…';
+            noTagsLabel.textContent = 'Fetching from API...';
             btnTopics.disabled = btnRating.disabled = true;
             btnTopics.classList.add('loading');
             btnRating.classList.add('loading');
@@ -387,7 +408,6 @@
                 stopPolling();
                 if (!hasTopics && !hasRating) noTagsLabel.textContent = 'No data available.';
             } catch (e) {
-                // AbortError means DOM found tags mid-flight — no error to surface
                 if (e.name === 'AbortError') return;
                 console.debug(e);
                 apiFailed = true;
@@ -400,23 +420,18 @@
         };
 
         const handleTopicsClick = () => {
-            // Retry path: API previously failed and no topics loaded yet
             if (apiFailed && !topicsContainer.innerHTML) {
                 tagsProcessed = false;
                 problemCachePromise = null;
                 loadTagsFromApi();
                 return;
             }
-
-            // If topics data exists, toggle visibility
             if (topicsContainer.innerHTML) {
                 topicsVisible = !topicsVisible;
                 topicsContainer.classList.toggle('ff-hidden', !topicsVisible);
                 btnTopics.textContent = topicsVisible ? 'Hide Tags' : 'Get Tags';
                 return;
             }
-
-            // No topics data — disable the button to avoid dead clicks
             if (tagsProcessed && !topicsContainer.innerHTML) {
                 btnTopics.disabled = true;
                 btnTopics.textContent = 'No Tags';
@@ -424,23 +439,18 @@
         };
 
         const handleRatingClick = () => {
-            // Retry path: API previously failed and no rating loaded yet
             if (apiFailed && !ratingContainer.innerHTML) {
                 tagsProcessed = false;
                 problemCachePromise = null;
                 loadTagsFromApi();
                 return;
             }
-
-            // If rating data exists, toggle visibility
             if (ratingContainer.innerHTML) {
                 ratingVisible = !ratingVisible;
                 ratingContainer.classList.toggle('ff-hidden', !ratingVisible);
                 btnRating.textContent = ratingVisible ? 'Hide Rating' : 'Get Rating';
                 return;
             }
-
-            // No rating data — disable the button
             if (tagsProcessed && !ratingContainer.innerHTML) {
                 btnRating.disabled = true;
                 btnRating.textContent = 'No Rating';
@@ -450,17 +460,6 @@
         btnTopics.addEventListener('click', handleTopicsClick);
         btnRating.addEventListener('click', handleRatingClick);
 
-        // ── Tag discovery: declare stopPolling first, then create observers.
-        let poll, obs;
-        let apiAbortController = null;
-        const stopPolling = () => {
-            clearInterval(poll);
-            obs.disconnect();
-        };
-        const onTagsFoundFromDom = () => {
-            apiAbortController?.abort();
-            stopPolling();
-        };
         obs = new MutationObserver(() => {
             if (processTagsFromDOM()) onTagsFoundFromDom();
         });
@@ -468,12 +467,11 @@
             if (processTagsFromDOM()) onTagsFoundFromDom();
         }, CONFIG.TAGS_POLL_INTERVAL_MS);
         setTimeout(stopPolling, CONFIG.TAGS_POLL_MAX_MS);
-
         obs.observe(document.body, { childList: true, subtree: true });
         loadTagsFromApi();
     }
 
-    // ── Timer ─────────────────────────────────────
+    // ── Timer (Content Script Sidebar) ──────────────────
     function initTimer() {
         const sidebar = document.getElementById('sidebar');
         if (!sidebar) return;
@@ -482,6 +480,7 @@
         const timerCard = document.createElement('div');
         timerCard.className = 'roundbox sidebox';
         timerCard.id = 'ff-timer-card';
+        timerCard.setAttribute('data-theme', currentTheme);
         timerCard.innerHTML = `
             <div class="roundbox-lt">&nbsp;</div>
             <div class="roundbox-rt">&nbsp;</div>
@@ -492,7 +491,7 @@
                 <div class="ff-timer-display" id="cf-timer-display">00:00:00</div>
                 <div class="ff-timer-inputs">
                     <label>
-                        <input type="number" id="cf-timer-mm" min="0" max="999" placeholder="MM" value="40"> m
+                        <input type="number" id="cf-timer-mm" min="0" max="999" placeholder="MM" value="25"> m
                     </label>
                     <label>
                         <input type="number" id="cf-timer-ss" min="0" max="59" placeholder="SS" value="0"> s
@@ -515,17 +514,18 @@
         let state;
         let intervalId = null;
 
-        const loadTimerState = () => {
+        const loadTimerState = async () => {
             try {
-                const s = JSON.parse(window.localStorage.getItem(CONFIG.TIMER_STATE_KEY) || '{}');
-                return { ...defaultTimerState(), ...s, notified10: !!s.notified10, notified5: !!s.notified5 };
+                const { [CONFIG.TIMER_STORAGE_KEY]: stored } = await chrome.storage.local.get(CONFIG.TIMER_STORAGE_KEY);
+                if (!stored) return defaultTimerState();
+                return { ...defaultTimerState(), ...stored };
             } catch {
                 return defaultTimerState();
             }
         };
 
         const saveState = () => {
-            window.localStorage.setItem(CONFIG.TIMER_STATE_KEY, JSON.stringify(state));
+            chrome.storage.local.set({ [CONFIG.TIMER_STORAGE_KEY]: state });
         };
 
         const renderUI = () => {
@@ -533,7 +533,6 @@
             mmInput.disabled = isActive;
             ssInput.disabled = isActive;
 
-            // Reset button state classes cleanly
             actionBtn.classList.remove('primary', 'pausing');
 
             if (state.status === 'RUNNING') {
@@ -571,8 +570,7 @@
 
             const now = Date.now();
             const result = tickState(state, now);
-            const prevNotified10 = state.notified10;
-            const prevNotified5 = state.notified5;
+            const prevNotified = [...(state.notifiedMilestones || [])];
             state = result.state;
 
             const msLeft = Math.max(0, state.endTime - now);
@@ -584,14 +582,14 @@
                 else if (action === 'NOTIFY_10') {
                     safeSendNotification('10 Minutes Left', 'Keep pushing, you are doing great!');
                 } else if (action === 'NOTIFY_5') {
-                    safeSendNotification('5 Minutes Left', 'Focus in—finalize your logic.');
+                    safeSendNotification('5 Minutes Left', 'Focus in — finalize your logic.');
                 } else if (action === 'FINISHED') {
                     finishTimer();
                     return;
                 }
             }
 
-            if (state.notified10 !== prevNotified10 || state.notified5 !== prevNotified5) {
+            if (JSON.stringify(state.notifiedMilestones) !== JSON.stringify(prevNotified)) {
                 saveState();
             }
         };
@@ -599,7 +597,7 @@
         const startTimer = () => {
             if (state.status === 'STOPPED') {
                 state.remainingMs = computeRemainingMs(mmInput.value, ssInput.value);
-                state.notified10 = state.notified5 = false;
+                state.notifiedMilestones = [];
                 state._dangerActive = false;
             }
             if (state.remainingMs <= 0) return;
@@ -609,15 +607,13 @@
             saveState();
             renderUI();
             if (!intervalId) intervalId = setInterval(tick, 1000);
-        };
 
-        state = loadTimerState();
+            // Notify background to set up alarms
+            chrome.runtime.sendMessage({ type: 'TIMER_STARTED', state }).catch(() => {});
+        };
 
         const triggerAction = () => {
             if (state.status === 'RUNNING') {
-                // If the timer already expired (e.g., a throttled background tab
-                // never got a chance to call finishTimer), finish it now instead
-                // of pausing with a stale endTime.
                 if (Date.now() >= state.endTime) {
                     finishTimer();
                     return;
@@ -627,6 +623,7 @@
                 saveState();
                 clearInterval(intervalId);
                 intervalId = null;
+                chrome.runtime.sendMessage({ type: 'TIMER_PAUSED', state }).catch(() => {});
             } else {
                 startTimer();
             }
@@ -635,34 +632,50 @@
 
         actionBtn.addEventListener('click', triggerAction);
 
-        mmInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') triggerAction();
-        });
-        ssInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') triggerAction();
-        });
+        mmInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerAction(); });
+        ssInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerAction(); });
 
         resetBtn.addEventListener('click', () => {
-            state = defaultTimerState();
+            state = { ...defaultTimerState() };
             saveState();
             renderUI();
             clearInterval(intervalId);
             intervalId = null;
+            chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state }).catch(() => {});
         });
 
-        // Recovery
-        if (state.status === 'RUNNING') {
-            if (Date.now() >= state.endTime) {
-                finishTimer();
-            } else {
-                state.durationMs = state.durationMs || state.remainingMs;
-                intervalId = setInterval(tick, 1000);
-                tick();
+        // Listen for state updates from popup
+        chrome.runtime.onMessage.addListener(req => {
+            if (req.type === 'TIMER_STATE_CHANGED') {
+                loadTimerState().then(newState => {
+                    state = newState;
+                    if (state.status === 'RUNNING') {
+                        if (!intervalId) intervalId = setInterval(tick, 1000);
+                    } else {
+                        clearInterval(intervalId);
+                        intervalId = null;
+                    }
+                    renderUI();
+                });
             }
-        } else if (state.status === 'PAUSED') {
-            display.textContent = formatTime(state.remainingMs);
-        }
-        renderUI();
+        });
+
+        // Initialize
+        loadTimerState().then(async loadedState => {
+            state = loadedState;
+            if (state.status === 'RUNNING') {
+                if (Date.now() >= state.endTime) {
+                    finishTimer();
+                } else {
+                    state.durationMs = state.durationMs || state.remainingMs;
+                    intervalId = setInterval(tick, 1000);
+                    tick();
+                }
+            } else if (state.status === 'PAUSED') {
+                display.textContent = formatTime(state.remainingMs);
+            }
+            renderUI();
+        });
     }
 
     // ── Init ───────────────────────────────────────
