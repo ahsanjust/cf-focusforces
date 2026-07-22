@@ -14,11 +14,11 @@ const CACHE_KEY = 'ff_contests_cache';
 const GYM_CACHE_TTL_MS = 30 * 60 * 1000;
 const GYM_CACHE_KEY = 'ff_gym_cache';
 
-const THEMES = ['default', 'light', 'dark', 'amoled', 'blue', 'minimal', 'contrast'];
+const THEMES = ['default', 'light', 'dark', 'amoled', 'contrast'];
 const THEME_KEY = 'ff_theme';
 const TIMER_STORAGE_KEY = 'ff_timer_state';
 const REMINDER_INTERVALS_KEY = 'ff_reminder_intervals';
-const DEFAULT_REMINDER_INTERVALS = [86400, 3600, 1800, 600, 300];
+const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 300];
 
 // ══════════════════════════════════════════════════════
 // MODULE: Theme
@@ -54,6 +54,14 @@ const ThemeModule = (() => {
     }
 
     function syncThemeToContentScript(theme) {
+        // Path 1: Send to background service worker, which broadcasts to ALL
+        // Codeforces tabs. This is the most reliable path because the service
+        // worker has a persistent listener and reaches every CF tab regardless
+        // of which tab is currently active.
+        chrome.runtime.sendMessage({ type: 'THEME_CHANGED', theme }).catch(() => {});
+
+        // Path 2: Direct message to the active tab's content script for the
+        // fastest possible theme update on the visible page.
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
                 chrome.tabs.sendMessage(tabs[0].id, { type: 'THEME_CHANGED', theme }).catch(() => {});
@@ -276,14 +284,6 @@ const TimerUIModule = (() => {
 // ══════════════════════════════════════════════════════
 
 const TimerActions = (() => {
-    function notifyContentScript() {
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-            if (tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'TIMER_STATE_CHANGED' }).catch(() => {});
-            }
-        });
-    }
-
     function start() {
         const state = TimerModule.getState();
         if (state.mode === 'countdown') {
@@ -311,7 +311,6 @@ const TimerActions = (() => {
         TimerInterval.start();
 
         chrome.runtime.sendMessage({ type: 'TIMER_STARTED', state }).catch(() => {});
-        notifyContentScript();
     }
 
     function pause() {
@@ -327,7 +326,6 @@ const TimerActions = (() => {
         TimerInterval.stop();
         TimerUIModule.render();
         chrome.runtime.sendMessage({ type: 'TIMER_PAUSED', state }).catch(() => {});
-        notifyContentScript();
     }
 
     function reset() {
@@ -337,7 +335,6 @@ const TimerActions = (() => {
         TimerModule.saveTimerState(TimerModule.getState());
         TimerUIModule.render();
         chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: TimerModule.getState() }).catch(() => {});
-        notifyContentScript();
     }
 
     function finish() {
@@ -347,7 +344,6 @@ const TimerActions = (() => {
         TimerModule.saveTimerState(state);
         TimerUIModule.render();
         chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state }).catch(() => {});
-        notifyContentScript();
     }
 
     return { start, pause, reset, finish };
@@ -360,7 +356,8 @@ const TimerActions = (() => {
 const TimerInterval = (() => {
     function start() {
         stop();
-        const id = setInterval(tickTimer, 500);
+        // 1000ms is sufficient for a timer display; reduces UI thread pressure vs 500ms
+        const id = setInterval(tickTimer, 1000);
         TimerModule.setIntervalId(id);
     }
 
@@ -389,24 +386,7 @@ const TimerInterval = (() => {
                 return;
             }
 
-            const milestones = state.notifiedMilestones || [];
-            
-            if (!milestones.includes('10min') && msLeft <= 600000 && state.durationMs >= 600000) {
-                state.notifiedMilestones = [...milestones, '10min'];
-                TimerModule.setState(state);
-                TimerModule.saveTimerState(state);
-                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY', title: '10 Minutes Left', message: 'Keep pushing, you are doing great!' }).catch(() => {});
-            } else if (!milestones.includes('5min') && msLeft <= 300000 && state.durationMs >= 300000) {
-                state.notifiedMilestones = [...milestones, '5min'];
-                TimerModule.setState(state);
-                TimerModule.saveTimerState(state);
-                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY', title: '5 Minutes Left', message: 'Focus in — finalize your logic.' }).catch(() => {});
-            } else if (!milestones.includes('1min') && msLeft <= 60000 && state.durationMs >= 60000) {
-                state.notifiedMilestones = [...milestones, '1min'];
-                TimerModule.setState(state);
-                TimerModule.saveTimerState(state);
-                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY', title: '1 Minute Left', message: 'Almost there — wrap up your solution!' }).catch(() => {});
-            }
+
         } else {
             const elapsed = state.elapsed + (Date.now() - state.lastStarted);
             const display = document.getElementById('timer-display');
@@ -456,28 +436,42 @@ const ContestHelpers = (() => {
 const AtCoderParser = (() => {
     function parse(html) {
         if (!html) return [];
+
+        // Parse the HTML string into a real DOM so we can use proper selectors
+        // instead of fragile regex patterns that break on HTML structure changes.
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const table = doc.querySelector('#contest-table-upcoming table');
+        if (!table) return [];
+
+        const rows = table.querySelectorAll('tbody tr');
         const contests = [];
-        const tableMatch = html.match(/id="contest-table-upcoming"[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/);
-        if (!tableMatch) return [];
-        const tbody = tableMatch[1];
-        const rowRegex = /<tr>([\s\S]*?)<\/tr>/g;
-        let rowMatch;
-        while ((rowMatch = rowRegex.exec(tbody)) !== null) {
-            const row = rowMatch[1];
-            const allLinks = [...row.matchAll(/<a href="(\/contests\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/g)];
-            if (!allLinks.length) continue;
-            const lastLink = allLinks[allLinks.length - 1];
-            const contestPath = lastLink[1];
-            const contestName = lastLink[2].trim();
-            const timeMatch = row.match(/<time[^>]*>([^<]*)<\/time>/);
-            if (!timeMatch) continue;
-            const startTimeStr = timeMatch[1].trim();
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 3) return;
+
+            // Contest name: the last <a href="/contests/..."> inside the first cell.
+            // AtCoder sometimes includes extra links (rating predictors, etc.) before
+            // the actual contest name; we want the last one.
+            const links = cells[0].querySelectorAll('a[href^="/contests/"]');
+            if (!links.length) return;
+            const lastLink = links[links.length - 1];
+            const contestPath = lastLink.getAttribute('href');
+            const contestName = lastLink.textContent.trim();
+
+            // Start time from <time> element (datetime attribute preferred)
+            const timeEl = cells[1].querySelector('time');
+            if (!timeEl) return;
+            const startTimeStr = timeEl.getAttribute('datetime') || timeEl.textContent.trim();
+            // AtCoder uses format "2024-06-01 12:00:00+09:00" — replace space with T for ISO
             const startTime = new Date(startTimeStr.replace(' ', 'T'));
-            if (Number.isNaN(startTime.getTime())) continue;
-            const tdMatches = [...row.matchAll(/<td[^>]*class="text-center"[^>]*>([\s\S]*?)<\/td>/g)];
-            const durationStr = tdMatches[1] ? tdMatches[1][1].trim() : '01:30';
+            if (Number.isNaN(startTime.getTime())) return;
+
+            // Duration from the third cell, e.g. "01:30"
+            const durationStr = cells[2].textContent.trim();
             const [dh = 0, dm = 0] = durationStr.split(':').map(Number);
             const durationMinutes = Number.isFinite(dh) && Number.isFinite(dm) ? dh * 60 + dm : 90;
+
             contests.push({
                 name: contestName,
                 url: `https://atcoder.jp${contestPath}`,
@@ -486,7 +480,8 @@ const AtCoderParser = (() => {
                 start_time: startTime.toISOString(),
                 duration: durationMinutes
             });
-        }
+        });
+
         return contests;
     }
 
@@ -960,6 +955,7 @@ const ReminderSettingsModule = (() => {
             ff_reminders_enabled: true,
             ff_reminder_intervals: DEFAULT_REMINDER_INTERVALS
         });
+        
         const remindersEnabled = ff_reminders_enabled !== false;
         reminderToggle.checked = remindersEnabled;
         document.getElementById('reminder-section').style.display = remindersEnabled ? 'block' : 'none';
@@ -971,17 +967,19 @@ const ReminderSettingsModule = (() => {
             chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled }).catch(() => {});
         });
 
-        const editBtn = document.getElementById('edit-reminders');
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                const options = document.querySelectorAll('.reminder-item');
+        const options = document.querySelectorAll('.reminder-item');
+        options.forEach(opt => {
+            const val = parseInt(opt.value, 10);
+            opt.checked = ff_reminder_intervals.includes(val);
+            
+            opt.addEventListener('change', () => {
                 const newIntervals = Array.from(options)
-                    .filter(opt => opt.checked)
-                    .map(opt => parseInt(opt.value, 10));
+                    .filter(o => o.checked)
+                    .map(o => parseInt(o.value, 10));
                 chrome.storage.local.set({ ff_reminder_intervals: newIntervals });
                 chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled: reminderToggle.checked }).catch(() => {});
             });
-        }
+        });
     }
 
     return { init };

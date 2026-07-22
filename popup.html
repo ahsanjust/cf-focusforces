@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,10 +43,6 @@
           <span class="dot-color" style="background: linear-gradient(135deg, #4338ca, #818cf8)"></span>
           <span class="dot-label">Default</span>
         </button>
-        <button class="theme-dot" data-theme="light" role="radio" aria-checked="false" title="Light">
-          <span class="dot-color" style="background: linear-gradient(135deg, #c0c8d4, #f0f2f5)"></span>
-          <span class="dot-label">Light</span>
-        </button>
         <button class="theme-dot" data-theme="dark" role="radio" aria-checked="false" title="Dark">
           <span class="dot-color" style="background: linear-gradient(135deg, #0e0e1a, #282842)"></span>
           <span class="dot-label">Dark</span>
@@ -54,14 +50,6 @@
         <button class="theme-dot" data-theme="amoled" role="radio" aria-checked="false" title="AMOLED">
           <span class="dot-color dot-amoled"></span>
           <span class="dot-label">AMOLED</span>
-        </button>
-        <button class="theme-dot" data-theme="blue" role="radio" aria-checked="false" title="Blue">
-          <span class="dot-color" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6)"></span>
-          <span class="dot-label">Blue</span>
-        </button>
-        <button class="theme-dot" data-theme="minimal" role="radio" aria-checked="false" title="Minimal">
-          <span class="dot-color" style="background: linear-gradient(135deg, #1a1a1a, #555555)"></span>
-          <span class="dot-label">Minimal</span>
         </button>
         <button class="theme-dot" data-theme="contrast" role="radio" aria-checked="false" title="High Contrast">
           <span class="dot-color" style="background: linear-gradient(135deg, #422006, #fde68a)"></span>
@@ -102,28 +90,39 @@
       </div>
       <div id="reminder-section" class="reminder-section" style="display: none;">
         <div class="reminder-header">
-          <span class="reminder-title">Reminder Times</span>
-          <button type="button" class="save-btn" id="edit-reminders">Save</button>
+          <span class="reminder-title">Notify me before:</span>
         </div>
         <div class="reminder-chips" id="reminder-options">
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="86400" checked>
+            <input type="checkbox" class="reminder-item" value="86400">
             <span>1 Day</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="3600" checked>
+            <input type="checkbox" class="reminder-item" value="43200">
+            <span>12 Hours</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="reminder-item" value="18000">
+            <span>5 Hours</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="reminder-item" value="7200">
+            <span>2 Hours</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="reminder-item" value="3600">
             <span>1 Hour</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="1800" checked>
+            <input type="checkbox" class="reminder-item" value="1800">
             <span>30 Min</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="600" checked>
+            <input type="checkbox" class="reminder-item" value="600">
             <span>10 Min</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="300" checked>
+            <input type="checkbox" class="reminder-item" value="300">
             <span>5 Min</span>
           </label>
         </div>

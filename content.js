@@ -6,29 +6,47 @@
 (function() {
     'use strict';
 
+    // ── Early guard: if chrome APIs are unavailable (e.g. extension reloaded ──
+    // while this content script is still running), bail out immediately to
+    // prevent synchronous crashes on every chrome.* call.
+    if (!chrome?.storage?.local) {
+        console.warn('FocusForces: chrome.storage API unavailable — extension context may have been invalidated. Reload the page to re-activate.');
+        return;
+    }
+
+    // ── Synchronous Theme Init ──────────────────────────
+    // Prevent FOUC by reading the theme synchronously from localStorage
+    // immediately as the content script runs at document_start.
+    try {
+        const syncTheme = localStorage.getItem('ff_theme');
+        if (syncTheme && syncTheme !== 'default') {
+            document.documentElement.setAttribute('data-ff-theme', syncTheme);
+        }
+    } catch (_) {}
+
     // ── Constants & Config ─────────────────────────────
+    const IS_CF = window.location.hostname.includes('codeforces.com');
     const CONFIG = {
-        ZEN_SELECTORS: [
+        ZEN_SELECTORS: IS_CF ? [
             '.community-stats-box',
             '.roundbox.menu-box:not(:first-child)',
             '#header > div:first-child',
             '.news-item',
             '.footer'
-        ],
+        ] : [],
         PROBLEMS_FETCH_TIMEOUT_MS: 15000,
         CONTEST_STANDINGS_TIMEOUT_MS: 5000,
         TAGS_POLL_INTERVAL_MS: 300,
-        TAGS_POLL_MAX_MS: 8000,
-        TIMER_STORAGE_KEY: 'ff_timer_state'
+        TAGS_POLL_MAX_MS: 8000
     };
 
     // ── State ──────────────────────────────────────────
     let zenModeEnabled = false;
     let problemCachePromise = null;
     let cachedAudioCtx = null;
-    let currentTheme = 'light';
+    let currentTheme = 'default';
 
-    // ── Audio ──────────────────────────────────────────
+    // ── Audio (for notification sounds triggered by background) ──
     const notifySound = new Audio(chrome.runtime.getURL('assets/notify.wav'));
 
     const getAudioContext = () => {
@@ -60,19 +78,6 @@
         } catch (_) {}
     };
 
-    const safeSendNotification = async (title, message) => {
-        try {
-            await chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY', title, message });
-        } catch (e) {
-            console.debug('Timer notify sendMessage failed:', e);
-        }
-        try {
-            await playNotificationSound();
-        } catch (e) {
-            console.debug('Timer notify sound failed:', e);
-        }
-    };
-
     // ── Theme ──────────────────────────────────────────
     // Apply (or clear) the theme marker on BOTH <html> and <body> so the
     // Codeforces site theme (cf-theme.css) is active on EVERY page — not
@@ -89,25 +94,20 @@
     }
 
     function loadTheme() {
-        chrome.storage.local.get('ff_theme').then(({ ff_theme }) => {
-            currentTheme = ff_theme || 'light';
-            applyThemeToElements(currentTheme);
-            applyThemeAttr(currentTheme);
-        }).catch(() => {
-            currentTheme = 'light';
-            applyThemeAttr(currentTheme);
-        });
+        try {
+            chrome.storage.local.get('ff_theme').then(({ ff_theme }) => {
+                applyThemeFromSource(ff_theme);
+            }).catch(() => {
+                applyThemeFromSource();
+            });
+        } catch (e) {
+            console.debug('FocusForces: failed to load theme', e);
+        }
     }
 
     function applyThemeToElements(theme) {
-        const timerCard = document.getElementById('ff-timer-card');
         const scoutCard = document.getElementById('ff-scout-card');
-        if (timerCard) timerCard.setAttribute('data-theme', theme);
         if (scoutCard) scoutCard.setAttribute('data-theme', theme);
-    }
-
-    function injectCFTheme(theme) {
-        applyThemeAttr(theme);
     }
 
     // Re-apply the marker if it ever goes missing (e.g. Codeforces replaces
@@ -120,30 +120,70 @@
         if (document.body && document.body.getAttribute('data-ff-theme') !== expected) {
             applyThemeAttr(currentTheme);
         }
+
+        // Clean up Codeforces' aggressive inline !important styles on table cells & rows
+        if (currentTheme !== 'default' && IS_CF) {
+            document.querySelectorAll('table:not(.ttypography table) tr[style*="background-color"], table:not(.ttypography table) td[style*="background-color"]').forEach(el => {
+                const styleStr = el.getAttribute('style') || '';
+                if (styleStr.includes('!important')) {
+                    el.style.removeProperty('background-color');
+                }
+            });
+
+            // Strip sliding-door sprite backgrounds from active/back tabs in profile nav.
+            document.querySelectorAll(
+                '.second-level-menu-list li.back, .second-level-menu-list li.selectedLava, ' +
+                '.menu-list li.back, .menu-list li.selectedLava'
+            ).forEach(li => {
+                [li, ...li.querySelectorAll('*')].forEach(el => {
+                    el.style.setProperty('background-image', 'none', 'important');
+                    if (el.tagName === 'A' || el.tagName === 'LI') {
+                        el.style.setProperty('background-color', 'transparent', 'important');
+                    }
+                });
+            });
+        }
     }
 
     // Programmatically inject cf-theme.css as a <style> tag at the end of <body>
     // so it has the highest cascade priority over CF's own stylesheets and any
     // SPA-injected styles.
     let ffStyleEl = null;
+    let ffCachedCSS = null;
 
-    async function injectThemeCSS() {
+    // Synchronous injection from cache — prevents FOUC on SPA navigations.
+    // Falls back to async fetch-and-inject on first call.
+    function injectThemeCSS() {
+        if (ffCachedCSS) {
+            applyStyleTag(ffCachedCSS);
+        } else {
+            injectThemeCSSAsync();
+        }
+    }
+
+    function applyStyleTag(css) {
+        if (ffStyleEl) ffStyleEl.remove();
+        ffStyleEl = document.createElement('style');
+        ffStyleEl.id = 'ff-theme-css';
+        ffStyleEl.textContent = css;
+        (document.body || document.documentElement).appendChild(ffStyleEl);
+    }
+
+    const THEME_CSS_MAP = {
+        'codeforces.com': 'cf-theme.css',
+        'atcoder.jp': 'atcoder-theme.css',
+        'codechef.com': 'codechef-theme.css'
+    };
+
+    async function injectThemeCSSAsync() {
         try {
-            const url = chrome.runtime.getURL('cf-theme.css');
+            const hostname = window.location.hostname.replace('www.', '');
+            const cssFile = THEME_CSS_MAP[hostname] || 'cf-theme.css';
+            
+            const url = chrome.runtime.getURL(cssFile);
             const res = await fetch(url);
-            const css = await res.text();
-
-            if (ffStyleEl) ffStyleEl.remove();
-
-            ffStyleEl = document.createElement('style');
-            ffStyleEl.id = 'ff-theme-css';
-            ffStyleEl.textContent = css;
-
-            if (document.body) {
-                document.body.appendChild(ffStyleEl);
-            } else {
-                document.documentElement.appendChild(ffStyleEl);
-            }
+            ffCachedCSS = await res.text();
+            applyStyleTag(ffCachedCSS);
         } catch (e) {
             console.warn('FocusForces: could not inject theme CSS', e);
         }
@@ -182,18 +222,67 @@
         injectThemeCSS();
     });
 
+    // ── Consolidated Message Dispatcher ─────────────────
     chrome.runtime.onMessage.addListener(req => {
-        if (req.type === 'THEME_CHANGED') {
-            currentTheme = req.theme;
-            applyThemeToElements(currentTheme);
-            injectCFTheme(currentTheme);
-            injectThemeCSS();
+        switch (req.type) {
+            case 'THEME_CHANGED':
+                applyThemeFromSource(req.theme);
+                break;
+
+            case 'TOGGLE_ZEN':
+                if (IS_CF) {
+                    zenModeEnabled = !!req.enabled;
+                    applyZenMode(zenModeEnabled);
+                }
+                break;
+
+            case 'PLAY_TIMER_SOUND':
+                playNotificationSound();
+                break;
         }
     });
+
+    // ── Storage Change Watcher (reliable theme sync) ─────
+    // chrome.storage.onChanged fires in ALL extension contexts whenever
+    // storage values change. This provides a more reliable path for theme
+    // sync compared to chrome.runtime messaging, which can fail silently
+    // (e.g., when tab queries return no results).
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.ff_theme) {
+            applyThemeFromSource(changes.ff_theme.newValue);
+        }
+    });
+
+    // ── Unified theme apply function ────────────────────
+    // Called by both the message dispatcher and storage watcher so the
+    // apply logic is defined once.
+    function applyThemeFromSource(theme) {
+        currentTheme = theme || 'default';
+        if (currentTheme !== 'default') {
+            try { localStorage.setItem('ff_theme', currentTheme); } catch (_) {}
+        } else {
+            try { localStorage.removeItem('ff_theme'); } catch (_) {}
+        }
+        applyThemeToElements(currentTheme);
+        applyThemeAttr(currentTheme);
+        if (currentTheme !== 'default') {
+            injectThemeCSS();
+        } else if (ffStyleEl) {
+            ffStyleEl.remove();
+            ffStyleEl = null;
+        }
+    }
 
     loadTheme();
     // Backup apply in case storage resolves after the first paint.
     ensureThemeApplied();
+
+    // Delayed cleanup to catch LavaLamp jQuery animations and other late JS
+    // that Codeforces runs after DOMContentLoaded (e.g. sliding-door tab sprites).
+    window.addEventListener('load', () => {
+        setTimeout(ensureThemeApplied, 150);
+        setTimeout(ensureThemeApplied, 600);
+    });
 
     // ── API Layer ─────────────────────────────────────
     async function fetchProblemFromApi(contestId, index, cancelSignal) {
@@ -284,7 +373,6 @@
             sidebar.querySelectorAll('.sidebox').forEach(box => {
                 const txt = box.textContent.toLowerCase();
                 const keep = txt.includes('problem tags') ||
-                    txt.includes('ff timer') ||
                     txt.includes('ff scout');
                 box.classList.toggle('ff-zen-hidden', enabled && !keep);
             });
@@ -292,17 +380,14 @@
     }
 
     (async () => {
-        const { zenMode } = await chrome.storage.local.get('zenMode');
-        zenModeEnabled = !!zenMode;
-        if (zenModeEnabled) applyZenMode(true);
-    })();
-
-    chrome.runtime.onMessage.addListener(req => {
-        if (req.type === 'TOGGLE_ZEN') {
-            zenModeEnabled = !!req.enabled;
-            applyZenMode(zenModeEnabled);
+        try {
+            const { zenMode } = await chrome.storage.local.get('zenMode');
+            zenModeEnabled = !!zenMode;
+            if (zenModeEnabled) applyZenMode(true);
+        } catch (e) {
+            console.debug('FocusForces: failed to load zen mode state', e);
         }
-    });
+    })();
 
     // ── Tag Toggler (Scout) ─────────────────────────
     function initTagToggler() {
@@ -551,214 +636,17 @@
         loadTagsFromApi();
     }
 
-    // ── Timer (Content Script Sidebar) ──────────────────
-    function initTimer() {
-        const sidebar = document.getElementById('sidebar');
-        if (!sidebar) return;
-        if (document.getElementById('cf-timer-display')) return;
-
-        const timerCard = document.createElement('div');
-        timerCard.className = 'roundbox sidebox';
-        timerCard.id = 'ff-timer-card';
-        timerCard.setAttribute('data-theme', currentTheme);
-        timerCard.innerHTML = `
-            <div class="roundbox-lt">&nbsp;</div>
-            <div class="roundbox-rt">&nbsp;</div>
-            <div class="caption titled">&rarr; Timer
-                <div class="top-links"></div>
-            </div>
-            <div class="ff-timer-content">
-                <div class="ff-timer-display" id="cf-timer-display">00:00:00</div>
-                <div class="ff-timer-inputs">
-                    <label>
-                        <input type="number" id="cf-timer-mm" min="0" max="999" placeholder="MM" value="25"> m
-                    </label>
-                    <label>
-                        <input type="number" id="cf-timer-ss" min="0" max="59" placeholder="SS" value="0"> s
-                    </label>
-                </div>
-                <div class="ff-timer-controls">
-                    <button type="button" class="ff-timer-btn primary" id="cf-timer-action">Start</button>
-                    <button type="button" class="ff-timer-btn" id="cf-timer-reset">Reset</button>
-                </div>
-            </div>
-        `;
-        sidebar.appendChild(timerCard);
-
-        const display = document.getElementById('cf-timer-display');
-        const mmInput = document.getElementById('cf-timer-mm');
-        const ssInput = document.getElementById('cf-timer-ss');
-        const actionBtn = document.getElementById('cf-timer-action');
-        const resetBtn = document.getElementById('cf-timer-reset');
-
-        let state;
-        let intervalId = null;
-
-        const loadTimerState = async () => {
-            try {
-                const { [CONFIG.TIMER_STORAGE_KEY]: stored } = await chrome.storage.local.get(CONFIG.TIMER_STORAGE_KEY);
-                if (!stored) return defaultTimerState();
-                return { ...defaultTimerState(), ...stored };
-            } catch {
-                return defaultTimerState();
-            }
-        };
-
-        const saveState = () => {
-            chrome.storage.local.set({ [CONFIG.TIMER_STORAGE_KEY]: state });
-        };
-
-        const renderUI = () => {
-            const isActive = state.status === 'RUNNING' || state.status === 'PAUSED';
-            mmInput.disabled = isActive;
-            ssInput.disabled = isActive;
-
-            actionBtn.classList.remove('primary', 'pausing');
-
-            if (state.status === 'RUNNING') {
-                actionBtn.textContent = 'Pause';
-                actionBtn.classList.add('pausing');
-                const msLeft = Math.max(0, state.endTime - Date.now());
-                display.textContent = formatTime(msLeft);
-                display.classList.toggle('danger', isDanger(msLeft));
-            } else if (state.status === 'PAUSED') {
-                actionBtn.textContent = 'Resume';
-                actionBtn.classList.add('primary');
-                display.textContent = formatTime(state.remainingMs);
-                display.classList.toggle('danger', isDanger(state.remainingMs));
-            } else {
-                actionBtn.textContent = 'Start';
-                actionBtn.classList.add('primary');
-                display.textContent = '00:00:00';
-                display.classList.remove('danger');
-            }
-        };
-
-        const finishTimer = () => {
-            clearInterval(intervalId);
-            intervalId = null;
-            state.status = 'STOPPED';
-            state.endTime = 0;
-            state.remainingMs = 0;
-            saveState();
-            renderUI();
-            safeSendNotification('Time is Up!', 'Your focus session concluded.');
-        };
-
-        const tick = () => {
-            if (state.status !== 'RUNNING') return;
-
-            const now = Date.now();
-            const result = tickState(state, now);
-            const prevNotified = [...(state.notifiedMilestones || [])];
-            state = result.state;
-
-            const msLeft = Math.max(0, state.endTime - now);
-            display.textContent = formatTime(msLeft);
-
-            for (const action of result.actions) {
-                if (action === 'DANGER_ON') display.classList.add('danger');
-                else if (action === 'DANGER_OFF') display.classList.remove('danger');
-                else if (action === 'NOTIFY_10') {
-                    safeSendNotification('10 Minutes Left', 'Keep pushing, you are doing great!');
-                } else if (action === 'NOTIFY_5') {
-                    safeSendNotification('5 Minutes Left', 'Focus in — finalize your logic.');
-                } else if (action === 'FINISHED') {
-                    finishTimer();
-                    return;
-                }
-            }
-
-            if (JSON.stringify(state.notifiedMilestones) !== JSON.stringify(prevNotified)) {
-                saveState();
-            }
-        };
-
-        const startTimer = () => {
-            if (state.status === 'STOPPED') {
-                state.remainingMs = computeRemainingMs(mmInput.value, ssInput.value);
-                state.notifiedMilestones = [];
-                state._dangerActive = false;
-            }
-            if (state.remainingMs <= 0) return;
-            state.status = 'RUNNING';
-            state.durationMs = state.durationMs || state.remainingMs;
-            state.endTime = Date.now() + state.remainingMs;
-            saveState();
-            renderUI();
-            if (!intervalId) intervalId = setInterval(tick, 1000);
-
-            // Notify background to set up alarms
-            chrome.runtime.sendMessage({ type: 'TIMER_STARTED', state }).catch(() => {});
-        };
-
-        const triggerAction = () => {
-            if (state.status === 'RUNNING') {
-                if (Date.now() >= state.endTime) {
-                    finishTimer();
-                    return;
-                }
-                state.remainingMs = Math.max(0, state.endTime - Date.now());
-                state.status = 'PAUSED';
-                saveState();
-                clearInterval(intervalId);
-                intervalId = null;
-                chrome.runtime.sendMessage({ type: 'TIMER_PAUSED', state }).catch(() => {});
-            } else {
-                startTimer();
-            }
-            renderUI();
-        };
-
-        actionBtn.addEventListener('click', triggerAction);
-
-        mmInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerAction(); });
-        ssInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerAction(); });
-
-        resetBtn.addEventListener('click', () => {
-            state = { ...defaultTimerState() };
-            saveState();
-            renderUI();
-            clearInterval(intervalId);
-            intervalId = null;
-            chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state }).catch(() => {});
-        });
-
-        // Listen for state updates from popup
-        chrome.runtime.onMessage.addListener(req => {
-            if (req.type === 'TIMER_STATE_CHANGED') {
-                loadTimerState().then(newState => {
-                    state = newState;
-                    if (state.status === 'RUNNING') {
-                        if (!intervalId) intervalId = setInterval(tick, 1000);
-                    } else {
-                        clearInterval(intervalId);
-                        intervalId = null;
-                    }
-                    renderUI();
-                });
-            }
-        });
-
-        // Initialize
-        loadTimerState().then(async loadedState => {
-            state = loadedState;
-            if (state.status === 'RUNNING') {
-                if (Date.now() >= state.endTime) {
-                    finishTimer();
-                } else {
-                    state.durationMs = state.durationMs || state.remainingMs;
-                    intervalId = setInterval(tick, 1000);
-                    tick();
-                }
-            } else if (state.status === 'PAUSED') {
-                display.textContent = formatTime(state.remainingMs);
-            }
-            renderUI();
-        });
-    }
-
     // ── Init ───────────────────────────────────────
-    initTagToggler();
-    initTimer();
+    // initTagToggler must wait for DOMContentLoaded because it queries
+    // #sidebar and other DOM elements that don't exist at document_start.
+    function startScout() {
+        if (IS_CF) {
+            initTagToggler();
+        }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startScout);
+    } else {
+        startScout();
+    }
 })();

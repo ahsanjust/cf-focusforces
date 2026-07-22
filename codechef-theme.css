@@ -1,0 +1,253 @@
+/* FocusForces – CodeChef Native Theme Overrides (Legacy + MUI) */
+
+/* ════════════════════════════════════════════════════
+   DARK THEME
+   ════════════════════════════════════════════════════ */
+
+[data-ff-theme="dark"] {
+  --ff-card-bg: #1e1e1e;
+  --ff-card-bd: #333333;
+  --ff-fg: #f5f5f5;
+  --ff-muted: #9e9e9e;
+  --ff-input-bg: #2d2d2d;
+  --ff-bg: #121212;
+  --ff-link: #90caf9;
+  --ff-link-hover: #e3f2fd;
+  --ff-primary: #1976d2;
+  --ff-primary-hover: #1565c0;
+  color-scheme: dark;
+}
+
+[data-ff-theme="dark"] body, 
+[data-ff-theme="dark"] #root {
+  background-color: var(--ff-bg) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* --- Legacy Pages (.m-*) --- */
+[data-ff-theme="dark"] .m-header-one, 
+[data-ff-theme="dark"] .l-header, 
+[data-ff-theme="dark"] .desktopNavigation, 
+[data-ff-theme="dark"] .headerNavigation {
+  background-color: var(--ff-card-bg) !important;
+  border-bottom: 1px solid var(--ff-card-bd) !important;
+}
+[data-ff-theme="dark"] .navigationItem, 
+[data-ff-theme="dark"] .navigationLink {
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] section.firstSection, 
+[data-ff-theme="dark"] section.secondSection, 
+[data-ff-theme="dark"] section.thirdSection, 
+[data-ff-theme="dark"] section.fourthSection, 
+[data-ff-theme="dark"] section.fifthSection, 
+[data-ff-theme="dark"] section.sixthSection {
+  background-color: var(--ff-bg) !important;
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] .roadmapCardContainer, 
+[data-ff-theme="dark"] .featureCard, 
+[data-ff-theme="dark"] .testimonialCard {
+  background-color: var(--ff-card-bg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] .heading, 
+[data-ff-theme="dark"] .description {
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] footer {
+  background-color: var(--ff-card-bg) !important;
+  border-top: 1px solid var(--ff-card-bd) !important;
+  color: var(--ff-muted) !important;
+}
+
+/* --- React SPA Pages (MUI & Modern Structure) --- */
+[data-ff-theme="dark"] [class*="MuiBox-"],
+[data-ff-theme="dark"] [class*="MuiPaper-"],
+[data-ff-theme="dark"] .user-profile-container,
+[data-ff-theme="dark"] .profile-container,
+[data-ff-theme="dark"] .user-details-container,
+[data-ff-theme="dark"] .rating-data-section,
+[data-ff-theme="dark"] .rating-header,
+[data-ff-theme="dark"] .profile-root,
+[data-ff-theme="dark"] main.content,
+[data-ff-theme="dark"] .page-container {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  border-color: var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiTable-"], 
+[data-ff-theme="dark"] [class*="MuiTableCell-"], 
+[data-ff-theme="dark"] [class*="MuiTableRow-"] {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  border-color: var(--ff-card-bd) !important;
+}
+[data-ff-theme="dark"] [class*="MuiTableRow-"]:hover {
+  background-color: var(--ff-input-bg) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiButton-"] {
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] [class*="MuiButton-contained"] {
+  background-color: var(--ff-primary) !important;
+  color: #fff !important;
+}
+[data-ff-theme="dark"] [class*="MuiButton-contained"]:hover {
+  background-color: var(--ff-primary-hover) !important;
+}
+[data-ff-theme="dark"] [class*="MuiButton-outlined"] {
+  border-color: var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiTypography-"] {
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiChip-"] {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-fg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiTextField-"], 
+[data-ff-theme="dark"] [class*="MuiInputBase-"], 
+[data-ff-theme="dark"] [class*="MuiOutlinedInput-"] {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] [class*="MuiOutlinedInput-notchedOutline"] {
+  border-color: var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiSelect-"] {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiAppBar-"] {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  border-bottom: 1px solid var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiDrawer-"] {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  border-right: 1px solid var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiMenu-"],
+[data-ff-theme="dark"] [class*="MuiMenuItem-"] {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme="dark"] [class*="MuiMenuItem-"]:hover {
+  background-color: var(--ff-input-bg) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiDialog-"] [class*="MuiPaper-"] {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiAlert-"] {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-fg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+}
+
+[data-ff-theme="dark"] [class*="MuiSvgIcon-"] {
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme="dark"] a {
+  color: var(--ff-link) !important;
+}
+[data-ff-theme="dark"] a:hover {
+  color: var(--ff-link-hover) !important;
+}
+
+
+/* ════════════════════════════════════════════════════
+   AMOLED THEME
+   ════════════════════════════════════════════════════ */
+
+[data-ff-theme="amoled"] {
+  --ff-card-bg: #000000;
+  --ff-card-bd: #1a1a2e;
+  --ff-fg: #d4d4d8;
+  --ff-muted: #71717a;
+  --ff-input-bg: #09090b;
+  --ff-bg: #000000;
+  --ff-link: #818cf8;
+  --ff-link-hover: #a5b4fc;
+  --ff-primary: #4f46e5;
+  --ff-primary-hover: #4338ca;
+  color-scheme: dark;
+}
+
+[data-ff-theme="amoled"] body, [data-ff-theme="amoled"] #root { background-color: var(--ff-bg) !important; color: var(--ff-fg) !important; }
+
+/* AMOLED Legacy */
+[data-ff-theme="amoled"] .m-header-one, [data-ff-theme="amoled"] .l-header, [data-ff-theme="amoled"] .desktopNavigation, [data-ff-theme="amoled"] .headerNavigation, [data-ff-theme="amoled"] .roadmapCardContainer, [data-ff-theme="amoled"] .featureCard, [data-ff-theme="amoled"] .testimonialCard, [data-ff-theme="amoled"] footer { background-color: var(--ff-card-bg) !important; border-color: var(--ff-card-bd) !important; color: var(--ff-fg) !important; }
+[data-ff-theme="amoled"] section.firstSection, [data-ff-theme="amoled"] section.secondSection, [data-ff-theme="amoled"] section.thirdSection, [data-ff-theme="amoled"] section.fourthSection, [data-ff-theme="amoled"] section.fifthSection, [data-ff-theme="amoled"] section.sixthSection { background-color: var(--ff-bg) !important; color: var(--ff-fg) !important; }
+[data-ff-theme="amoled"] .navigationItem, [data-ff-theme="amoled"] .navigationLink, [data-ff-theme="amoled"] .heading, [data-ff-theme="amoled"] .description { color: var(--ff-fg) !important; }
+
+/* AMOLED MUI & Profile */
+[data-ff-theme="amoled"] [class*="MuiBox-"], [data-ff-theme="amoled"] [class*="MuiPaper-"], [data-ff-theme="amoled"] .user-profile-container, [data-ff-theme="amoled"] .profile-container, [data-ff-theme="amoled"] .user-details-container, [data-ff-theme="amoled"] .rating-data-section, [data-ff-theme="amoled"] .rating-header, [data-ff-theme="amoled"] .profile-root, [data-ff-theme="amoled"] main.content, [data-ff-theme="amoled"] .page-container, [data-ff-theme="amoled"] [class*="MuiTable-"], [data-ff-theme="amoled"] [class*="MuiTableCell-"], [data-ff-theme="amoled"] [class*="MuiTableRow-"], [data-ff-theme="amoled"] [class*="MuiAppBar-"], [data-ff-theme="amoled"] [class*="MuiDrawer-"], [data-ff-theme="amoled"] [class*="MuiMenu-"], [data-ff-theme="amoled"] [class*="MuiMenuItem-"] { background-color: var(--ff-card-bg) !important; color: var(--ff-fg) !important; border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="amoled"] [class*="MuiTableRow-"]:hover, [data-ff-theme="amoled"] [class*="MuiMenuItem-"]:hover { background-color: var(--ff-input-bg) !important; }
+[data-ff-theme="amoled"] [class*="MuiButton-"] { color: var(--ff-fg) !important; }
+[data-ff-theme="amoled"] [class*="MuiButton-contained"] { background-color: var(--ff-primary) !important; color: #fff !important; }
+[data-ff-theme="amoled"] [class*="MuiButton-contained"]:hover { background-color: var(--ff-primary-hover) !important; }
+[data-ff-theme="amoled"] [class*="MuiButton-outlined"] { border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="amoled"] [class*="MuiTypography-"], [data-ff-theme="amoled"] [class*="MuiSvgIcon-"] { color: var(--ff-fg) !important; }
+[data-ff-theme="amoled"] [class*="MuiChip-"], [data-ff-theme="amoled"] [class*="MuiTextField-"], [data-ff-theme="amoled"] [class*="MuiInputBase-"], [data-ff-theme="amoled"] [class*="MuiOutlinedInput-"], [data-ff-theme="amoled"] [class*="MuiSelect-"], [data-ff-theme="amoled"] [class*="MuiAlert-"] { background-color: var(--ff-input-bg) !important; color: var(--ff-fg) !important; border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="amoled"] [class*="MuiOutlinedInput-notchedOutline"] { border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="amoled"] [class*="MuiDialog-"] [class*="MuiPaper-"] { background-color: var(--ff-card-bg) !important; color: var(--ff-fg) !important; border: 1px solid var(--ff-card-bd) !important; }
+[data-ff-theme="amoled"] a { color: var(--ff-link) !important; }
+[data-ff-theme="amoled"] a:hover { color: var(--ff-link-hover) !important; }
+
+
+/* ════════════════════════════════════════════════════
+   HIGH CONTRAST THEME
+   ════════════════════════════════════════════════════ */
+
+[data-ff-theme="high-contrast"] {
+  --ff-card-bg: #000000;
+  --ff-card-bd: #ffffff;
+  --ff-fg: #ffffff;
+  --ff-muted: #bbbbbb;
+  --ff-input-bg: #111111;
+  --ff-bg: #000000;
+  --ff-link: #4facfe;
+  --ff-link-hover: #00f2fe;
+  --ff-primary: #1976d2;
+  --ff-primary-hover: #00f2fe;
+  color-scheme: dark;
+}
+
+[data-ff-theme="high-contrast"] body, [data-ff-theme="high-contrast"] #root { background-color: var(--ff-bg) !important; color: var(--ff-fg) !important; }
+
+/* High Contrast Legacy */
+[data-ff-theme="high-contrast"] .m-header-one, [data-ff-theme="high-contrast"] .l-header, [data-ff-theme="high-contrast"] .desktopNavigation, [data-ff-theme="high-contrast"] .headerNavigation, [data-ff-theme="high-contrast"] .roadmapCardContainer, [data-ff-theme="high-contrast"] .featureCard, [data-ff-theme="high-contrast"] .testimonialCard, [data-ff-theme="high-contrast"] footer { background-color: var(--ff-card-bg) !important; border: 1px solid var(--ff-card-bd) !important; color: var(--ff-fg) !important; }
+[data-ff-theme="high-contrast"] section.firstSection, [data-ff-theme="high-contrast"] section.secondSection, [data-ff-theme="high-contrast"] section.thirdSection, [data-ff-theme="high-contrast"] section.fourthSection, [data-ff-theme="high-contrast"] section.fifthSection, [data-ff-theme="high-contrast"] section.sixthSection { background-color: var(--ff-bg) !important; color: var(--ff-fg) !important; }
+[data-ff-theme="high-contrast"] .navigationItem, [data-ff-theme="high-contrast"] .navigationLink, [data-ff-theme="high-contrast"] .heading, [data-ff-theme="high-contrast"] .description { color: var(--ff-fg) !important; }
+
+/* High Contrast MUI & Profile */
+[data-ff-theme="high-contrast"] [class*="MuiBox-"], [data-ff-theme="high-contrast"] [class*="MuiPaper-"], [data-ff-theme="high-contrast"] .user-profile-container, [data-ff-theme="high-contrast"] .profile-container, [data-ff-theme="high-contrast"] .user-details-container, [data-ff-theme="high-contrast"] .rating-data-section, [data-ff-theme="high-contrast"] .rating-header, [data-ff-theme="high-contrast"] .profile-root, [data-ff-theme="high-contrast"] main.content, [data-ff-theme="high-contrast"] .page-container, [data-ff-theme="high-contrast"] [class*="MuiTable-"], [data-ff-theme="high-contrast"] [class*="MuiTableCell-"], [data-ff-theme="high-contrast"] [class*="MuiTableRow-"], [data-ff-theme="high-contrast"] [class*="MuiAppBar-"], [data-ff-theme="high-contrast"] [class*="MuiDrawer-"], [data-ff-theme="high-contrast"] [class*="MuiMenu-"], [data-ff-theme="high-contrast"] [class*="MuiMenuItem-"] { background-color: var(--ff-card-bg) !important; color: var(--ff-fg) !important; border: 1px solid var(--ff-card-bd) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiTableRow-"]:hover, [data-ff-theme="high-contrast"] [class*="MuiMenuItem-"]:hover { background-color: var(--ff-input-bg) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiButton-"] { color: var(--ff-fg) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiButton-contained"] { background-color: var(--ff-primary) !important; color: #fff !important; }
+[data-ff-theme="high-contrast"] [class*="MuiButton-contained"]:hover { background-color: var(--ff-primary-hover) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiButton-outlined"] { border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiTypography-"], [data-ff-theme="high-contrast"] [class*="MuiSvgIcon-"] { color: var(--ff-fg) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiChip-"], [data-ff-theme="high-contrast"] [class*="MuiTextField-"], [data-ff-theme="high-contrast"] [class*="MuiInputBase-"], [data-ff-theme="high-contrast"] [class*="MuiOutlinedInput-"], [data-ff-theme="high-contrast"] [class*="MuiSelect-"], [data-ff-theme="high-contrast"] [class*="MuiAlert-"] { background-color: var(--ff-input-bg) !important; color: var(--ff-fg) !important; border: 1px solid var(--ff-card-bd) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiOutlinedInput-notchedOutline"] { border-color: var(--ff-card-bd) !important; }
+[data-ff-theme="high-contrast"] [class*="MuiDialog-"] [class*="MuiPaper-"] { background-color: var(--ff-card-bg) !important; color: var(--ff-fg) !important; border: 1px solid var(--ff-card-bd) !important; }
+[data-ff-theme="high-contrast"] a { color: var(--ff-link) !important; font-weight: bold !important; }
+[data-ff-theme="high-contrast"] a:hover { color: var(--ff-link-hover) !important; text-decoration: underline !important; }

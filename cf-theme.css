@@ -1,136 +1,11 @@
 /* FocusForces – Codeforces Website Theme Overrides  ·  v8 */
 
-/* ════════════════════════════════════════════════════
-   LIGHT THEME (default)
-   ════════════════════════════════════════════════════ */
-
-body[data-ff-theme="light"] {
-  --ff-card-bg: #ffffff;
-  --ff-card-bd: #e2e5ea;
-  --ff-fg: #111827;
-  --ff-muted: #6b7280;
-  --ff-input-bg: #f8f9fb;
-  background-color: #f0f2f5 !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] .roundbox,
-body[data-ff-theme="light"] .sidebox,
-body[data-ff-theme="light"] .formErrorDiv,
-body[data-ff-theme="light"] .ttypography {
-  background-color: #ffffff !important;
-  border-color: #e2e5ea !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] #header,
-body[data-ff-theme="light"] #footer,
-body[data-ff-theme="light"] .community-stats-box,
-body[data-ff-theme="light"] .news-item {
-  background-color: #ffffff !important;
-  border-color: #e2e5ea !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] a {
-  color: #6c5ce7 !important;
-}
-
-body[data-ff-theme="light"] a:hover {
-  color: #5a48d6 !important;
-}
-
-body[data-ff-theme="light"] input[type="text"],
-body[data-ff-theme="light"] input[type="password"],
-body[data-ff-theme="light"] input[type="number"],
-body[data-ff-theme="light"] input[type="search"],
-body[data-ff-theme="light"] input[type="email"],
-body[data-ff-theme="light"] input[type="url"],
-body[data-ff-theme="light"] input:not([type]),
-body[data-ff-theme="light"] textarea,
-body[data-ff-theme="light"] select {
-  background-color: #f8f9fb !important;
-  border-color: #d1d5db !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] ::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
-}
-
-body[data-ff-theme="light"] button,
-body[data-ff-theme="light"] input[type="submit"],
-body[data-ff-theme="light"] input[type="button"] {
-  background-color: #6c5ce7 !important;
-  border-color: #6c5ce7 !important;
-  color: #ffffff !important;
-}
-
-body[data-ff-theme="light"] button:hover,
-body[data-ff-theme="light"] input[type="submit"]:hover,
-body[data-ff-theme="light"] input[type="button"]:hover {
-  background-color: #5a48d6 !important;
-  border-color: #5a48d6 !important;
-}
-
-body[data-ff-theme="light"] .tab,
-body[data-ff-theme="light"] .tabs {
-  background-color: #eaecf2 !important;
-  border-color: #e2e5ea !important;
-}
-
-body[data-ff-theme="light"] .tab.active {
-  background-color: #ffffff !important;
-  color: #6c5ce7 !important;
-}
-
-body[data-ff-theme="light"] .datatable,
-body[data-ff-theme="light"] table {
-  background-color: #ffffff !important;
-  border-color: #e2e5ea !important;
-}
-
-body[data-ff-theme="light"] .datatable th,
-body[data-ff-theme="light"] table th {
-  background-color: #f0f2f5 !important;
-  border-color: #e2e5ea !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] .datatable td,
-body[data-ff-theme="light"] table td {
-  border-color: #e2e5ea !important;
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] .MathJax,
-body[data-ff-theme="light"] mjx-container,
-body[data-ff-theme="light"] mjx-math {
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] .MathJax_SVG text,
-body[data-ff-theme="light"] .MathJax_SVG use,
-body[data-ff-theme="light"] .MathJax svg text,
-body[data-ff-theme="light"] .MathJax svg use {
-  fill: #111827 !important;
-  stroke: none !important;
-}
-
-body[data-ff-theme="light"] .MathJax_Display {
-  color: #111827 !important;
-}
-
-body[data-ff-theme="light"] .MathJax *:not(svg):not(svg *) {
-  color: #111827 !important;
-}
 
 /* ════════════════════════════════════════════════════
    DARK THEME
    ════════════════════════════════════════════════════ */
 
-body[data-ff-theme="dark"] {
+[data-ff-theme="dark"] {
   --ff-card-bg: #171728;
   --ff-card-bd: #282842;
   --ff-fg: #e8e8f0;
@@ -140,195 +15,247 @@ body[data-ff-theme="dark"] {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .roundbox,
-body[data-ff-theme="dark"] .sidebox,
-body[data-ff-theme="dark"] .formErrorDiv,
-body[data-ff-theme="dark"] .ttypography {
+[data-ff-theme="dark"] .roundbox,
+[data-ff-theme="dark"] .sidebox,
+[data-ff-theme="dark"] .formErrorDiv,
+[data-ff-theme="dark"] .ttypography {
   background-color: #171728 !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] #header,
-body[data-ff-theme="dark"] #footer,
-body[data-ff-theme="dark"] .community-stats-box,
-body[data-ff-theme="dark"] .news-item {
+[data-ff-theme="dark"] #header,
+[data-ff-theme="dark"] #footer,
+[data-ff-theme="dark"] .community-stats-box,
+[data-ff-theme="dark"] .news-item {
   background-color: #171728 !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] #header table,
-body[data-ff-theme="dark"] #header td,
-body[data-ff-theme="dark"] #header .logo,
-body[data-ff-theme="dark"] #header .lang-chooser,
-body[data-ff-theme="dark"] #header > div,
-body[data-ff-theme="dark"] #header > div > a,
-body[data-ff-theme="dark"] #header > div > a img,
-body[data-ff-theme="dark"] #header > div > a div,
-body[data-ff-theme="dark"] #header > div > a font,
-body[data-ff-theme="dark"] #header > div > a > * {
+[data-ff-theme="dark"] #header table,
+[data-ff-theme="dark"] #header td,
+[data-ff-theme="dark"] #header .logo,
+[data-ff-theme="dark"] #header .logo *,
+[data-ff-theme="dark"] #header .lang-chooser,
+[data-ff-theme="dark"] #header > div,
+[data-ff-theme="dark"] #header > div > a,
+[data-ff-theme="dark"] #header > div > a img,
+[data-ff-theme="dark"] #header > div > a div,
+[data-ff-theme="dark"] #header > div > a font,
+[data-ff-theme="dark"] #header > div > a > *,
+[data-ff-theme="dark"] #header > div > a * {
   background-color: #171728 !important;
   background-image: none !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .problem-statement .header {
+/* Fix: Practice / participate link td in contest sidebar */
+[data-ff-theme="dark"] .roundbox td,
+[data-ff-theme="dark"] .roundbox tr,
+[data-ff-theme="dark"] .sidebox td,
+[data-ff-theme="dark"] .sidebox tr {
+  background-color: #171728 !important;
+  background-image: none !important;
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="dark"] .problem-statement .header {
   background-color: #171728 !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .caption,
-body[data-ff-theme="dark"] .caption.titled,
-body[data-ff-theme="dark"] .sidebox .caption,
-body[data-ff-theme="dark"] .roundbox .titled {
+[data-ff-theme="dark"] .caption,
+[data-ff-theme="dark"] .caption.titled,
+[data-ff-theme="dark"] .sidebox .caption,
+[data-ff-theme="dark"] .roundbox .titled {
   background-color: #1c1c30 !important;
   background-image: none !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .second-level-menu,
-body[data-ff-theme="dark"] .menu-box {
+[data-ff-theme="dark"] .second-level-menu,
+[data-ff-theme="dark"] .menu-box {
   background-color: #171728 !important;
   border-color: #282842 !important;
 }
 
-body[data-ff-theme="dark"] a {
+[data-ff-theme="dark"] a {
   color: #a78bfa !important;
 }
 
-body[data-ff-theme="dark"] a:hover {
+[data-ff-theme="dark"] a:hover {
   color: #c4b5fd !important;
 }
 
-body[data-ff-theme="dark"] input[type="text"],
-body[data-ff-theme="dark"] input[type="password"],
-body[data-ff-theme="dark"] input[type="number"],
-body[data-ff-theme="dark"] input[type="search"],
-body[data-ff-theme="dark"] input[type="email"],
-body[data-ff-theme="dark"] input[type="url"],
-body[data-ff-theme="dark"] input:not([type]),
-body[data-ff-theme="dark"] textarea,
-body[data-ff-theme="dark"] select {
+[data-ff-theme="dark"] input[type="text"],
+[data-ff-theme="dark"] input[type="password"],
+[data-ff-theme="dark"] input[type="number"],
+[data-ff-theme="dark"] input[type="search"],
+[data-ff-theme="dark"] input[type="email"],
+[data-ff-theme="dark"] input[type="url"],
+[data-ff-theme="dark"] input:not([type]),
+[data-ff-theme="dark"] textarea,
+[data-ff-theme="dark"] select {
   background-color: #1c1c30 !important;
   border-color: #2e2e4a !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] ::placeholder {
+[data-ff-theme="dark"] ::placeholder {
   color: #6b7280 !important;
   opacity: 1 !important;
 }
 
-body[data-ff-theme="dark"] button,
-body[data-ff-theme="dark"] input[type="submit"],
-body[data-ff-theme="dark"] input[type="button"] {
+[data-ff-theme="dark"] button,
+[data-ff-theme="dark"] input[type="submit"],
+[data-ff-theme="dark"] input[type="button"] {
   background-color: #7c3aed !important;
   border-color: #7c3aed !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="dark"] button:hover,
-body[data-ff-theme="dark"] input[type="submit"]:hover,
-body[data-ff-theme="dark"] input[type="button"]:hover {
+[data-ff-theme="dark"] button:hover,
+[data-ff-theme="dark"] input[type="submit"]:hover,
+[data-ff-theme="dark"] input[type="button"]:hover {
   background-color: #6d28d9 !important;
   border-color: #6d28d9 !important;
 }
 
-body[data-ff-theme="dark"] .tab,
-body[data-ff-theme="dark"] .tabs {
+[data-ff-theme="dark"] .tab,
+[data-ff-theme="dark"] .tabs {
   background-color: #1a1a2c !important;
   border-color: #282842 !important;
 }
 
-body[data-ff-theme="dark"] .tab.active {
+[data-ff-theme="dark"] .tab.active {
   background-color: #171728 !important;
   color: #a78bfa !important;
 }
 
-body[data-ff-theme="dark"] .datatable,
-body[data-ff-theme="dark"] table {
+[data-ff-theme="dark"] .datatable,
+[data-ff-theme="dark"] table {
   background-color: #171728 !important;
   border-color: #282842 !important;
 }
 
-body[data-ff-theme="dark"] .datatable th,
-body[data-ff-theme="dark"] table th {
+[data-ff-theme="dark"] .datatable tr,
+[data-ff-theme="dark"] table tr,
+[data-ff-theme="dark"] .datatable tr:nth-child(even),
+[data-ff-theme="dark"] table tr:nth-child(even),
+[data-ff-theme="dark"] .datatable tr:nth-child(odd),
+[data-ff-theme="dark"] table tr:nth-child(odd) {
+  background-color: #171728 !important;
+  background: #171728 !important;
+}
+
+[data-ff-theme="dark"] .datatable th,
+[data-ff-theme="dark"] table th {
   background-color: #1c1c30 !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .datatable td,
-body[data-ff-theme="dark"] table td {
+[data-ff-theme="dark"] .datatable td,
+[data-ff-theme="dark"] table td {
+  background-color: #171728 !important;
   border-color: #282842 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .MathJax,
-body[data-ff-theme="dark"] mjx-container,
-body[data-ff-theme="dark"] mjx-math {
+[data-ff-theme="dark"] .MathJax,
+[data-ff-theme="dark"] mjx-container,
+[data-ff-theme="dark"] mjx-math {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .MathJax_SVG text,
-body[data-ff-theme="dark"] .MathJax_SVG use,
-body[data-ff-theme="dark"] .MathJax svg text,
-body[data-ff-theme="dark"] .MathJax svg use {
+[data-ff-theme="dark"] .MathJax_SVG text,
+[data-ff-theme="dark"] .MathJax_SVG use,
+[data-ff-theme="dark"] .MathJax svg text,
+[data-ff-theme="dark"] .MathJax svg use {
   fill: #e8e8f0 !important;
   stroke: none !important;
 }
 
-body[data-ff-theme="dark"] .MathJax_Display {
+[data-ff-theme="dark"] .MathJax_Display {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .MathJax *:not(svg):not(svg *) {
+[data-ff-theme="dark"] .MathJax *:not(svg):not(svg *) {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] pre,
-body[data-ff-theme="dark"] code,
-body[data-ff-theme="dark"] .prettyprint,
-body[data-ff-theme="dark"] pre.prettyprint,
-body[data-ff-theme="dark"] .sample-tests,
-body[data-ff-theme="dark"] .sample-test {
+[data-ff-theme="dark"] pre,
+[data-ff-theme="dark"] code,
+[data-ff-theme="dark"] .prettyprint,
+[data-ff-theme="dark"] pre.prettyprint,
+[data-ff-theme="dark"] .sample-tests,
+[data-ff-theme="dark"] .sample-test,
+[data-ff-theme="dark"] .input,
+[data-ff-theme="dark"] .output {
   background-color: #1c1c30 !important;
   border-color: #2e2e4a !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .pln,
-body[data-ff-theme="dark"] .prettyprint .pun,
-body[data-ff-theme="dark"] .prettyprint .opn,
-body[data-ff-theme="dark"] .prettyprint .clo {
+/* Fix: inner data containers inside sample test sections */
+[data-ff-theme="dark"] .input > div,
+[data-ff-theme="dark"] .output > div,
+[data-ff-theme="dark"] .sample-test .input pre,
+[data-ff-theme="dark"] .sample-test .output pre,
+[data-ff-theme="dark"] .input pre,
+[data-ff-theme="dark"] .output pre,
+[data-ff-theme="dark"] .input div,
+[data-ff-theme="dark"] .output div {
+  background-color: #1c1c30 !important;
+  background: #1c1c30 !important;
+  border-color: #2e2e4a !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .kwd,
-body[data-ff-theme="dark"] .prettyprint .fun {
+/* Fix: "Practice" / virtual-participation link box in contest sidebar */
+[data-ff-theme="dark"] .accept-participate-link,
+[data-ff-theme="dark"] a.accept-participate-link,
+[data-ff-theme="dark"] .roundbox a[href*="practice"],
+[data-ff-theme="dark"] .sidebox a[href*="practice"],
+[data-ff-theme="dark"] .roundbox .participation-practice,
+[data-ff-theme="dark"] .participation-practice {
+  background-color: #1c1c30 !important;
+  border-color: #2e2e4a !important;
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="dark"] .prettyprint .pln,
+[data-ff-theme="dark"] .prettyprint .pun,
+[data-ff-theme="dark"] .prettyprint .opn,
+[data-ff-theme="dark"] .prettyprint .clo {
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="dark"] .prettyprint .kwd,
+[data-ff-theme="dark"] .prettyprint .fun {
   color: #c4b5fd !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .typ,
-body[data-ff-theme="dark"] .prettyprint .lit,
-body[data-ff-theme="dark"] .prettyprint .dec,
-body[data-ff-theme="dark"] .prettyprint .var {
+[data-ff-theme="dark"] .prettyprint .typ,
+[data-ff-theme="dark"] .prettyprint .lit,
+[data-ff-theme="dark"] .prettyprint .dec,
+[data-ff-theme="dark"] .prettyprint .var {
   color: #82aaff !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .str,
-body[data-ff-theme="dark"] .prettyprint .atv {
+[data-ff-theme="dark"] .prettyprint .str,
+[data-ff-theme="dark"] .prettyprint .atv {
   color: #a5d6a7 !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .com {
+[data-ff-theme="dark"] .prettyprint .com {
   color: #7a7d92 !important;
 }
 
-body[data-ff-theme="dark"] .prettyprint .atn {
+[data-ff-theme="dark"] .prettyprint .atn {
   color: #ffcb6b !important;
 }
 
@@ -336,464 +263,264 @@ body[data-ff-theme="dark"] .prettyprint .atn {
    AMOLED THEME
    ════════════════════════════════════════════════════ */
 
-body[data-ff-theme="amoled"] {
+[data-ff-theme="amoled"] {
   --ff-card-bg: #111111;
   --ff-card-bd: #222222;
   --ff-fg: #e8e8f0;
-  --ff-muted: #a0a3b8;
+  --ff-muted: #b0b3c8;
   --ff-input-bg: #161616;
   background-color: #000000 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .roundbox,
-body[data-ff-theme="amoled"] .sidebox,
-body[data-ff-theme="amoled"] .formErrorDiv,
-body[data-ff-theme="amoled"] .ttypography {
+[data-ff-theme="amoled"] .roundbox,
+[data-ff-theme="amoled"] .sidebox,
+[data-ff-theme="amoled"] .formErrorDiv,
+[data-ff-theme="amoled"] .ttypography {
   background-color: #111111 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] #header,
-body[data-ff-theme="amoled"] #footer,
-body[data-ff-theme="amoled"] .community-stats-box,
-body[data-ff-theme="amoled"] .news-item {
+[data-ff-theme="amoled"] #header,
+[data-ff-theme="amoled"] #footer,
+[data-ff-theme="amoled"] .community-stats-box,
+[data-ff-theme="amoled"] .news-item {
   background-color: #111111 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] #header table,
-body[data-ff-theme="amoled"] #header td,
-body[data-ff-theme="amoled"] #header .logo,
-body[data-ff-theme="amoled"] #header .lang-chooser,
-body[data-ff-theme="amoled"] #header > div,
-body[data-ff-theme="amoled"] #header > div > a,
-body[data-ff-theme="amoled"] #header > div > a img,
-body[data-ff-theme="amoled"] #header > div > a div,
-body[data-ff-theme="amoled"] #header > div > a font,
-body[data-ff-theme="amoled"] #header > div > a > * {
+[data-ff-theme="amoled"] #header table,
+[data-ff-theme="amoled"] #header td,
+[data-ff-theme="amoled"] #header .logo,
+[data-ff-theme="amoled"] #header .logo *,
+[data-ff-theme="amoled"] #header .lang-chooser,
+[data-ff-theme="amoled"] #header > div,
+[data-ff-theme="amoled"] #header > div > a,
+[data-ff-theme="amoled"] #header > div > a img,
+[data-ff-theme="amoled"] #header > div > a div,
+[data-ff-theme="amoled"] #header > div > a font,
+[data-ff-theme="amoled"] #header > div > a > *,
+[data-ff-theme="amoled"] #header > div > a * {
   background-color: #111111 !important;
   background-image: none !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .problem-statement .header {
+/* Fix: Practice / participate link td in contest sidebar */
+[data-ff-theme="amoled"] .roundbox td,
+[data-ff-theme="amoled"] .roundbox tr,
+[data-ff-theme="amoled"] .sidebox td,
+[data-ff-theme="amoled"] .sidebox tr {
+  background-color: #111111 !important;
+  background-image: none !important;
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="amoled"] .problem-statement .header {
   background-color: #111111 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .caption,
-body[data-ff-theme="amoled"] .caption.titled,
-body[data-ff-theme="amoled"] .sidebox .caption,
-body[data-ff-theme="amoled"] .roundbox .titled {
+[data-ff-theme="amoled"] .caption,
+[data-ff-theme="amoled"] .caption.titled,
+[data-ff-theme="amoled"] .sidebox .caption,
+[data-ff-theme="amoled"] .roundbox .titled {
   background-color: #161616 !important;
   background-image: none !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .second-level-menu {
+[data-ff-theme="amoled"] .second-level-menu {
   background-color: #111111 !important;
   border-color: #222222 !important;
 }
 
-body[data-ff-theme="amoled"] a {
+[data-ff-theme="amoled"] a {
   color: #c9a0ff !important;
 }
 
-body[data-ff-theme="amoled"] a:hover {
+[data-ff-theme="amoled"] a:hover {
   color: #dbb8ff !important;
 }
 
-body[data-ff-theme="amoled"] input[type="text"],
-body[data-ff-theme="amoled"] input[type="password"],
-body[data-ff-theme="amoled"] input[type="number"],
-body[data-ff-theme="amoled"] input[type="search"],
-body[data-ff-theme="amoled"] input[type="email"],
-body[data-ff-theme="amoled"] input[type="url"],
-body[data-ff-theme="amoled"] input:not([type]),
-body[data-ff-theme="amoled"] textarea,
-body[data-ff-theme="amoled"] select {
+[data-ff-theme="amoled"] input[type="text"],
+[data-ff-theme="amoled"] input[type="password"],
+[data-ff-theme="amoled"] input[type="number"],
+[data-ff-theme="amoled"] input[type="search"],
+[data-ff-theme="amoled"] input[type="email"],
+[data-ff-theme="amoled"] input[type="url"],
+[data-ff-theme="amoled"] input:not([type]),
+[data-ff-theme="amoled"] textarea,
+[data-ff-theme="amoled"] select {
   background-color: #161616 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] ::placeholder {
+[data-ff-theme="amoled"] ::placeholder {
   color: #6b7280 !important;
   opacity: 1 !important;
 }
 
-body[data-ff-theme="amoled"] button,
-body[data-ff-theme="amoled"] input[type="submit"],
-body[data-ff-theme="amoled"] input[type="button"] {
+[data-ff-theme="amoled"] button,
+[data-ff-theme="amoled"] input[type="submit"],
+[data-ff-theme="amoled"] input[type="button"] {
   background-color: #c9a0ff !important;
   border-color: #c9a0ff !important;
   color: #1a1a1a !important;
 }
 
-body[data-ff-theme="amoled"] button:hover,
-body[data-ff-theme="amoled"] input[type="submit"]:hover,
-body[data-ff-theme="amoled"] input[type="button"]:hover {
+[data-ff-theme="amoled"] button:hover,
+[data-ff-theme="amoled"] input[type="submit"]:hover,
+[data-ff-theme="amoled"] input[type="button"]:hover {
   background-color: #b08aff !important;
   border-color: #b08aff !important;
 }
 
-body[data-ff-theme="amoled"] .tab,
-body[data-ff-theme="amoled"] .tabs {
+[data-ff-theme="amoled"] .tab,
+[data-ff-theme="amoled"] .tabs {
   background-color: #0e0e0e !important;
   border-color: #222222 !important;
 }
 
-body[data-ff-theme="amoled"] .tab.active {
+[data-ff-theme="amoled"] .tab.active {
   background-color: #111111 !important;
   color: #c9a0ff !important;
 }
 
-body[data-ff-theme="amoled"] .datatable,
-body[data-ff-theme="amoled"] table {
+[data-ff-theme="amoled"] .datatable,
+[data-ff-theme="amoled"] table {
   background-color: #111111 !important;
   border-color: #222222 !important;
 }
 
-body[data-ff-theme="amoled"] .datatable th,
-body[data-ff-theme="amoled"] table th {
+[data-ff-theme="amoled"] .datatable tr,
+[data-ff-theme="amoled"] table tr,
+[data-ff-theme="amoled"] .datatable tr:nth-child(even),
+[data-ff-theme="amoled"] table tr:nth-child(even),
+[data-ff-theme="amoled"] .datatable tr:nth-child(odd),
+[data-ff-theme="amoled"] table tr:nth-child(odd) {
+  background-color: #111111 !important;
+  background: #111111 !important;
+}
+
+[data-ff-theme="amoled"] .datatable th,
+[data-ff-theme="amoled"] table th {
   background-color: #161616 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .datatable td,
-body[data-ff-theme="amoled"] table td {
+[data-ff-theme="amoled"] .datatable td,
+[data-ff-theme="amoled"] table td {
+  background-color: #111111 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .MathJax,
-body[data-ff-theme="amoled"] mjx-container,
-body[data-ff-theme="amoled"] mjx-math {
+[data-ff-theme="amoled"] .MathJax,
+[data-ff-theme="amoled"] mjx-container,
+[data-ff-theme="amoled"] mjx-math {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .MathJax_SVG text,
-body[data-ff-theme="amoled"] .MathJax_SVG use,
-body[data-ff-theme="amoled"] .MathJax svg text,
-body[data-ff-theme="amoled"] .MathJax svg use {
+[data-ff-theme="amoled"] .MathJax_SVG text,
+[data-ff-theme="amoled"] .MathJax_SVG use,
+[data-ff-theme="amoled"] .MathJax svg text,
+[data-ff-theme="amoled"] .MathJax svg use {
   fill: #e8e8f0 !important;
   stroke: none !important;
 }
 
-body[data-ff-theme="amoled"] .MathJax_Display {
+[data-ff-theme="amoled"] .MathJax_Display {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .MathJax *:not(svg):not(svg *) {
+[data-ff-theme="amoled"] .MathJax *:not(svg):not(svg *) {
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] pre,
-body[data-ff-theme="amoled"] code,
-body[data-ff-theme="amoled"] .prettyprint,
-body[data-ff-theme="amoled"] pre.prettyprint,
-body[data-ff-theme="amoled"] .sample-tests,
-body[data-ff-theme="amoled"] .sample-test {
+[data-ff-theme="amoled"] pre,
+[data-ff-theme="amoled"] code,
+[data-ff-theme="amoled"] .prettyprint,
+[data-ff-theme="amoled"] pre.prettyprint,
+[data-ff-theme="amoled"] .sample-tests,
+[data-ff-theme="amoled"] .sample-test,
+[data-ff-theme="amoled"] .input,
+[data-ff-theme="amoled"] .output {
   background-color: #161616 !important;
   border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .pln,
-body[data-ff-theme="amoled"] .prettyprint .pun,
-body[data-ff-theme="amoled"] .prettyprint .opn,
-body[data-ff-theme="amoled"] .prettyprint .clo {
+/* Fix: inner data containers inside sample test sections */
+[data-ff-theme="amoled"] .input > div,
+[data-ff-theme="amoled"] .output > div,
+[data-ff-theme="amoled"] .sample-test .input pre,
+[data-ff-theme="amoled"] .sample-test .output pre,
+[data-ff-theme="amoled"] .input pre,
+[data-ff-theme="amoled"] .output pre,
+[data-ff-theme="amoled"] .input div,
+[data-ff-theme="amoled"] .output div {
+  background-color: #161616 !important;
+  background: #161616 !important;
+  border-color: #222222 !important;
   color: #e8e8f0 !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .kwd,
-body[data-ff-theme="amoled"] .prettyprint .fun {
+/* Fix: "Practice" / virtual-participation link box in contest sidebar */
+[data-ff-theme="amoled"] .accept-participate-link,
+[data-ff-theme="amoled"] a.accept-participate-link,
+[data-ff-theme="amoled"] .roundbox a[href*="practice"],
+[data-ff-theme="amoled"] .sidebox a[href*="practice"],
+[data-ff-theme="amoled"] .roundbox .participation-practice,
+[data-ff-theme="amoled"] .participation-practice {
+  background-color: #161616 !important;
+  border-color: #222222 !important;
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="amoled"] .prettyprint .pln,
+[data-ff-theme="amoled"] .prettyprint .pun,
+[data-ff-theme="amoled"] .prettyprint .opn,
+[data-ff-theme="amoled"] .prettyprint .clo {
+  color: #e8e8f0 !important;
+}
+
+[data-ff-theme="amoled"] .prettyprint .kwd,
+[data-ff-theme="amoled"] .prettyprint .fun {
   color: #dbb8ff !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .typ,
-body[data-ff-theme="amoled"] .prettyprint .lit,
-body[data-ff-theme="amoled"] .prettyprint .dec,
-body[data-ff-theme="amoled"] .prettyprint .var {
+[data-ff-theme="amoled"] .prettyprint .typ,
+[data-ff-theme="amoled"] .prettyprint .lit,
+[data-ff-theme="amoled"] .prettyprint .dec,
+[data-ff-theme="amoled"] .prettyprint .var {
   color: #82aaff !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .str,
-body[data-ff-theme="amoled"] .prettyprint .atv {
+[data-ff-theme="amoled"] .prettyprint .str,
+[data-ff-theme="amoled"] .prettyprint .atv {
   color: #a5d6a7 !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .com {
+[data-ff-theme="amoled"] .prettyprint .com {
   color: #7a7d92 !important;
 }
 
-body[data-ff-theme="amoled"] .prettyprint .atn {
+[data-ff-theme="amoled"] .prettyprint .atn {
   color: #ffcb6b !important;
-}
-
-/* ════════════════════════════════════════════════════
-   BLUE THEME
-   ════════════════════════════════════════════════════ */
-
-body[data-ff-theme="blue"] {
-  --ff-card-bg: #ffffff;
-  --ff-card-bd: #d0daea;
-  --ff-fg: #1e293b;
-  --ff-muted: #475569;
-  --ff-input-bg: #f4f7fb;
-  background-color: #eef2f7 !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] .roundbox,
-body[data-ff-theme="blue"] .sidebox,
-body[data-ff-theme="blue"] .formErrorDiv,
-body[data-ff-theme="blue"] .ttypography {
-  background-color: #ffffff !important;
-  border-color: #d0daea !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] #header,
-body[data-ff-theme="blue"] #footer,
-body[data-ff-theme="blue"] .community-stats-box,
-body[data-ff-theme="blue"] .news-item {
-  background-color: #ffffff !important;
-  border-color: #d0daea !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] a {
-  color: #2563eb !important;
-}
-
-body[data-ff-theme="blue"] a:hover {
-  color: #1d4ed8 !important;
-}
-
-body[data-ff-theme="blue"] input[type="text"],
-body[data-ff-theme="blue"] input[type="password"],
-body[data-ff-theme="blue"] input[type="number"],
-body[data-ff-theme="blue"] input[type="search"],
-body[data-ff-theme="blue"] input[type="email"],
-body[data-ff-theme="blue"] input[type="url"],
-body[data-ff-theme="blue"] input:not([type]),
-body[data-ff-theme="blue"] textarea,
-body[data-ff-theme="blue"] select {
-  background-color: #f4f7fb !important;
-  border-color: #d0daea !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] ::placeholder {
-  color: #94a3b8 !important;
-  opacity: 1 !important;
-}
-
-body[data-ff-theme="blue"] button,
-body[data-ff-theme="blue"] input[type="submit"],
-body[data-ff-theme="blue"] input[type="button"] {
-  background-color: #2563eb !important;
-  border-color: #2563eb !important;
-  color: #ffffff !important;
-}
-
-body[data-ff-theme="blue"] button:hover,
-body[data-ff-theme="blue"] input[type="submit"]:hover,
-body[data-ff-theme="blue"] input[type="button"]:hover {
-  background-color: #1d4ed8 !important;
-  border-color: #1d4ed8 !important;
-}
-
-body[data-ff-theme="blue"] .tab,
-body[data-ff-theme="blue"] .tabs {
-  background-color: #dde5f0 !important;
-  border-color: #d0daea !important;
-}
-
-body[data-ff-theme="blue"] .tab.active {
-  background-color: #ffffff !important;
-  color: #2563eb !important;
-}
-
-body[data-ff-theme="blue"] .datatable,
-body[data-ff-theme="blue"] table {
-  background-color: #ffffff !important;
-  border-color: #d0daea !important;
-}
-
-body[data-ff-theme="blue"] .datatable th,
-body[data-ff-theme="blue"] table th {
-  background-color: #eef2f7 !important;
-  border-color: #d0daea !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] .datatable td,
-body[data-ff-theme="blue"] table td {
-  border-color: #d0daea !important;
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] .MathJax,
-body[data-ff-theme="blue"] mjx-container,
-body[data-ff-theme="blue"] mjx-math {
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] .MathJax_SVG text,
-body[data-ff-theme="blue"] .MathJax_SVG use,
-body[data-ff-theme="blue"] .MathJax svg text,
-body[data-ff-theme="blue"] .MathJax svg use {
-  fill: #1e293b !important;
-  stroke: none !important;
-}
-
-body[data-ff-theme="blue"] .MathJax_Display {
-  color: #1e293b !important;
-}
-
-body[data-ff-theme="blue"] .MathJax *:not(svg):not(svg *) {
-  color: #1e293b !important;
-}
-
-/* ════════════════════════════════════════════════════
-   MINIMAL THEME
-   ════════════════════════════════════════════════════ */
-
-body[data-ff-theme="minimal"] {
-  --ff-card-bg: #ffffff;
-  --ff-card-bd: #dcdcdc;
-  --ff-fg: #1a1a1a;
-  --ff-muted: #555555;
-  --ff-input-bg: #fafafa;
-  background-color: #f5f5f5 !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .roundbox,
-body[data-ff-theme="minimal"] .sidebox,
-body[data-ff-theme="minimal"] .formErrorDiv,
-body[data-ff-theme="minimal"] .ttypography {
-  background-color: #ffffff !important;
-  border-color: #dcdcdc !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] #header,
-body[data-ff-theme="minimal"] #footer,
-body[data-ff-theme="minimal"] .community-stats-box,
-body[data-ff-theme="minimal"] .news-item {
-  background-color: #ffffff !important;
-  border-color: #dcdcdc !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] a {
-  color: #333333 !important;
-}
-
-body[data-ff-theme="minimal"] a:hover {
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] input[type="text"],
-body[data-ff-theme="minimal"] input[type="password"],
-body[data-ff-theme="minimal"] input[type="number"],
-body[data-ff-theme="minimal"] input[type="search"],
-body[data-ff-theme="minimal"] input[type="email"],
-body[data-ff-theme="minimal"] input[type="url"],
-body[data-ff-theme="minimal"] input:not([type]),
-body[data-ff-theme="minimal"] textarea,
-body[data-ff-theme="minimal"] select {
-  background-color: #fafafa !important;
-  border-color: #dcdcdc !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] ::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
-}
-
-body[data-ff-theme="minimal"] button,
-body[data-ff-theme="minimal"] input[type="submit"],
-body[data-ff-theme="minimal"] input[type="button"] {
-  background-color: #333333 !important;
-  border-color: #333333 !important;
-  color: #ffffff !important;
-}
-
-body[data-ff-theme="minimal"] button:hover,
-body[data-ff-theme="minimal"] input[type="submit"]:hover,
-body[data-ff-theme="minimal"] input[type="button"]:hover {
-  background-color: #1a1a1a !important;
-  border-color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .tab,
-body[data-ff-theme="minimal"] .tabs {
-  background-color: #ebebeb !important;
-  border-color: #dcdcdc !important;
-}
-
-body[data-ff-theme="minimal"] .tab.active {
-  background-color: #ffffff !important;
-  color: #333333 !important;
-}
-
-body[data-ff-theme="minimal"] .datatable,
-body[data-ff-theme="minimal"] table {
-  background-color: #ffffff !important;
-  border-color: #dcdcdc !important;
-}
-
-body[data-ff-theme="minimal"] .datatable th,
-body[data-ff-theme="minimal"] table th {
-  background-color: #f5f5f5 !important;
-  border-color: #dcdcdc !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .datatable td,
-body[data-ff-theme="minimal"] table td {
-  border-color: #dcdcdc !important;
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .MathJax,
-body[data-ff-theme="minimal"] mjx-container,
-body[data-ff-theme="minimal"] mjx-math {
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .MathJax_SVG text,
-body[data-ff-theme="minimal"] .MathJax_SVG use,
-body[data-ff-theme="minimal"] .MathJax svg text,
-body[data-ff-theme="minimal"] .MathJax svg use {
-  fill: #1a1a1a !important;
-  stroke: none !important;
-}
-
-body[data-ff-theme="minimal"] .MathJax_Display {
-  color: #1a1a1a !important;
-}
-
-body[data-ff-theme="minimal"] .MathJax *:not(svg):not(svg *) {
-  color: #1a1a1a !important;
 }
 
 /* ════════════════════════════════════════════════════
    HIGH CONTRAST THEME
    ════════════════════════════════════════════════════ */
 
-body[data-ff-theme="contrast"] {
+[data-ff-theme="contrast"] {
   --ff-card-bg: #141414;
   --ff-card-bd: #888888;
   --ff-fg: #ffffff;
@@ -803,191 +530,243 @@ body[data-ff-theme="contrast"] {
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .roundbox,
-body[data-ff-theme="contrast"] .sidebox,
-body[data-ff-theme="contrast"] .formErrorDiv,
-body[data-ff-theme="contrast"] .ttypography {
+[data-ff-theme="contrast"] .roundbox,
+[data-ff-theme="contrast"] .sidebox,
+[data-ff-theme="contrast"] .formErrorDiv,
+[data-ff-theme="contrast"] .ttypography {
   background-color: #141414 !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] #header,
-body[data-ff-theme="contrast"] #footer,
-body[data-ff-theme="contrast"] .community-stats-box,
-body[data-ff-theme="contrast"] .news-item {
+[data-ff-theme="contrast"] #header,
+[data-ff-theme="contrast"] #footer,
+[data-ff-theme="contrast"] .community-stats-box,
+[data-ff-theme="contrast"] .news-item {
   background-color: #141414 !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] #header table,
-body[data-ff-theme="contrast"] #header td,
-body[data-ff-theme="contrast"] #header .logo,
-body[data-ff-theme="contrast"] #header .lang-chooser,
-body[data-ff-theme="contrast"] #header > div,
-body[data-ff-theme="contrast"] #header > div > a,
-body[data-ff-theme="contrast"] #header > div > a img,
-body[data-ff-theme="contrast"] #header > div > a div,
-body[data-ff-theme="contrast"] #header > div > a font,
-body[data-ff-theme="contrast"] #header > div > a > * {
+[data-ff-theme="contrast"] #header table,
+[data-ff-theme="contrast"] #header td,
+[data-ff-theme="contrast"] #header .logo,
+[data-ff-theme="contrast"] #header .logo *,
+[data-ff-theme="contrast"] #header .lang-chooser,
+[data-ff-theme="contrast"] #header > div,
+[data-ff-theme="contrast"] #header > div > a,
+[data-ff-theme="contrast"] #header > div > a img,
+[data-ff-theme="contrast"] #header > div > a div,
+[data-ff-theme="contrast"] #header > div > a font,
+[data-ff-theme="contrast"] #header > div > a > *,
+[data-ff-theme="contrast"] #header > div > a * {
   background-color: #141414 !important;
   background-image: none !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .problem-statement .header {
+/* Fix: Practice / participate link td in contest sidebar */
+[data-ff-theme="contrast"] .roundbox td,
+[data-ff-theme="contrast"] .roundbox tr,
+[data-ff-theme="contrast"] .sidebox td,
+[data-ff-theme="contrast"] .sidebox tr {
+  background-color: #141414 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+}
+
+[data-ff-theme="contrast"] .problem-statement .header {
   background-color: #141414 !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .caption,
-body[data-ff-theme="contrast"] .caption.titled,
-body[data-ff-theme="contrast"] .sidebox .caption,
-body[data-ff-theme="contrast"] .roundbox .titled {
+[data-ff-theme="contrast"] .caption,
+[data-ff-theme="contrast"] .caption.titled,
+[data-ff-theme="contrast"] .sidebox .caption,
+[data-ff-theme="contrast"] .roundbox .titled {
   background-color: #1e1e1e !important;
   background-image: none !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .second-level-menu {
+[data-ff-theme="contrast"] .second-level-menu {
   background-color: #141414 !important;
   border-color: #888888 !important;
 }
 
-body[data-ff-theme="contrast"] a {
+[data-ff-theme="contrast"] a {
   color: #facc15 !important;
 }
 
-body[data-ff-theme="contrast"] a:hover {
+[data-ff-theme="contrast"] a:hover {
   color: #fde68a !important;
 }
 
-body[data-ff-theme="contrast"] input[type="text"],
-body[data-ff-theme="contrast"] input[type="password"],
-body[data-ff-theme="contrast"] input[type="number"],
-body[data-ff-theme="contrast"] input[type="search"],
-body[data-ff-theme="contrast"] input[type="email"],
-body[data-ff-theme="contrast"] input[type="url"],
-body[data-ff-theme="contrast"] input:not([type]),
-body[data-ff-theme="contrast"] textarea,
-body[data-ff-theme="contrast"] select {
+[data-ff-theme="contrast"] input[type="text"],
+[data-ff-theme="contrast"] input[type="password"],
+[data-ff-theme="contrast"] input[type="number"],
+[data-ff-theme="contrast"] input[type="search"],
+[data-ff-theme="contrast"] input[type="email"],
+[data-ff-theme="contrast"] input[type="url"],
+[data-ff-theme="contrast"] input:not([type]),
+[data-ff-theme="contrast"] textarea,
+[data-ff-theme="contrast"] select {
   background-color: #1e1e1e !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] ::placeholder {
+[data-ff-theme="contrast"] ::placeholder {
   color: #a0a0a0 !important;
   opacity: 1 !important;
 }
 
-body[data-ff-theme="contrast"] button,
-body[data-ff-theme="contrast"] input[type="submit"],
-body[data-ff-theme="contrast"] input[type="button"] {
+[data-ff-theme="contrast"] button,
+[data-ff-theme="contrast"] input[type="submit"],
+[data-ff-theme="contrast"] input[type="button"] {
   background-color: #facc15 !important;
   border-color: #facc15 !important;
   color: #000000 !important;
 }
 
-body[data-ff-theme="contrast"] button:hover,
-body[data-ff-theme="contrast"] input[type="submit"]:hover,
-body[data-ff-theme="contrast"] input[type="button"]:hover {
+[data-ff-theme="contrast"] button:hover,
+[data-ff-theme="contrast"] input[type="submit"]:hover,
+[data-ff-theme="contrast"] input[type="button"]:hover {
   background-color: #eab308 !important;
   border-color: #eab308 !important;
 }
 
-body[data-ff-theme="contrast"] .tab,
-body[data-ff-theme="contrast"] .tabs {
+[data-ff-theme="contrast"] .tab,
+[data-ff-theme="contrast"] .tabs {
   background-color: #1a1a1a !important;
   border-color: #888888 !important;
 }
 
-body[data-ff-theme="contrast"] .tab.active {
+[data-ff-theme="contrast"] .tab.active {
   background-color: #141414 !important;
   color: #facc15 !important;
 }
 
-body[data-ff-theme="contrast"] .datatable,
-body[data-ff-theme="contrast"] table {
+[data-ff-theme="contrast"] .datatable,
+[data-ff-theme="contrast"] table {
   background-color: #141414 !important;
   border-color: #888888 !important;
 }
 
-body[data-ff-theme="contrast"] .datatable th,
-body[data-ff-theme="contrast"] table th {
+[data-ff-theme="contrast"] .datatable tr,
+[data-ff-theme="contrast"] table tr,
+[data-ff-theme="contrast"] .datatable tr:nth-child(even),
+[data-ff-theme="contrast"] table tr:nth-child(even),
+[data-ff-theme="contrast"] .datatable tr:nth-child(odd),
+[data-ff-theme="contrast"] table tr:nth-child(odd) {
+  background-color: #141414 !important;
+  background: #141414 !important;
+}
+
+[data-ff-theme="contrast"] .datatable th,
+[data-ff-theme="contrast"] table th {
   background-color: #1e1e1e !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .datatable td,
-body[data-ff-theme="contrast"] table td {
+[data-ff-theme="contrast"] .datatable td,
+[data-ff-theme="contrast"] table td {
+  background-color: #141414 !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .MathJax,
-body[data-ff-theme="contrast"] mjx-container,
-body[data-ff-theme="contrast"] mjx-math {
+[data-ff-theme="contrast"] .MathJax,
+[data-ff-theme="contrast"] mjx-container,
+[data-ff-theme="contrast"] mjx-math {
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .MathJax_SVG text,
-body[data-ff-theme="contrast"] .MathJax_SVG use,
-body[data-ff-theme="contrast"] .MathJax svg text,
-body[data-ff-theme="contrast"] .MathJax svg use {
+[data-ff-theme="contrast"] .MathJax_SVG text,
+[data-ff-theme="contrast"] .MathJax_SVG use,
+[data-ff-theme="contrast"] .MathJax svg text,
+[data-ff-theme="contrast"] .MathJax svg use {
   fill: #ffffff !important;
   stroke: none !important;
 }
 
-body[data-ff-theme="contrast"] .MathJax_Display {
+[data-ff-theme="contrast"] .MathJax_Display {
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .MathJax *:not(svg):not(svg *) {
+[data-ff-theme="contrast"] .MathJax *:not(svg):not(svg *) {
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] pre,
-body[data-ff-theme="contrast"] code,
-body[data-ff-theme="contrast"] .prettyprint,
-body[data-ff-theme="contrast"] pre.prettyprint,
-body[data-ff-theme="contrast"] .sample-tests,
-body[data-ff-theme="contrast"] .sample-test {
+[data-ff-theme="contrast"] pre,
+[data-ff-theme="contrast"] code,
+[data-ff-theme="contrast"] .prettyprint,
+[data-ff-theme="contrast"] pre.prettyprint,
+[data-ff-theme="contrast"] .sample-tests,
+[data-ff-theme="contrast"] .sample-test,
+[data-ff-theme="contrast"] .input,
+[data-ff-theme="contrast"] .output {
   background-color: #1e1e1e !important;
   border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .prettyprint .pln,
-body[data-ff-theme="contrast"] .prettyprint .pun,
-body[data-ff-theme="contrast"] .prettyprint .opn,
-body[data-ff-theme="contrast"] .prettyprint .clo {
+/* Fix: inner data containers inside sample test sections */
+[data-ff-theme="contrast"] .input > div,
+[data-ff-theme="contrast"] .output > div,
+[data-ff-theme="contrast"] .sample-test .input pre,
+[data-ff-theme="contrast"] .sample-test .output pre,
+[data-ff-theme="contrast"] .input pre,
+[data-ff-theme="contrast"] .output pre,
+[data-ff-theme="contrast"] .input div,
+[data-ff-theme="contrast"] .output div {
+  background-color: #1e1e1e !important;
+  background: #1e1e1e !important;
+  border-color: #888888 !important;
   color: #ffffff !important;
 }
 
-body[data-ff-theme="contrast"] .prettyprint .kwd,
-body[data-ff-theme="contrast"] .prettyprint .fun,
-body[data-ff-theme="contrast"] .prettyprint .atn {
+/* Fix: "Practice" / virtual-participation link box in contest sidebar */
+[data-ff-theme="contrast"] .accept-participate-link,
+[data-ff-theme="contrast"] a.accept-participate-link,
+[data-ff-theme="contrast"] .roundbox a[href*="practice"],
+[data-ff-theme="contrast"] .sidebox a[href*="practice"],
+[data-ff-theme="contrast"] .roundbox .participation-practice,
+[data-ff-theme="contrast"] .participation-practice {
+  background-color: #1e1e1e !important;
+  border-color: #888888 !important;
+  color: #ffffff !important;
+}
+
+[data-ff-theme="contrast"] .prettyprint .pln,
+[data-ff-theme="contrast"] .prettyprint .pun,
+[data-ff-theme="contrast"] .prettyprint .opn,
+[data-ff-theme="contrast"] .prettyprint .clo {
+  color: #ffffff !important;
+}
+
+[data-ff-theme="contrast"] .prettyprint .kwd,
+[data-ff-theme="contrast"] .prettyprint .fun,
+[data-ff-theme="contrast"] .prettyprint .atn {
   color: #facc15 !important;
 }
 
-body[data-ff-theme="contrast"] .prettyprint .typ,
-body[data-ff-theme="contrast"] .prettyprint .lit,
-body[data-ff-theme="contrast"] .prettyprint .dec,
-body[data-ff-theme="contrast"] .prettyprint .var {
+[data-ff-theme="contrast"] .prettyprint .typ,
+[data-ff-theme="contrast"] .prettyprint .lit,
+[data-ff-theme="contrast"] .prettyprint .dec,
+[data-ff-theme="contrast"] .prettyprint .var {
   color: #7dd3fc !important;
 }
 
-body[data-ff-theme="contrast"] .prettyprint .str,
-body[data-ff-theme="contrast"] .prettyprint .atv {
+[data-ff-theme="contrast"] .prettyprint .str,
+[data-ff-theme="contrast"] .prettyprint .atv {
   color: #a5d6a7 !important;
 }
 
-body[data-ff-theme="contrast"] .prettyprint .com {
+[data-ff-theme="contrast"] .prettyprint .com {
   color: #b0b0b0 !important;
 }
 
@@ -998,78 +777,188 @@ body[data-ff-theme="contrast"] .prettyprint .com {
     boxes so none render with a default light background.)
    ════════════════════════════════════════════════════ */
 
-body[data-ff-theme] .roundbox,
-body[data-ff-theme] .roundbox-lt,
-body[data-ff-theme] .roundbox-rt,
-body[data-ff-theme] .roundbox-lb,
-body[data-ff-theme] .roundbox-rb,
-body[data-ff-theme] .sidebox,
-body[data-ff-theme] .sidebox-lt,
-body[data-ff-theme] .sidebox-rt,
-body[data-ff-theme] .sidebox-lb,
-body[data-ff-theme] .sidebox-rb,
-body[data-ff-theme] .formErrorDiv,
-body[data-ff-theme] .ttypography,
-body[data-ff-theme] .content,
-body[data-ff-theme] .content-with-sidebar,
-body[data-ff-theme] .pageContent,
-body[data-ff-theme] #pageContent,
-body[data-ff-theme] .problem-statement,
-body[data-ff-theme] .problem-statement .header,
-body[data-ff-theme] .contest-statement,
-body[data-ff-theme] .blogEntry,
-body[data-ff-theme] .blog-entry,
-body[data-ff-theme] .blog-entry-content,
-body[data-ff-theme] .comment-content,
-body[data-ff-theme] .comment-table,
-body[data-ff-theme] .post,
-body[data-ff-theme] .post-content,
-body[data-ff-theme] .news-item,
-body[data-ff-theme] .community-stats-box,
-body[data-ff-theme] .datatable,
-body[data-ff-theme] table,
-body[data-ff-theme] .standings,
-body[data-ff-theme] .problems,
-body[data-ff-theme] .menu-box,
-body[data-ff-theme] .menu-list,
-body[data-ff-theme] .menu-list li,
-body[data-ff-theme] .menu-list li a,
-body[data-ff-theme] .second-level-menu,
-body[data-ff-theme] .caption,
-body[data-ff-theme] .caption.titled,
-body[data-ff-theme] .sidebox .caption,
-body[data-ff-theme] .roundbox .titled,
-body[data-ff-theme] .info,
-body[data-ff-theme] .message,
-body[data-ff-theme] .messages,
-body[data-ff-theme] .notice,
-body[data-ff-theme] .alert,
-body[data-ff-theme] .sample-tests,
-body[data-ff-theme] .sample-test,
-body[data-ff-theme] .input,
-body[data-ff-theme] .output,
-body[data-ff-theme] .tag-box,
-body[data-ff-theme] .lang-chooser {
+[data-ff-theme] .roundbox,
+[data-ff-theme] .roundbox-lt,
+[data-ff-theme] .roundbox-rt,
+[data-ff-theme] .roundbox-lb,
+[data-ff-theme] .roundbox-rb,
+[data-ff-theme] .sidebox,
+[data-ff-theme] .sidebox-lt,
+[data-ff-theme] .sidebox-rt,
+[data-ff-theme] .sidebox-lb,
+[data-ff-theme] .sidebox-rb,
+[data-ff-theme] .formErrorDiv,
+[data-ff-theme] .ttypography,
+[data-ff-theme] .content,
+[data-ff-theme] .content-with-sidebar,
+[data-ff-theme] .pageContent,
+[data-ff-theme] #pageContent,
+[data-ff-theme] .problem-statement,
+[data-ff-theme] .problem-statement .header,
+[data-ff-theme] .contest-statement,
+[data-ff-theme] .blogEntry,
+[data-ff-theme] .blog-entry,
+[data-ff-theme] .blog-entry-content,
+[data-ff-theme] .comment-content,
+[data-ff-theme] .comment-table,
+[data-ff-theme] .post,
+[data-ff-theme] .post-content,
+[data-ff-theme] .news-item,
+[data-ff-theme] .community-stats-box,
+[data-ff-theme] .datatable,
+[data-ff-theme] table,
+[data-ff-theme] .standings,
+[data-ff-theme] .problems,
+[data-ff-theme] .menu-box,
+[data-ff-theme] .menu-list,
+[data-ff-theme] .menu-list li,
+[data-ff-theme] .menu-list li a,
+[data-ff-theme] .second-level-menu,
+[data-ff-theme] .caption,
+[data-ff-theme] .caption.titled,
+[data-ff-theme] .sidebox .caption,
+[data-ff-theme] .roundbox .titled,
+[data-ff-theme] .info,
+[data-ff-theme] .message,
+[data-ff-theme] .messages,
+[data-ff-theme] .notice,
+[data-ff-theme] .alert,
+[data-ff-theme] .spoiler-title,
+[data-ff-theme] .spoiler-content,
+[data-ff-theme] .sample-tests,
+[data-ff-theme] .sample-test,
+[data-ff-theme] .input,
+[data-ff-theme] .output,
+[data-ff-theme] pre,
+[data-ff-theme] .prettyprint,
+[data-ff-theme] pre.prettyprint,
+[data-ff-theme] code,
+[data-ff-theme] .property-title,
+[data-ff-theme] .tag-box,
+[data-ff-theme] .lang-chooser {
   background: var(--ff-card-bg) !important;
   background-image: none !important;
   border-color: var(--ff-card-bd) !important;
   color: var(--ff-fg) !important;
 }
 
+/* Fix: inner data containers and divs inside sample test sections (catches inline background styles) */
+[data-ff-theme] .input > div,
+[data-ff-theme] .output > div,
+[data-ff-theme] .input pre,
+[data-ff-theme] .output pre,
+[data-ff-theme] .input div,
+[data-ff-theme] .output div,
+[data-ff-theme] .sample-test .input *,
+[data-ff-theme] .sample-test .output * {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Fix: table alternating row stripes — CF's .datatable applies light bg on tr:nth-child(even) */
+[data-ff-theme] table tr,
+[data-ff-theme] .datatable tr,
+[data-ff-theme] table tr:nth-child(even),
+[data-ff-theme] .datatable tr:nth-child(even),
+[data-ff-theme] table tr:nth-child(odd),
+[data-ff-theme] .datatable tr:nth-child(odd) {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+}
+
+[data-ff-theme] table td {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+}
+
+/* Fix: "Practice" / virtual-participation link box — CF uses white <td> in a table inside .roundbox */
+[data-ff-theme] .roundbox td,
+[data-ff-theme] .roundbox tr,
+[data-ff-theme] .sidebox td,
+[data-ff-theme] .sidebox tr {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Fix: "Practice" / "Participate" link itself inside contest sidebar */
+[data-ff-theme] .accept-participate-link,
+[data-ff-theme] a.accept-participate-link,
+[data-ff-theme] .roundbox a[href*="practice"],
+[data-ff-theme] .sidebox a[href*="practice"],
+[data-ff-theme] .roundbox .participation-practice,
+[data-ff-theme] .participation-practice {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+  border-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Fix: logo white box
+   The CF logo is a PNG with white background baked into the image.
+   mix-blend-mode: multiply makes white pixels take on the dark page background,
+   effectively hiding the white box on dark themes.
+   Light themes use mix-blend-mode: normal to keep the logo unaltered. */
+[data-ff-theme="dark"] #header .logo img,
+[data-ff-theme="dark"] #header img[src*="logo"],
+[data-ff-theme="dark"] #header > div > a img,
+[data-ff-theme="dark"] #footer img,
+[data-ff-theme="dark"] img[src*="ton"],
+[data-ff-theme="dark"] img[src*="sponsor"],
+[data-ff-theme="dark"] .rateit {
+  filter: invert(1) hue-rotate(180deg) !important;
+  mix-blend-mode: screen !important;
+}
+
+[data-ff-theme="amoled"] #header .logo img,
+[data-ff-theme="amoled"] #header img[src*="logo"],
+[data-ff-theme="amoled"] #header > div > a img,
+[data-ff-theme="amoled"] #footer img,
+[data-ff-theme="amoled"] img[src*="ton"],
+[data-ff-theme="amoled"] img[src*="sponsor"],
+[data-ff-theme="amoled"] .rateit {
+  filter: invert(1) hue-rotate(180deg) !important;
+  mix-blend-mode: screen !important;
+}
+
+[data-ff-theme="contrast"] #header .logo img,
+[data-ff-theme="contrast"] #header img[src*="logo"],
+[data-ff-theme="contrast"] #header > div > a img,
+[data-ff-theme="contrast"] #footer img,
+[data-ff-theme="contrast"] img[src*="ton"],
+[data-ff-theme="contrast"] img[src*="sponsor"],
+[data-ff-theme="contrast"] .rateit {
+  filter: invert(1) hue-rotate(180deg) !important;
+  mix-blend-mode: screen !important;
+}
+
+/* Logo container background — still needed for the wrapper div */
+[data-ff-theme] #header .logo,
+[data-ff-theme] #header .logo *,
+[data-ff-theme] #header > div > a *,
+[data-ff-theme] #header * {
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+}
+
 /* Secondary text / muted labels inside containers */
-body[data-ff-theme] .text-label-gray,
-body[data-ff-theme] .text-label-muted,
-body[data-ff-theme] .text-label-yellow,
-body[data-ff-theme] .text-label-warning {
+[data-ff-theme] .text-label-gray,
+[data-ff-theme] .text-label-muted,
+[data-ff-theme] .text-label-yellow,
+[data-ff-theme] .text-label-warning {
   background: transparent !important;
   color: var(--ff-muted) !important;
 }
 
 /* Sidebar nav links (CF sets these to black #000, invisible on dark) */
-body[data-ff-theme] .menu-list li a,
-body[data-ff-theme] .menu-list li a:hover,
-body[data-ff-theme] .menu-list li a:visited,
-body[data-ff-theme] .menu-list li a:active {
+[data-ff-theme] .menu-list li a,
+[data-ff-theme] .menu-list li a:hover,
+[data-ff-theme] .menu-list li a:visited,
+[data-ff-theme] .menu-list li a:active {
   color: var(--ff-fg) !important;
 }
 
@@ -1089,32 +978,396 @@ body[data-ff-theme] .menu-list li a:active {
   outline-offset: 2px !important;
 }
 
-body[data-ff-theme="dark"] input:focus,
-body[data-ff-theme="dark"] textarea:focus,
-body[data-ff-theme="dark"] select:focus {
+[data-ff-theme="dark"] input:focus,
+[data-ff-theme="dark"] textarea:focus,
+[data-ff-theme="dark"] select:focus {
   outline-color: #a78bfa !important;
 }
 
-body[data-ff-theme="amoled"] input:focus,
-body[data-ff-theme="amoled"] textarea:focus,
-body[data-ff-theme="amoled"] select:focus {
+[data-ff-theme="amoled"] input:focus,
+[data-ff-theme="amoled"] textarea:focus,
+[data-ff-theme="amoled"] select:focus {
   outline-color: #c9a0ff !important;
 }
 
-body[data-ff-theme="blue"] input:focus,
-body[data-ff-theme="blue"] textarea:focus,
-body[data-ff-theme="blue"] select:focus {
-  outline-color: #2563eb !important;
-}
-
-body[data-ff-theme="minimal"] input:focus,
-body[data-ff-theme="minimal"] textarea:focus,
-body[data-ff-theme="minimal"] select:focus {
-  outline-color: #333333 !important;
-}
-
-body[data-ff-theme="contrast"] input:focus,
-body[data-ff-theme="contrast"] textarea:focus,
-body[data-ff-theme="contrast"] select:focus {
+[data-ff-theme="contrast"] input:focus,
+[data-ff-theme="contrast"] textarea:focus,
+[data-ff-theme="contrast"] select:focus {
   outline-color: #facc15 !important;
 }
+
+[data-ff-theme] input,
+[data-ff-theme] textarea,
+[data-ff-theme] select {
+  background-image: none !important;
+}
+
+[data-ff-theme] button,
+[data-ff-theme] input[type="submit"],
+[data-ff-theme] input[type="button"] {
+  background-image: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  border-style: solid !important;
+  border-width: 1px !important;
+}
+
+/* Form labels like "Contest type:" in filters */
+[data-ff-theme] .field-name,
+[data-ff-theme] .setting-name,
+[data-ff-theme] label {
+  color: var(--ff-fg) !important;
+}
+
+/* Fix active tab background on secondary menus (MAIN, BLOG, STATUS, etc) */
+[data-ff-theme] .menu-list li.current,
+[data-ff-theme] .menu-list li.active,
+[data-ff-theme] .menu-list li.selectedLava,
+[data-ff-theme] .menu-list li.back,
+[data-ff-theme] .second-level-menu-list li.current,
+[data-ff-theme] .second-level-menu-list li.active,
+[data-ff-theme] .second-level-menu-list li.selectedLava,
+[data-ff-theme] .second-level-menu-list li.back {
+  background: var(--ff-input-bg) !important;
+  background-image: none !important;
+}
+
+/* Strip sprite images from ALL children of the .back tab wrapper (username tab) */
+[data-ff-theme] .menu-list li.back *,
+[data-ff-theme] .second-level-menu-list li.back * {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* Re-apply the correct background to the anchor itself so text is readable */
+[data-ff-theme] .menu-list li.back > a,
+[data-ff-theme] .second-level-menu-list li.back > a {
+  background: var(--ff-input-bg) !important;
+  background-image: none !important;
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme] .menu-list li.current a,
+[data-ff-theme] .menu-list li.active a,
+[data-ff-theme] .menu-list li.selectedLava a,
+[data-ff-theme] .second-level-menu-list li.current a,
+[data-ff-theme] .second-level-menu-list li.active a,
+[data-ff-theme] .second-level-menu-list li.selectedLava a {
+  color: var(--ff-fg) !important;
+  background: var(--ff-input-bg) !important;
+  background-image: none !important;
+}
+
+[data-ff-theme] .menu-list,
+[data-ff-theme] .second-level-menu-list {
+  list-style-type: none !important;
+}
+
+/* ════════════════════════════════════════════════════
+   ELEGANCE, ENCHANTMENT & FOCUS MODS
+   ════════════════════════════════════════════════════ */
+
+/* Global Typography - Sleek and modern */
+[data-ff-theme] {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Softer UI Edges (Border Radius) */
+[data-ff-theme] .roundbox,
+[data-ff-theme] .sidebox,
+[data-ff-theme] input,
+[data-ff-theme] button,
+[data-ff-theme] select,
+[data-ff-theme] textarea {
+  border-radius: 8px !important;
+}
+
+/* Micro-animations / Transitions */
+[data-ff-theme] a,
+[data-ff-theme] button,
+[data-ff-theme] input,
+[data-ff-theme] .tab,
+[data-ff-theme] .sidebox {
+  transition: all 0.25s ease !important;
+}
+
+/* Enchanting Hover Lift for buttons */
+[data-ff-theme] button:hover,
+[data-ff-theme] input[type="submit"]:hover,
+[data-ff-theme] input[type="button"]:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0, 0.2) !important;
+}
+
+/* Focus Mode - Dim sidebars */
+[data-ff-theme] #sidebar .sidebox {
+  opacity: 0.65;
+}
+[data-ff-theme] #sidebar .sidebox:hover {
+  opacity: 1;
+}
+
+/* Problem Statement Focus */
+[data-ff-theme] .problem-statement {
+  background: var(--ff-card-bg) !important;
+  border-radius: 12px !important;
+  padding: 24px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  font-size: 1.05em !important;
+  line-height: 1.7 !important;
+}
+
+/* ════════════════════════════════════════════════════
+   COMPREHENSIVE ENDPOINT FIXES (Tables, Verdicts, Diffs)
+   ════════════════════════════════════════════════════ */
+
+/* Accepted & Successful Backgrounds */
+[data-ff-theme] tr.accepted-problem td,
+[data-ff-theme] td.accepted-problem,
+[data-ff-theme] .cell-accepted,
+[data-ff-theme] .cell-passed-system-test,
+[data-ff-theme] .hack-successful,
+[data-ff-theme] td[style*="d4edc9"],
+[data-ff-theme] td[style*="e1ebd0"] {
+  background-color: #123318 !important;
+}
+
+/* Rejected, Failed & Unsuccessful Backgrounds */
+[data-ff-theme] tr.rejected-problem td,
+[data-ff-theme] td.rejected-problem,
+[data-ff-theme] .cell-rejected,
+[data-ff-theme] .cell-wrong-answer,
+[data-ff-theme] .cell-time-rejected,
+[data-ff-theme] .cell-rejected-problem,
+[data-ff-theme] .hack-unsuccessful,
+[data-ff-theme] td[style*="ffe3e3"],
+[data-ff-theme] td[style*="f0a0a0"] {
+  background-color: #3b1414 !important;
+}
+
+/* Pending & Challenged Backgrounds */
+[data-ff-theme] .cell-challenged,
+[data-ff-theme] td[style*="e4ebb0"],
+[data-ff-theme] td[style*="cce6ff"] {
+  background-color: #1c2b42 !important;
+}
+
+/* Time Penalties & Standings Accents */
+[data-ff-theme] .cell-time {
+  color: var(--ff-muted) !important;
+}
+[data-ff-theme] tr.unofficial td,
+[data-ff-theme] tr[style*="f8f8f9"] td {
+  background-color: var(--ff-card-bd) !important;
+}
+[data-ff-theme] tr.highlighted-row td,
+[data-ff-theme] .highlighted-row th {
+  background-color: var(--ff-card-bd) !important;
+}
+
+/* Hardcoded Text Colors (Verdicts & Statuses) */
+[data-ff-theme] .verdict-accepted,
+[data-ff-theme] font[color="green"],
+[data-ff-theme] font[color="green"] * {
+  color: #84d296 !important;
+}
+[data-ff-theme] .verdict-rejected,
+[data-ff-theme] .verdict-format-bug,
+[data-ff-theme] .verdict-runtime-error,
+[data-ff-theme] .verdict-time-limit-exceeded,
+[data-ff-theme] .verdict-memory-limit-exceeded,
+[data-ff-theme] font[color="red"],
+[data-ff-theme] font[color="red"] * {
+  color: #e58787 !important;
+}
+[data-ff-theme] .verdict-challenged,
+[data-ff-theme] font[color="blue"],
+[data-ff-theme] font[color="blue"] * {
+  color: #8cb4ff !important;
+}
+
+/* Popups (Facebox & Source Code) */
+[data-ff-theme] #facebox .popup,
+[data-ff-theme] #facebox .content,
+[data-ff-theme] .source-code-popup {
+  background-color: var(--ff-card-bg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Code Diffs (Hacks / Testcases) */
+[data-ff-theme] .diff-add {
+  background-color: #123318 !important;
+  color: #84d296 !important;
+}
+[data-ff-theme] .diff-del {
+  background-color: #3b1414 !important;
+  color: #e58787 !important;
+}
+[data-ff-theme] .diff-change {
+  background-color: #1c2b42 !important;
+  color: #8cb4ff !important;
+}
+
+/* ════════════════════════════════════════════════════
+   DEEP DIVE FIXES (Pagination, Alerts, User Ranks)
+   ════════════════════════════════════════════════════ */
+
+/* Unrated Users (user-black) visibility */
+[data-ff-theme] .user-black {
+  color: var(--ff-fg) !important;
+}
+
+/* Pagination (Page Links) */
+[data-ff-theme] .pagination .active,
+[data-ff-theme] .page-index.active {
+  background-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+  border-color: var(--ff-card-bd) !important;
+}
+
+/* Codeforces Notification Banners (*-macq) */
+[data-ff-theme] .info-macq,
+[data-ff-theme] .success-macq,
+[data-ff-theme] .warning-macq,
+[data-ff-theme] .error-macq {
+  background-color: var(--ff-card-bd) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+  border-radius: 8px !important;
+}
+
+/* System Alerts (.alert, .alert-success, etc.) */
+[data-ff-theme] .alert,
+[data-ff-theme] .alert-success,
+[data-ff-theme] .alert-info,
+[data-ff-theme] .alert-warning,
+[data-ff-theme] .alert-danger {
+  background-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+  border-color: var(--ff-card-bd) !important;
+}
+
+/* Blog / Topic Pane Extras */
+[data-ff-theme] .topic-pane,
+[data-ff-theme] .notice {
+  background-color: var(--ff-card-bg) !important;
+  border-color: var(--ff-card-bd) !important;
+}
+
+/* Fix Dropdown Menus and Filters (Bootstrap / Select2) */
+[data-ff-theme] .dropdown-menu,
+[data-ff-theme] .multiselect-container,
+[data-ff-theme] .multiselect-container > li,
+[data-ff-theme] .multiselect-container > li > a,
+[data-ff-theme] .multiselect-container > li > a > label,
+[data-ff-theme] .select2-drop,
+[data-ff-theme] .select2-dropdown {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+  background-image: none !important;
+}
+[data-ff-theme] .dropdown-menu,
+[data-ff-theme] .multiselect-container,
+[data-ff-theme] .select2-drop,
+[data-ff-theme] .select2-dropdown {
+  border: 1px solid var(--ff-card-bd) !important;
+}
+[data-ff-theme] .dropdown-menu > li > a,
+[data-ff-theme] .dropdown-menu label,
+[data-ff-theme] .multiselect-container label,
+[data-ff-theme] .multiselect-container input[type="checkbox"] {
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme] .dropdown-menu > li > a:hover,
+[data-ff-theme] .multiselect-container > li > a:hover,
+[data-ff-theme] .dropdown-menu > .active > a,
+[data-ff-theme] .multiselect-container > .active > a,
+[data-ff-theme] .select2-results .select2-highlighted {
+  background-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Multiselect Toggle Button */
+[data-ff-theme] .btn.multiselect,
+[data-ff-theme] .btn-default {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-fg) !important;
+  border: 1px solid var(--ff-card-bd) !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+[data-ff-theme] .btn.multiselect:hover,
+[data-ff-theme] .btn-default:hover,
+[data-ff-theme] .btn.multiselect:focus,
+[data-ff-theme] .btn-default:focus {
+  background-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+/* Fix generic tabs (e.g. GYM | MASHUPS) inactive state */
+[data-ff-theme] ul.tabs li a,
+[data-ff-theme] .tabs li a {
+  background-color: var(--ff-card-bg) !important;
+  color: var(--ff-fg) !important;
+}
+[data-ff-theme] ul.tabs li.current a,
+[data-ff-theme] ul.tabs li.active a,
+[data-ff-theme] .tabs li.current a,
+[data-ff-theme] .tabs li.active a {
+  background-color: var(--ff-input-bg) !important;
+  color: var(--ff-brand-color) !important;
+}
+
+/* Invert Google Calendar iframe for Dark Mode */
+[data-ff-theme="dark"] iframe[src*="calendar.google.com"],
+[data-ff-theme="amoled"] iframe[src*="calendar.google.com"],
+[data-ff-theme="contrast"] iframe[src*="calendar.google.com"] {
+  filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
+  border: none !important;
+  border-radius: 8px !important;
+}
+
+/* Fix white fade overlay on truncated blog posts */
+[data-ff-theme] .topic .content::after,
+[data-ff-theme] .topic-fade,
+[data-ff-theme] .fade,
+[data-ff-theme] .content-fade,
+[data-ff-theme] div[style*="rgba(255, 255, 255, 0)"],
+[data-ff-theme] div[style*="rgba(255,255,255,0)"],
+[data-ff-theme] div[style*="fade.png"] {
+  background: linear-gradient(to bottom, transparent, var(--ff-card-bg)) !important;
+}
+
+/* Bottom Links Background Fix */
+[data-ff-theme] .bottom-links {
+  background-color: var(--ff-card-bd) !important;
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+/* Hide legacy Codeforces corner artifacts */
+[data-ff-theme] .rtop,
+[data-ff-theme] .rbottom,
+[data-ff-theme] .ltop,
+[data-ff-theme] .lbottom,
+[data-ff-theme] .roundbox-lt,
+[data-ff-theme] .roundbox-rt,
+[data-ff-theme] .roundbox-lb,
+[data-ff-theme] .roundbox-rb,
+[data-ff-theme] img[src*="corner"] {
+  display: none !important;
+}
+
+/* ════════════════════════════════════════════════════
+   ROOT / <html> THEMING
+   Theme the document root as well so the entire viewport
+   (background, overscroll area, and <body> swaps during
+   AJAX navigation) stays themed on EVERY Codeforces page.
+   ════════════════════════════════════════════════════ */
+
+html[data-ff-theme="dark"]    { background-color: #0e0e1a !important; }
+html[data-ff-theme="amoled"]  { background-color: #000000 !important; }
+html[data-ff-theme="contrast"]{ background-color: #000000 !important; }
+

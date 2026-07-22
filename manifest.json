@@ -35,13 +35,33 @@
     {
       "matches": ["https://codeforces.com/*"],
       "js": ["timer-utils.js", "content.js", "submitify.js"],
-      "css": ["content.css", "cf-theme.css"]
+      "css": ["content.css", "cf-theme.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://atcoder.jp/*"],
+      "js": ["timer-utils.js", "content.js"],
+      "css": ["content.css", "atcoder-theme.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.codechef.com/*"],
+      "js": ["timer-utils.js", "content.js"],
+      "css": ["content.css", "codechef-theme.css"],
+      "run_at": "document_start"
     }
   ],
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://codeforces.com https://www.codechef.com https://atcoder.jp https://leetcode.com"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["assets/notify.wav", "cf-theme.css"],
-      "matches": ["https://codeforces.com/*"]
+      "resources": ["assets/notify.wav", "cf-theme.css", "atcoder-theme.css", "codechef-theme.css"],
+      "matches": [
+        "https://codeforces.com/*",
+        "https://atcoder.jp/*",
+        "https://www.codechef.com/*"
+      ]
     }
   ]
 }
