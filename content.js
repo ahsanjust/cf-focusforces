@@ -640,7 +640,7 @@
     // initTagToggler must wait for DOMContentLoaded because it queries
     // #sidebar and other DOM elements that don't exist at document_start.
     function startScout() {
-        if (IS_CF) {
+        if (IS_CF && window.location.pathname.toLowerCase().includes('/problem/')) {
             initTagToggler();
         }
     }
