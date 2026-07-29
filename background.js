@@ -8,12 +8,10 @@
 // ══════════════════════════════════════════════════════
 
 const CONTEST_CHECK_INTERVAL = 30;
-const CONTEST_NOTIFICATION_WINDOW = 2 * 60 * 60 + 15 * 60;
 const CONTEST_WINDOW_MARGIN = 15 * 60;
 const CONTEST_FETCH_TIMEOUT_MS = 10000;
-const NOTIFICATION_AUTO_DISMISS_MS = 5000;
+const NOTIFICATION_AUTO_DISMISS_MS = 20000;
 const TIMER_STORAGE_KEY = 'ff_timer_state';
-const NOTIFICATION_DISMISS_PREFIX = 'ff_dismiss_';
 const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 300];
 
 const ICON_URL = chrome.runtime.getURL('icons/icon128.png');
@@ -95,19 +93,25 @@ let inflightCheck = null;
 
 function setupAlarms() {
     chrome.alarms.create('checkContests', { periodInMinutes: CONTEST_CHECK_INTERVAL });
+    chrome.alarms.create('pruneStaleKeys', { periodInMinutes: 1440 });
 }
 
-chrome.runtime.onStartup.addListener(() => {
+chrome.runtime.onStartup.addListener(async () => {
     setupAlarms();
-    checkUpcomingContests();
-    pruneStaleKeys();
-    recoverTimerAlarms();
+    await Promise.allSettled([
+        checkUpcomingContests(),
+        pruneStaleKeys(),
+        recoverTimerAlarms()
+    ]);
 });
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
     setupAlarms();
-    checkUpcomingContests();
-    pruneStaleKeys();
+    await Promise.allSettled([
+        checkUpcomingContests(),
+        pruneStaleKeys(),
+        recoverTimerAlarms()
+    ]);
 });
 
 chrome.alarms.onAlarm.addListener(alarm => {
@@ -115,8 +119,12 @@ chrome.alarms.onAlarm.addListener(alarm => {
         checkUpcomingContests();
     } else if (alarm.name.startsWith('timer_')) {
         handleTimerAlarm(alarm.name);
-        // Refresh badge after any timer milestone alarm fires
         updateTimerBadge();
+    } else if (alarm.name.startsWith('dismiss_')) {
+        const notificationId = alarm.name.slice('dismiss_'.length);
+        chrome.notifications.clear(notificationId).catch(() => {});
+    } else if (alarm.name === 'pruneStaleKeys') {
+        pruneStaleKeys();
     }
 });
 
@@ -147,15 +155,16 @@ async function checkUpcomingContests() {
             const toNotify = contests.filter(c => !stored[`notified_${c.site}_${c.id}_${c.triggeredInterval}`]);
 
             for (const contest of toNotify) {
-                await sendContestNotification(contest);
-            }
-
-            if (toNotify.length) {
-                const updates = {};
-                for (const contest of toNotify) {
-                    updates[`notified_${contest.site}_${contest.id}_${contest.triggeredInterval}`] = true;
+                try {
+                    await sendContestNotification(contest);
+                    if (contest.url) {
+                        await chrome.storage.local.set({
+                            [`notified_${contest.site}_${contest.id}_${contest.triggeredInterval}`]: Date.now()
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Failed to notify contest:', contest.site, contest.id, e);
                 }
-                await chrome.storage.local.set(updates);
             }
         } catch (e) {
             console.error('Contest check failed:', e);
@@ -168,20 +177,21 @@ async function checkUpcomingContests() {
 }
 
 async function fetchContestsForNotifications(intervals) {
-    const allContests = [];
     const now = Math.floor(Date.now() / 1000);
 
-    try {
-        const cfResp = await fetch('https://codeforces.com/api/contest.list', {
-            signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const results = await Promise.allSettled([
+        (async () => {
+            const cfResp = await fetch('https://codeforces.com/api/contest.list', {
+                signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
+            }).then(r => r.ok ? r.json() : null).catch(() => null);
 
-        if (cfResp?.status === 'OK' && Array.isArray(cfResp.result)) {
-            cfResp.result.filter(c => c.phase === 'BEFORE').forEach(c => {
+            if (cfResp?.status !== 'OK' || !Array.isArray(cfResp.result)) return [];
+            return cfResp.result.filter(c => c.phase === 'BEFORE').reduce((acc, c) => {
                 const until = c.startTimeSeconds - now;
+                if (until < 0) return acc;
                 const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
                 if (triggeredInterval !== undefined) {
-                    allContests.push({
+                    acc.push({
                         id: c.id,
                         site: 'CodeForces',
                         name: c.name,
@@ -191,31 +201,32 @@ async function fetchContestsForNotifications(intervals) {
                         triggeredInterval
                     });
                 }
-            });
-        }
-    } catch {}
+                return acc;
+            }, []);
+        })(),
 
-    try {
-        const ccResp = await fetch('https://www.codechef.com/api/list/contests/all', {
-            signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
+        (async () => {
+            const ccResp = await fetch('https://www.codechef.com/api/list/contests/all', {
+                signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
+            }).then(r => r.ok ? r.json() : null).catch(() => null);
 
-        if (ccResp) {
-            const nowDate = new Date();
+            if (!ccResp) return [];
             const parseDate = (dateStr) => {
                 if (!dateStr) return null;
                 const d = new Date(dateStr);
                 return isNaN(d.getTime()) ? null : Math.floor(d.getTime() / 1000);
             };
-
-            [...(ccResp.future_contests || []), ...(ccResp.present_contests || [])].forEach(c => {
+            const future = Array.isArray(ccResp.future_contests) ? ccResp.future_contests : [];
+            const present = Array.isArray(ccResp.present_contests) ? ccResp.present_contests : [];
+            return [...future, ...present].reduce((acc, c) => {
                 const startTimeSec = parseDate(c.contest_start_date_iso);
-                if (!startTimeSec) return;
+                if (!startTimeSec) return acc;
                 const until = startTimeSec - now;
+                if (until < 0) return acc;
                 const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
                 if (triggeredInterval !== undefined) {
-                    allContests.push({
-                        id: c.contest_code || `unknown_${c.contest_name}`,
+                    acc.push({
+                        id: c.contest_code || `cc_${startTimeSec}_${(c.contest_name || 'unknown').replace(/\s+/g, '_')}`,
                         site: 'CodeChef',
                         name: c.contest_name || 'CodeChef Contest',
                         url: c.contest_code ? `https://www.codechef.com/${c.contest_code}` : 'https://www.codechef.com/contests',
@@ -224,72 +235,67 @@ async function fetchContestsForNotifications(intervals) {
                         triggeredInterval
                     });
                 }
-            });
-        }
-    } catch {}
+                return acc;
+            }, []);
+        })(),
 
-    try {
-        const acResp = await fetch('https://atcoder.jp/contests', {
-            signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
-        }).then(r => r.ok ? r.text() : null).catch(() => null);
+        (async () => {
+            const acResp = await fetch('https://atcoder.jp/contests', {
+                signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS)
+            }).then(r => r.ok ? r.text() : null).catch(() => null);
 
-        if (acResp) {
-            const upcomingMatch = acResp.match(/<div id="contest-table-upcoming".*?<tbody>(.*?)<\/tbody>/s);
-            if (upcomingMatch) {
-                const rowsHtml = upcomingMatch[1];
-                const rowRegex = /<tr>(.*?)<\/tr>/gs;
-                let row;
-                while ((row = rowRegex.exec(rowsHtml)) !== null) {
-                    const cellHtml = row[1];
-                    const linkMatch = cellHtml.match(/<a href="(\/contests\/[^"]+)">([^<]+)<\/a>/g);
-                    if (!linkMatch) continue;
-                    
-                    const lastLinkStr = linkMatch[linkMatch.length - 1];
-                    const urlMatch = lastLinkStr.match(/href="([^"]+)"/);
-                    const nameMatch = lastLinkStr.match(/>([^<]+)</);
-                    if (!urlMatch || !nameMatch) continue;
-
-                    const timeMatch = cellHtml.match(/<time[^>]*datetime="([^"]+)"/);
-                    if (!timeMatch) continue;
-
-                    const startTimeSec = Math.floor(new Date(timeMatch[1].replace(' ', 'T')).getTime() / 1000);
-                    if (Number.isNaN(startTimeSec)) continue;
-
-                    const until = startTimeSec - now;
-                    const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
-                    if (triggeredInterval !== undefined) {
-                        allContests.push({
-                            id: urlMatch[1].split('/').pop(),
-                            site: 'AtCoder',
-                            name: nameMatch[1],
-                            url: `https://atcoder.jp${urlMatch[1]}`,
-                            start_time: startTimeSec * 1000,
-                            startTimeSeconds: startTimeSec,
-                            triggeredInterval
-                        });
-                    }
-                }
-            }
-        }
-    } catch {}
-
-    try {
-        const lcResp = await fetch('https://leetcode.com/graphql', {
-            signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS),
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: '{ upcomingContests { title titleSlug startTime duration } }' })
-        }).then(r => r.ok ? r.json() : null).catch(() => null);
-
-        if (lcResp?.data?.upcomingContests) {
-            lcResp.data.upcomingContests.forEach(c => {
-                const startTimeSec = c.startTime;
-                if (!startTimeSec) return;
-                
+            if (!acResp) return [];
+            const tableMatch = acResp.match(/<div id="contest-table-upcoming".*?<tbody>(.*?)<\/tbody>/s);
+            if (!tableMatch) return [];
+            const contests = [];
+            const rowRegex = /<tr>(.*?)<\/tr>/gs;
+            let rowMatch;
+            while ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {
+                const rowHtml = rowMatch[1];
+                const hrefMatch = rowHtml.match(/<a[^>]+href="(\/contests\/[^"]+)"[^>]*>([^<]*)<\/a>/);
+                const timeMatch = rowHtml.match(/<time[^>]*>([^<]*)<\/time>/);
+                if (!hrefMatch || !timeMatch) continue;
+                const href = hrefMatch[1];
+                const name = hrefMatch[2].trim();
+                if (!href || !name) continue;
+                const startTimeSec = Math.floor(new Date(timeMatch[1]).getTime() / 1000);
+                if (Number.isNaN(startTimeSec)) continue;
                 const until = startTimeSec - now;
+                if (until < 0) continue;
                 const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
                 if (triggeredInterval !== undefined) {
-                    allContests.push({
+                    contests.push({
+                        id: href.split('/').pop(),
+                        site: 'AtCoder',
+                        name,
+                        url: `https://atcoder.jp${href}`,
+                        start_time: startTimeSec * 1000,
+                        startTimeSeconds: startTimeSec,
+                        triggeredInterval
+                    });
+                }
+            }
+            return contests;
+        })(),
+
+        (async () => {
+            const lcResp = await fetch('https://leetcode.com/graphql', {
+                signal: AbortSignal.timeout(CONTEST_FETCH_TIMEOUT_MS),
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: '{ upcomingContests { title titleSlug startTime duration } }' })
+            }).then(r => r.ok ? r.json() : null).catch(() => null);
+
+            if (!lcResp?.data?.upcomingContests) return [];
+            return lcResp.data.upcomingContests.reduce((acc, c) => {
+                let startTimeSec = c.startTime;
+                if (!startTimeSec) return acc;
+                if (startTimeSec > 1e12) startTimeSec = Math.floor(startTimeSec / 1000);
+                const until = startTimeSec - now;
+                if (until < 0) return acc;
+                const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
+                if (triggeredInterval !== undefined) {
+                    acc.push({
                         id: c.titleSlug || c.title,
                         site: 'LeetCode',
                         name: c.title || 'LeetCode Contest',
@@ -299,39 +305,54 @@ async function fetchContestsForNotifications(intervals) {
                         triggeredInterval
                     });
                 }
-            });
-        }
-    } catch {}
+                return acc;
+            }, []);
+        })(),
+    ]);
 
+    const allContests = [];
+    for (const r of results) {
+        if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+            allContests.push(...r.value);
+        }
+    }
     return allContests;
 }
 
 function sendContestNotification(contest) {
-    const time = new Date(contest.start_time).toLocaleTimeString();
-    const until = contest.startTimeSeconds
-        ? Math.floor((contest.startTimeSeconds - Math.floor(Date.now() / 1000)) / 60)
+    if (!contest.url) return Promise.resolve();
+    const time = new Date(contest.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const rawMinutes = contest.startTimeSeconds
+        ? (contest.startTimeSeconds - Math.floor(Date.now() / 1000)) / 60
         : null;
+    const until = rawMinutes !== null ? Math.max(0, Math.round(rawMinutes)) : null;
     const timeStr = until !== null
         ? (until >= 60 ? `${Math.floor(until / 60)}h ${until % 60}m` : `${until}m`)
         : 'soon';
 
     return new Promise(resolve => {
-        chrome.notifications.create(`contest_${contest.site}_${contest.id}`, {
-            type: 'basic',
-            iconUrl: ICON_URL,
-            title: `🚀 Upcoming ${contest.site} Contest`,
-            message: `${contest.name}\nStarts at ${time} (in ~${timeStr})`,
-            priority: 2,
-            requireInteraction: false,
-            buttons: [{ title: 'Open Contest' }]
-        }, async notificationId => {
-            if (notificationId) {
-                await chrome.storage.local.set({
-                    [`notification_${notificationId}`]: contest.url
-                });
-                scheduleNotificationDismiss(notificationId);
-            }
-            resolve();
+        const notificationId = `contest_${contest.site}_${contest.id}_${contest.triggeredInterval}`;
+        chrome.notifications.clear(notificationId).catch(() => {}).then(() => {
+            chrome.notifications.create(notificationId, {
+                type: 'basic',
+                iconUrl: ICON_URL,
+                title: `🚀 Upcoming ${contest.site} Contest`,
+                message: `${contest.name}\nStarts at ${time} (in ~${timeStr})`,
+                priority: 2,
+                requireInteraction: false,
+                buttons: [{ title: 'Open Contest' }]
+            }, createdId => {
+                try {
+                    if (createdId) {
+                        chrome.storage.local.set({
+                            [`notification_${createdId}`]: contest.url
+                        }).catch(() => {});
+                        scheduleNotificationDismiss(createdId);
+                    }
+                } catch {} finally {
+                    resolve();
+                }
+            });
         });
     });
 }
@@ -356,7 +377,7 @@ async function recoverTimerAlarms() {
         }
         // Start badge updates for both countdown and stopwatch
         updateTimerBadge();
-    } catch {}
+    } catch (e) { console.warn('Timer recovery failed:', e); }
 }
 
 function scheduleTimerAlarms(state) {
@@ -440,6 +461,14 @@ async function handleTimerFinished(state) {
     stopBadgeUpdates();
 }
 
+function targetTimerSound() {
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+        if (tabs.length) {
+            chrome.tabs.sendMessage(tabs[0].id, { type: 'PLAY_TIMER_SOUND' }).catch(() => {});
+        }
+    });
+}
+
 function sendTimerNotification(title, message) {
     chrome.notifications.create({
         type: 'basic',
@@ -447,15 +476,20 @@ function sendTimerNotification(title, message) {
         title: `⏳ ${title}`,
         message,
         priority: 2,
-        requireInteraction: true  // Stay visible until dismissed
-    }, notificationId => {
-        if (notificationId) {
-            scheduleNotificationDismiss(notificationId);
-        }
-    });
+        requireInteraction: true
+    }).catch(() => {});
+    targetTimerSound();
+}
 
-    // Trigger notification sound in content scripts (on CF pages)
-    chrome.runtime.sendMessage({ type: 'PLAY_TIMER_SOUND' }).catch(() => {});
+async function clearContestNotifications() {
+    try {
+        const all = await chrome.notifications.getAll();
+        for (const id of Object.keys(all)) {
+            if (id.startsWith('contest_')) {
+                chrome.notifications.clear(id).catch(() => {});
+            }
+        }
+    } catch {}
 }
 
 // ══════════════════════════════════════════════════════
@@ -463,9 +497,9 @@ function sendTimerNotification(title, message) {
 // ══════════════════════════════════════════════════════
 
 function scheduleNotificationDismiss(notificationId) {
-    setTimeout(() => {
-        chrome.notifications.clear(notificationId).catch(() => {});
-    }, NOTIFICATION_AUTO_DISMISS_MS);
+    chrome.alarms.create(`dismiss_${notificationId}`, {
+        when: Date.now() + NOTIFICATION_AUTO_DISMISS_MS
+    }).catch(() => {});
 }
 
 // ══════════════════════════════════════════════════════
@@ -487,6 +521,8 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     } else if (req.type === 'REMINDERS_TOGGLED') {
         if (req.enabled) {
             checkUpcomingContests();
+        } else {
+            clearContestNotifications();
         }
     } else if (req.type === 'TIMER_NOTIFY') {
         sendTimerNotification(req.title, req.message);
@@ -515,7 +551,7 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, btnIdx) 
     if (btnIdx !== 0) return;
     const key = `notification_${notificationId}`;
     const { [key]: url } = await chrome.storage.local.get(key);
-    if (url) chrome.tabs.create({ url, active: false });
+    if (url) chrome.tabs.create({ url, active: false }).catch(() => {});
     chrome.notifications.clear(notificationId).catch(() => {});
 });
 
@@ -528,16 +564,23 @@ async function pruneStaleKeys() {
         const all = await chrome.storage.local.get(null);
         const toRemove = [];
         const notifiedKeys = [];
+
+        const activeIds = new Set(Object.keys(await chrome.notifications.getAll()));
+
         for (const k of Object.keys(all)) {
-            if (k.startsWith('notification_') || k.startsWith(NOTIFICATION_DISMISS_PREFIX)) {
-                toRemove.push(k);
+            if (k.startsWith('notification_')) {
+                const notifId = k.slice('notification_'.length);
+                if (!activeIds.has(notifId)) {
+                    toRemove.push(k);
+                }
             } else if (k.startsWith('notified_')) {
-                notifiedKeys.push(k);
+                notifiedKeys.push({ key: k, time: all[k] });
             }
         }
         if (notifiedKeys.length > 50) {
-            toRemove.push(...notifiedKeys.slice(0, notifiedKeys.length - 50));
+            notifiedKeys.sort((a, b) => a.time - b.time);
+            toRemove.push(...notifiedKeys.slice(0, notifiedKeys.length - 50).map(x => x.key));
         }
         if (toRemove.length) await chrome.storage.local.remove(toRemove);
-    } catch {}
+    } catch (e) { console.warn('pruneStaleKeys failed:', e); }
 }
