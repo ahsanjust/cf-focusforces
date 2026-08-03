@@ -13,6 +13,8 @@ const PLATFORM_CONFIG = {
 };
 
 const CONTEST_HORIZON_MS = 15 * 24 * 60 * 60 * 1000;
+
+const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 300];
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -100,17 +102,43 @@ function sortByTime(items) {
     return items.slice().sort(contestComparator);
 }
 
+/**
+ * Resolve the active reminder-interval set from stored user settings.
+ *
+ * Semantics (regression-tested):
+ *   - missing / non-array / undefined  → defaults   (user never configured)
+ *   - empty array                       → []          (user unchecked every
+ *                                                       chip → NO reminders;
+ *                                                       caller must NOT fall
+ *                                                       back to defaults)
+ *   - non-empty array                   → that array
+ *
+ * Returning [] for the "all unchecked" case is deliberate: previously the
+ * caller fell back to defaults whenever the stored array was empty, which
+ * silently re-enabled every reminder right after the user disabled them all.
+ *
+ * @param {*} stored   value read from `ff_reminder_intervals`
+ * @param {number[]} defaults  fallback when stored is absent/non-array
+ * @returns {number[]}
+ */
+function resolveReminderIntervals(stored, defaults) {
+    if (Array.isArray(stored)) return stored;
+    return defaults;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         PLATFORM_CONFIG,
         CONTEST_HORIZON_MS,
         TWENTY_FOUR_HOURS_MS,
+        DEFAULT_REMINDER_INTERVALS,
         getContestStatus,
         formatDuration,
         formatDateTime,
         timeUntil,
         contestComparator,
         filterAndSort,
-        sortByTime
+        sortByTime,
+        resolveReminderIntervals
     };
 }

@@ -9,18 +9,24 @@
         const input = document.querySelector('input[name="sourceFile"]');
         if (!input) return;
 
+        // ── Update label ──────────────────────────────────
+        // Resolve the label BEFORE detaching `input` via replaceWith below —
+        // Element.closest() walks ancestors and returns null for a detached
+        // node, and input.labels no longer reflects wrapping <label> ancestors
+        // once the input is out of the document.
+        const label = input.closest('.field')?.querySelector('label')
+            || input.labels?.[0];
+
         // ── Replace file input with textarea ──────────────
         const textarea = document.createElement('textarea');
         input.getAttributeNames().forEach(name => {
-            textarea.setAttribute(name, input.getAttribute(name));
+            if (!name.startsWith('on')) {
+                textarea.setAttribute(name, input.getAttribute(name));
+            }
         });
         input.replaceWith(textarea);
 
-        // ── Update label ──────────────────────────────────
-        const fields = document.querySelectorAll('.field');
-        if (fields.length >= 2) {
-            fields[1].textContent = 'Put Code Here:';
-        }
+        if (label) label.textContent = 'Put Code Here:';
 
         // ── Open submission in new tab ────────────────────
         const form = document.querySelector('.submitForm');

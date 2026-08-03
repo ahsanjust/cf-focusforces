@@ -39,19 +39,19 @@
     <div class="setting-card">
       <div class="setting-label">Theme</div>
       <div class="theme-picker" id="theme-picker" role="radiogroup" aria-label="Select theme">
-        <button class="theme-dot" data-theme="default" role="radio" aria-checked="true" title="Default">
+        <button class="theme-dot" data-ff-theme="default" role="radio" aria-checked="true" title="Default">
           <span class="dot-color" style="background: linear-gradient(135deg, #4338ca, #818cf8)"></span>
           <span class="dot-label">Default</span>
         </button>
-        <button class="theme-dot" data-theme="dark" role="radio" aria-checked="false" title="Dark">
+        <button class="theme-dot" data-ff-theme="dark" role="radio" aria-checked="false" title="Dark">
           <span class="dot-color" style="background: linear-gradient(135deg, #0e0e1a, #282842)"></span>
           <span class="dot-label">Dark</span>
         </button>
-        <button class="theme-dot" data-theme="amoled" role="radio" aria-checked="false" title="AMOLED">
+        <button class="theme-dot" data-ff-theme="amoled" role="radio" aria-checked="false" title="AMOLED">
           <span class="dot-color dot-amoled"></span>
           <span class="dot-label">AMOLED</span>
         </button>
-        <button class="theme-dot" data-theme="contrast" role="radio" aria-checked="false" title="High Contrast">
+        <button class="theme-dot" data-ff-theme="contrast" role="radio" aria-checked="false" title="High Contrast">
           <span class="dot-color" style="background: linear-gradient(135deg, #422006, #fde68a)"></span>
           <span class="dot-label">Contrast</span>
         </button>
@@ -81,48 +81,48 @@
           <span class="setting-label">Contest Reminders</span>
           <span class="setting-desc">Notify before upcoming contests</span>
         </div>
-        <label class="switch" for="reminder-toggle" title="Toggle contest reminders">
+        <label class="switch" for="reminder-toggle" title="Toggle contest reminders" aria-expanded="true">
           <input type="checkbox" id="reminder-toggle" checked aria-label="Toggle contest reminders">
           <span class="switch-track">
             <span class="switch-thumb"></span>
           </span>
         </label>
       </div>
-      <div id="reminder-section" class="reminder-section" style="display: none;">
+      <div id="reminder-section" class="reminder-section" aria-expanded="true">
         <div class="reminder-header">
           <span class="reminder-title">Notify me before:</span>
         </div>
         <div class="reminder-chips" id="reminder-options">
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="86400">
+            <input type="checkbox" class="reminder-item" value="86400" aria-label="Notify 1 day before">
             <span>1 Day</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="43200">
+            <input type="checkbox" class="reminder-item" value="43200" aria-label="Notify 12 hours before">
             <span>12 Hours</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="18000">
+            <input type="checkbox" class="reminder-item" value="18000" aria-label="Notify 5 hours before">
             <span>5 Hours</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="7200">
+            <input type="checkbox" class="reminder-item" value="7200" aria-label="Notify 2 hours before">
             <span>2 Hours</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="3600">
+            <input type="checkbox" class="reminder-item" value="3600" aria-label="Notify 1 hour before">
             <span>1 Hour</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="1800">
+            <input type="checkbox" class="reminder-item" value="1800" aria-label="Notify 30 minutes before">
             <span>30 Min</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="600">
+            <input type="checkbox" class="reminder-item" value="600" aria-label="Notify 10 minutes before">
             <span>10 Min</span>
           </label>
           <label class="reminder-chip">
-            <input type="checkbox" class="reminder-item" value="300">
+            <input type="checkbox" class="reminder-item" value="300" aria-label="Notify 5 minutes before">
             <span>5 Min</span>
           </label>
         </div>
@@ -143,7 +143,7 @@
       </div>
     </div>
     <div class="timer-body">
-      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="timer-display" id="timer-display" role="timer" aria-live="polite">00:00:00</div>
       <div class="timer-inputs" id="timer-inputs">
         <label>
           <input type="number" id="timer-mm" min="0" max="999" placeholder="MM" value="25"> m

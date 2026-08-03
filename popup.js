@@ -14,11 +14,10 @@ const CACHE_KEY = 'ff_contests_cache';
 const GYM_CACHE_TTL_MS = 30 * 60 * 1000;
 const GYM_CACHE_KEY = 'ff_gym_cache';
 
-const THEMES = ['default', 'light', 'dark', 'amoled', 'contrast'];
+const THEMES = ['default', 'dark', 'amoled', 'contrast'];
 const THEME_KEY = 'ff_theme';
 const TIMER_STORAGE_KEY = 'ff_timer_state';
 const REMINDER_INTERVALS_KEY = 'ff_reminder_intervals';
-const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 300];
 
 // ══════════════════════════════════════════════════════
 // MODULE: Theme
@@ -29,9 +28,9 @@ const ThemeModule = (() => {
 
     function applyTheme(theme) {
         currentTheme = theme;
-        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-ff-theme', theme);
         document.querySelectorAll('.theme-dot').forEach(dot => {
-            const isActive = dot.dataset.theme === theme;
+            const isActive = dot.dataset.ffTheme === theme;
             dot.classList.toggle('active', isActive);
             dot.setAttribute('aria-checked', String(isActive));
         });
@@ -285,7 +284,7 @@ const TimerUIModule = (() => {
 
 const TimerActions = (() => {
     function start() {
-        const state = TimerModule.getState();
+        const state = { ...TimerModule.getState() };
         if (state.mode === 'countdown') {
             const mmInput = document.getElementById('timer-mm');
             const ssInput = document.getElementById('timer-ss');
@@ -314,7 +313,7 @@ const TimerActions = (() => {
     }
 
     function pause() {
-        const state = TimerModule.getState();
+        const state = { ...TimerModule.getState() };
         if (state.mode === 'countdown') {
             state.remainingMs = Math.max(0, state.endTime - Date.now());
         } else {
@@ -339,7 +338,8 @@ const TimerActions = (() => {
 
     function finish() {
         TimerInterval.stop();
-        const state = TimerModule.defaultTimerState();
+        const currentMode = TimerModule.getState().mode;
+        const state = { ...TimerModule.defaultTimerState(), mode: currentMode };
         TimerModule.setState(state);
         TimerModule.saveTimerState(state);
         TimerUIModule.render();
@@ -448,26 +448,27 @@ const AtCoderParser = (() => {
 
         rows.forEach(row => {
             const cells = row.querySelectorAll('td');
-            if (cells.length < 3) return;
+            // AtCoder upcoming table has 4 columns: Start Time | Contest Name | Duration | Rated Range
+            if (cells.length < 4) return;
 
-            // Contest name: the last <a href="/contests/..."> inside the first cell.
+            // Contest name: the last <a href="/contests/..."> inside the second cell (column 1).
             // AtCoder sometimes includes extra links (rating predictors, etc.) before
             // the actual contest name; we want the last one.
-            const links = cells[0].querySelectorAll('a[href^="/contests/"]');
+            const links = cells[1].querySelectorAll('a[href^="/contests/"]');
             if (!links.length) return;
             const lastLink = links[links.length - 1];
             const contestPath = lastLink.getAttribute('href');
             const contestName = lastLink.textContent.trim();
 
-            // Start time from <time> element (datetime attribute preferred)
-            const timeEl = cells[1].querySelector('time');
+            // Start time from <time> element in the first cell (column 0)
+            const timeEl = cells[0].querySelector('time');
             if (!timeEl) return;
             const startTimeStr = timeEl.getAttribute('datetime') || timeEl.textContent.trim();
             // AtCoder uses format "2024-06-01 12:00:00+09:00" — replace space with T for ISO
             const startTime = new Date(startTimeStr.replace(' ', 'T'));
             if (Number.isNaN(startTime.getTime())) return;
 
-            // Duration from the third cell, e.g. "01:30"
+            // Duration from the third cell (column 2), e.g. "01:30"
             const durationStr = cells[2].textContent.trim();
             const [dh = 0, dm = 0] = durationStr.split(':').map(Number);
             const durationMinutes = Number.isFinite(dh) && Number.isFinite(dm) ? dh * 60 + dm : 90;
@@ -618,13 +619,16 @@ const ContestFetch = (() => {
         const lcContests = [];
         if (lcResp?.data?.upcomingContests) {
             lcResp.data.upcomingContests.forEach(c => {
-                const start_time = c.startTime ? new Date(c.startTime * 1000).toISOString() : null;
+                let startTime = c.startTime;
+                if (!startTime) return;
+                if (startTime > 1e12) startTime = Math.floor(startTime / 1000);
+                const start_time = new Date(startTime * 1000).toISOString();
                 if (!start_time) return;
                 lcContests.push({
                     name: c.title || 'LeetCode Contest',
                     url: c.titleSlug ? `https://leetcode.com/contest/${c.titleSlug}` : null,
                     site: 'LeetCode', status: 'BEFORE', start_time,
-                    duration: c.duration ? Math.round(c.duration / 60) : 90
+                    duration: c.duration ? Math.round(c.duration > 1e6 ? c.duration / 1000 / 60 : c.duration / 60) : 90
                 });
             });
         }
@@ -893,11 +897,14 @@ const ContestListModule = (() => {
     let currentMain = [];
     let currentGym = [];
     let refreshIntervalId = null;
+    let loadGeneration = 0;
 
     async function load() {
         const list = document.getElementById('contest-list');
+        const myGen = ++loadGeneration;
 
         const [cachedMain, cachedGym] = await Promise.all([ContestCache.getMain(), ContestCache.getGym()]);
+        if (myGen !== loadGeneration) return;
         currentMain = cachedMain || [];
         currentGym = cachedGym || [];
 
@@ -908,10 +915,12 @@ const ContestListModule = (() => {
         }
 
         ContestFetch.fetchMain().then(main => {
+            if (myGen !== loadGeneration) return;
             currentMain = main;
             ContestCache.setMain(main);
             ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
         }).catch(e => {
+            if (myGen !== loadGeneration) return;
             if (!currentMain.length && !currentGym.length) {
                 const msg = !navigator.onLine
                     ? 'You appear to be offline. Connect to the internet and try again.'
@@ -921,6 +930,7 @@ const ContestListModule = (() => {
         });
 
         ContestFetch.fetchGym().then(gym => {
+            if (myGen !== loadGeneration) return;
             if (gym && gym.length) {
                 currentGym = gym;
                 ContestCache.setGym(gym);
@@ -960,10 +970,12 @@ const ReminderSettingsModule = (() => {
         reminderToggle.checked = remindersEnabled;
         document.getElementById('reminder-section').style.display = remindersEnabled ? 'block' : 'none';
         
-        reminderToggle.addEventListener('change', e => {
+        reminderToggle.addEventListener('change', async e => {
             const enabled = e.target.checked;
-            chrome.storage.local.set({ ff_reminders_enabled: enabled });
+            try { await chrome.storage.local.set({ ff_reminders_enabled: enabled }); } catch {}
             document.getElementById('reminder-section').style.display = enabled ? 'block' : 'none';
+            document.getElementById('reminder-section').setAttribute('aria-expanded', String(enabled));
+            e.target.closest('.switch').setAttribute('aria-expanded', String(enabled));
             chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled }).catch(() => {});
         });
 
@@ -972,12 +984,23 @@ const ReminderSettingsModule = (() => {
             const val = parseInt(opt.value, 10);
             opt.checked = ff_reminder_intervals.includes(val);
             
-            opt.addEventListener('change', () => {
+            opt.addEventListener('change', async () => {
+                // Keep at least one reminder chip enabled via the chip UI: the
+                // master "Contest Reminders" toggle is the intended way to fully
+                // disable reminders, so we block unchecking the last chip here.
+                // (The background still treats a stored `[]` as "no reminders",
+                // so this is UX reinforcement, not the sole guard.)
+                if (!opt.checked && Array.from(options).filter(o => o.checked).length === 0) {
+                    opt.checked = true;
+                    return;
+                }
                 const newIntervals = Array.from(options)
                     .filter(o => o.checked)
                     .map(o => parseInt(o.value, 10));
-                chrome.storage.local.set({ ff_reminder_intervals: newIntervals });
-                chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled: reminderToggle.checked }).catch(() => {});
+                try { await chrome.storage.local.set({ ff_reminder_intervals: newIntervals }); } catch {}
+                // Distinct message so the background can clear & re-schedule the
+                // per-(contest,interval) absolute alarms for the new interval set.
+                chrome.runtime.sendMessage({ type: 'REMINDER_INTERVALS_CHANGED', intervals: newIntervals }).catch(() => {});
             });
         });
     }
@@ -992,15 +1015,17 @@ const ReminderSettingsModule = (() => {
 const SettingsModule = (() => {
     async function init() {
         const zenToggle = document.getElementById('zen-toggle');
-        const { zenMode } = await chrome.storage.local.get('zenMode');
-        zenToggle.checked = !!zenMode;
-        zenToggle.addEventListener('change', e => {
+        const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
+        zenToggle.checked = !!ff_zenMode;
+        zenToggle.addEventListener('change', async e => {
             const enabled = e.target.checked;
-            chrome.storage.local.set({ zenMode: enabled });
-            chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-                if (tabs[0]?.url?.includes('codeforces.com')) {
-                    chrome.tabs.sendMessage(tabs[0].id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
-                }
+            try { await chrome.storage.local.set({ ff_zenMode: enabled }); } catch {}
+            chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
+                tabs.forEach(tab => {
+                    if (tab.id) {
+                        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
+                    }
+                });
             });
         });
     }
@@ -1026,8 +1051,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (themePicker) {
         themePicker.addEventListener('click', e => {
             const dot = e.target.closest('.theme-dot');
-            if (dot && dot.dataset.theme) {
-                ThemeModule.applyTheme(dot.dataset.theme);
+            if (dot && dot.dataset.ffTheme) {
+                ThemeModule.applyTheme(dot.dataset.ffTheme);
             }
         });
     }

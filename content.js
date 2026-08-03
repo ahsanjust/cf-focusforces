@@ -45,6 +45,11 @@
     let problemCachePromise = null;
     let cachedAudioCtx = null;
     let currentTheme = 'default';
+    let ffPoll = null;
+    let ffObs = null;
+    let ffAbortCtrl = null;
+    let ffTimeout = null;
+    let themeGuard = null;
 
     // ── Audio (for notification sounds triggered by background) ──
     const notifySound = new Audio(chrome.runtime.getURL('assets/notify.wav'));
@@ -107,7 +112,7 @@
 
     function applyThemeToElements(theme) {
         const scoutCard = document.getElementById('ff-scout-card');
-        if (scoutCard) scoutCard.setAttribute('data-theme', theme);
+        if (scoutCard) scoutCard.setAttribute('data-ff-theme', theme);
     }
 
     // Re-apply the marker if it ever goes missing (e.g. Codeforces replaces
@@ -201,13 +206,15 @@
     }
 
     // Watch for <body> being replaced entirely (some CF pages re-render).
-    const themeGuard = new MutationObserver(ensureThemeApplied);
+    themeGuard = new MutationObserver(ensureThemeApplied);
     themeGuard.observe(document.documentElement, { childList: true });
 
     // Re-apply the theme after client-side (History API) navigations so the
     // whole site stays themed when moving between Codeforces pages.
     const wrapHistory = (method) => {
+        if (history[method].__ffOriginal) return;
         const original = history[method];
+        history[method].__ffOriginal = original;
         history[method] = function (...args) {
             const result = original.apply(this, args);
             applyThemeAttr(currentTheme);
@@ -217,10 +224,13 @@
     };
     wrapHistory('pushState');
     wrapHistory('replaceState');
-    window.addEventListener('popstate', () => {
-        applyThemeAttr(currentTheme);
-        injectThemeCSS();
-    });
+    if (!window.__ffPopstateListener) {
+        window.__ffPopstateListener = true;
+        window.addEventListener('popstate', () => {
+            applyThemeAttr(currentTheme);
+            injectThemeCSS();
+        });
+    }
 
     // ── Consolidated Message Dispatcher ─────────────────
     chrome.runtime.onMessage.addListener(req => {
@@ -250,6 +260,10 @@
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'local' && changes.ff_theme) {
             applyThemeFromSource(changes.ff_theme.newValue);
+        }
+        if (area === 'local' && changes.ff_zenMode) {
+            zenModeEnabled = !!changes.ff_zenMode.newValue;
+            applyZenMode(zenModeEnabled);
         }
     });
 
@@ -381,8 +395,8 @@
 
     (async () => {
         try {
-            const { zenMode } = await chrome.storage.local.get('zenMode');
-            zenModeEnabled = !!zenMode;
+            const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
+            zenModeEnabled = !!ff_zenMode;
             if (zenModeEnabled) applyZenMode(true);
         } catch (e) {
             console.debug('FocusForces: failed to load zen mode state', e);
@@ -399,7 +413,7 @@
             card = document.createElement('div');
             card.className = 'roundbox sidebox';
             card.id = 'ff-scout-card';
-            card.setAttribute('data-theme', currentTheme);
+            card.setAttribute('data-ff-theme', currentTheme);
             card.innerHTML = `
                 <div class="roundbox-lt">&nbsp;</div>
                 <div class="roundbox-rt">&nbsp;</div>
@@ -517,16 +531,19 @@
             return true;
         };
 
-        let apiAbortController = null;
-        let poll, obs;
+        // Clean up any previous polling/observer from a prior initTagToggler call.
+        if (ffPoll) { clearInterval(ffPoll); ffPoll = null; }
+        if (ffObs) { ffObs.disconnect(); ffObs = null; }
+        if (ffAbortCtrl) { ffAbortCtrl.abort(); ffAbortCtrl = null; }
+        if (ffTimeout) { clearTimeout(ffTimeout); ffTimeout = null; }
 
         const stopPolling = () => {
-            clearInterval(poll);
-            obs.disconnect();
+            if (ffPoll) { clearInterval(ffPoll); ffPoll = null; }
+            if (ffObs) { ffObs.disconnect(); ffObs = null; }
         };
 
         const onTagsFoundFromDom = () => {
-            apiAbortController?.abort();
+            ffAbortCtrl?.abort();
             stopPolling();
         };
 
@@ -544,97 +561,97 @@
             btnTopics.classList.add('loading');
             btnRating.classList.add('loading');
 
-            apiAbortController = new AbortController();
-            const { signal } = apiAbortController;
+        ffAbortCtrl = new AbortController();
+        const { signal } = ffAbortCtrl;
 
-            try {
-                const { contestId, index } = getProblemIdentity();
-                if (!index) throw new Error('No index');
+        try {
+            const { contestId, index } = getProblemIdentity();
+            if (!index) throw new Error('No index');
 
-                const problem = await fetchProblemFromApi(contestId, index, signal);
-                if (!problem) throw new Error('Not found');
-                if (tagsProcessed) return;
+            const problem = await fetchProblemFromApi(contestId, index, signal);
+            if (!problem) throw new Error('Not found');
+            if (tagsProcessed) return;
 
-                clearContainers();
-                let hasTopics = false, hasRating = false;
+            clearContainers();
+            let hasTopics = false, hasRating = false;
 
-                (problem.tags || []).forEach(tag => {
-                    topicsContainer.appendChild(createTagElement(tag));
-                    hasTopics = true;
-                });
+            (problem.tags || []).forEach(tag => {
+                topicsContainer.appendChild(createTagElement(tag));
+                hasTopics = true;
+            });
 
-                if (Number.isFinite(problem.rating)) {
-                    ratingContainer.appendChild(createTagElement(problem.rating, true));
-                    hasRating = true;
-                }
-
-                markProcessed(hasTopics, hasRating);
-                tagsProcessed = true;
-                stopPolling();
-                if (!hasTopics && !hasRating) noTagsLabel.textContent = 'No data available.';
-            } catch (e) {
-                if (e.name === 'AbortError') return;
-                console.debug(e);
-                apiFailed = true;
-                btnTopics.disabled = btnRating.disabled = false;
-                noTagsLabel.textContent = 'Tap buttons to load.';
-            } finally {
-                btnTopics.classList.remove('loading');
-                btnRating.classList.remove('loading');
+            if (Number.isFinite(problem.rating)) {
+                ratingContainer.appendChild(createTagElement(problem.rating, true));
+                hasRating = true;
             }
-        };
 
-        const handleTopicsClick = () => {
-            if (apiFailed && !topicsContainer.innerHTML) {
-                tagsProcessed = false;
-                problemCachePromise = null;
-                loadTagsFromApi();
-                return;
-            }
-            if (topicsContainer.innerHTML) {
-                topicsVisible = !topicsVisible;
-                topicsContainer.classList.toggle('ff-hidden', !topicsVisible);
-                btnTopics.textContent = topicsVisible ? 'Hide Tags' : 'Get Tags';
-                return;
-            }
-            if (tagsProcessed && !topicsContainer.innerHTML) {
-                btnTopics.disabled = true;
-                btnTopics.textContent = 'No Tags';
-            }
-        };
+            markProcessed(hasTopics, hasRating);
+            tagsProcessed = true;
+            stopPolling();
+            if (!hasTopics && !hasRating) noTagsLabel.textContent = 'No data available.';
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.debug(e);
+            apiFailed = true;
+            btnTopics.disabled = btnRating.disabled = false;
+            noTagsLabel.textContent = 'Tap buttons to load.';
+        } finally {
+            btnTopics.classList.remove('loading');
+            btnRating.classList.remove('loading');
+        }
+    };
 
-        const handleRatingClick = () => {
-            if (apiFailed && !ratingContainer.innerHTML) {
-                tagsProcessed = false;
-                problemCachePromise = null;
-                loadTagsFromApi();
-                return;
-            }
-            if (ratingContainer.innerHTML) {
-                ratingVisible = !ratingVisible;
-                ratingContainer.classList.toggle('ff-hidden', !ratingVisible);
-                btnRating.textContent = ratingVisible ? 'Hide Rating' : 'Get Rating';
-                return;
-            }
-            if (tagsProcessed && !ratingContainer.innerHTML) {
-                btnRating.disabled = true;
-                btnRating.textContent = 'No Rating';
-            }
-        };
+    const handleTopicsClick = () => {
+        if (apiFailed && !topicsContainer.innerHTML) {
+            tagsProcessed = false;
+            problemCachePromise = null;
+            loadTagsFromApi();
+            return;
+        }
+        if (topicsContainer.innerHTML) {
+            topicsVisible = !topicsVisible;
+            topicsContainer.classList.toggle('ff-hidden', !topicsVisible);
+            btnTopics.textContent = topicsVisible ? 'Hide Tags' : 'Get Tags';
+            return;
+        }
+        if (tagsProcessed && !topicsContainer.innerHTML) {
+            btnTopics.disabled = true;
+            btnTopics.textContent = 'No Tags';
+        }
+    };
 
-        btnTopics.addEventListener('click', handleTopicsClick);
-        btnRating.addEventListener('click', handleRatingClick);
+    const handleRatingClick = () => {
+        if (apiFailed && !ratingContainer.innerHTML) {
+            tagsProcessed = false;
+            problemCachePromise = null;
+            loadTagsFromApi();
+            return;
+        }
+        if (ratingContainer.innerHTML) {
+            ratingVisible = !ratingVisible;
+            ratingContainer.classList.toggle('ff-hidden', !ratingVisible);
+            btnRating.textContent = ratingVisible ? 'Hide Rating' : 'Get Rating';
+            return;
+        }
+        if (tagsProcessed && !ratingContainer.innerHTML) {
+            btnRating.disabled = true;
+            btnRating.textContent = 'No Rating';
+        }
+    };
 
-        obs = new MutationObserver(() => {
-            if (processTagsFromDOM()) onTagsFoundFromDom();
-        });
-        poll = setInterval(() => {
-            if (processTagsFromDOM()) onTagsFoundFromDom();
-        }, CONFIG.TAGS_POLL_INTERVAL_MS);
-        setTimeout(stopPolling, CONFIG.TAGS_POLL_MAX_MS);
-        obs.observe(document.body, { childList: true, subtree: true });
-        loadTagsFromApi();
-    }
+    btnTopics.addEventListener('click', handleTopicsClick);
+    btnRating.addEventListener('click', handleRatingClick);
+
+    ffObs = new MutationObserver(() => {
+        if (processTagsFromDOM()) onTagsFoundFromDom();
+    });
+    ffPoll = setInterval(() => {
+        if (processTagsFromDOM()) onTagsFoundFromDom();
+    }, CONFIG.TAGS_POLL_INTERVAL_MS);
+    ffTimeout = setTimeout(stopPolling, CONFIG.TAGS_POLL_MAX_MS);
+    ffObs.observe(document.body, { childList: true, subtree: true });
+    loadTagsFromApi();
+}
 
     // ── Init ───────────────────────────────────────
     // initTagToggler must wait for DOMContentLoaded because it queries

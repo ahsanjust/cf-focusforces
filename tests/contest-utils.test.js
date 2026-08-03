@@ -9,6 +9,8 @@ const {
     contestComparator,
     filterAndSort,
     sortByTime,
+    resolveReminderIntervals,
+    DEFAULT_REMINDER_INTERVALS,
     TWENTY_FOUR_HOURS_MS
 } = require('../contest-utils');
 
@@ -216,5 +218,44 @@ describe('filterAndSort', () => {
         expect(result[0].status).toBe('CODING');
         expect(result[1].start_time).toBe(soon);
         expect(result[2].start_time).toBe(later);
+    });
+});
+
+describe('resolveReminderIntervals', () => {
+    // Regression for the bug where unchecking every reminder chip stored `[]`
+    // but the background fell back to DEFAULT_REMINDER_INTERVALS, silently
+    // re-enabling all reminders right after the user disabled them.
+    test('returns [] when stored is an empty array (all chips unchecked)', () => {
+        expect(resolveReminderIntervals([], DEFAULT_REMINDER_INTERVALS)).toEqual([]);
+    });
+
+    test('returns defaults when stored is missing/undefined', () => {
+        expect(resolveReminderIntervals(undefined, DEFAULT_REMINDER_INTERVALS))
+            .toEqual(DEFAULT_REMINDER_INTERVALS);
+    });
+
+    test('returns defaults when stored is null', () => {
+        expect(resolveReminderIntervals(null, DEFAULT_REMINDER_INTERVALS))
+            .toEqual(DEFAULT_REMINDER_INTERVALS);
+    });
+
+    test('returns defaults when stored is a non-array primitive', () => {
+        expect(resolveReminderIntervals(3600, DEFAULT_REMINDER_INTERVALS))
+            .toEqual(DEFAULT_REMINDER_INTERVALS);
+        expect(resolveReminderIntervals('3600', DEFAULT_REMINDER_INTERVALS))
+            .toEqual(DEFAULT_REMINDER_INTERVALS);
+        expect(resolveReminderIntervals(true, DEFAULT_REMINDER_INTERVALS))
+            .toEqual(DEFAULT_REMINDER_INTERVALS);
+    });
+
+    test('returns the stored array as-is when non-empty', () => {
+        const custom = [3600, 600, 300];
+        expect(resolveReminderIntervals(custom, DEFAULT_REMINDER_INTERVALS)).toBe(custom);
+    });
+
+    test('empty-array result length is 0, not the default length', () => {
+        const result = resolveReminderIntervals([], DEFAULT_REMINDER_INTERVALS);
+        expect(result).toHaveLength(0);
+        expect(result.length).not.toBe(DEFAULT_REMINDER_INTERVALS.length);
     });
 });

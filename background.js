@@ -3,16 +3,19 @@
  * Contest notifications, timer alarms, and notification lifecycle.
  */
 
+importScripts('contest-utils.js');
+
 // ══════════════════════════════════════════════════════
 // CONFIGURATION
 // ══════════════════════════════════════════════════════
 
 const CONTEST_CHECK_INTERVAL = 30;
-const CONTEST_WINDOW_MARGIN = 15 * 60;
 const CONTEST_FETCH_TIMEOUT_MS = 10000;
-const NOTIFICATION_AUTO_DISMISS_MS = 20000;
+const CONTEST_NOTIFICATION_AUTO_DISMISS_MS = 5 * 1000;        // contest reminders auto-dismiss 5s
+const TIMER_NOTIFICATION_AUTO_DISMISS_MS = 5 * 1000;          // timer alerts auto-dismiss 5s
 const TIMER_STORAGE_KEY = 'ff_timer_state';
-const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 300];
+const CONTEST_REMINDER_ALARM_PREFIX = 'crem_'; // crem_<site>_<id>_<intervalSec>
+const CONTEST_HORIZON_S = 15 * 24 * 60 * 60;  // only schedule reminders within 15 days
 
 const ICON_URL = chrome.runtime.getURL('icons/icon128.png');
 
@@ -69,6 +72,7 @@ async function updateTimerBadge() {
         }
     } catch {
         chrome.action.setBadgeText({ text: '' });
+        stopBadgeUpdateInterval();
     }
 }
 
@@ -117,6 +121,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.alarms.onAlarm.addListener(alarm => {
     if (alarm.name === 'checkContests') {
         checkUpcomingContests();
+    } else if (alarm.name.startsWith(CONTEST_REMINDER_ALARM_PREFIX)) {
+        handleContestReminderAlarm(alarm.name);
     } else if (alarm.name.startsWith('timer_')) {
         handleTimerAlarm(alarm.name);
         updateTimerBadge();
@@ -141,29 +147,67 @@ async function checkUpcomingContests() {
                 ff_reminders_enabled: true,
                 ff_reminder_intervals: DEFAULT_REMINDER_INTERVALS
             });
-            if (ff_reminders_enabled === false) return;
+            if (ff_reminders_enabled === false) {
+                await clearAllContestReminderAlarms();
+                return;
+            }
 
-            const intervals = Array.isArray(ff_reminder_intervals) && ff_reminder_intervals.length
-                ? ff_reminder_intervals
-                : DEFAULT_REMINDER_INTERVALS;
+            // Determine the active interval set. A MISSING/non-array value
+            // means the user never configured reminders → use the defaults.
+            // An EMPTY array means the user deliberately unchecked every chip
+            // → no reminders at all. Do NOT fall back to defaults for an empty
+            // array, or unchecking every chip would silently re-enable all
+            // reminders (the previous behavior).
+            const intervals = resolveReminderIntervals(ff_reminder_intervals, DEFAULT_REMINDER_INTERVALS);
+            if (!intervals.length) {
+                // User wants no reminders: cancel anything pending and stop.
+                await clearAllContestReminderAlarms();
+                return;
+            }
 
-            const contests = await fetchContestsForNotifications(intervals);
+            const contests = await fetchContestsForNotifications();
             if (!contests.length) return;
 
-            const keys = contests.map(c => `notified_${c.site}_${c.id}_${c.triggeredInterval}`);
-            const stored = await chrome.storage.local.get(keys);
-            const toNotify = contests.filter(c => !stored[`notified_${c.site}_${c.id}_${c.triggeredInterval}`]);
-
-            for (const contest of toNotify) {
-                try {
-                    await sendContestNotification(contest);
-                    if (contest.url) {
-                        await chrome.storage.local.set({
-                            [`notified_${contest.site}_${contest.id}_${contest.triggeredInterval}`]: Date.now()
-                        });
+            // Schedule an exact absolute-time alarm for every (contest, enabled
+            // interval) whose fire time is still ahead. This replaces the old
+            // poll-and-match scheme whose ±margin detection windows for the
+            // 5m/10m/30m reminders were narrower than the 30-minute poll
+            // period, causing those reminders to be silently missed ~58-75%
+            // of the time. Absolute `when` alarms fire reliably (and fire on
+            // device wake after sleep), so every enabled reminder is delivered.
+            const nowMs = Date.now();
+            const dedupKeys = [];
+            for (const contest of contests) {
+                for (const interval of intervals) {
+                    const fireTimeMs = contest.startTimeSeconds * 1000 - interval * 1000;
+                    if (fireTimeMs > nowMs) {
+                        scheduleContestReminder(contest, interval, fireTimeMs);
+                    } else if (fireTimeMs > nowMs - CONTEST_CATCHUP_WINDOW_MS
+                               && contest.startTimeSeconds * 1000 > nowMs) {
+                        // Catch-up: a reminder whose fire time just passed while
+                        // the browser was closed/sleeping should still be
+                        // delivered (once) if the contest hasn't started yet.
+                        dedupKeys.push(`notified_${contest.site}_${contest.id}_${interval}`);
                     }
-                } catch (e) {
-                    console.warn('Failed to notify contest:', contest.site, contest.id, e);
+                }
+            }
+
+            if (dedupKeys.length) {
+                const stored = await chrome.storage.local.get(dedupKeys);
+                for (const contest of contests) {
+                    for (const interval of intervals) {
+                        const fireTimeMs = contest.startTimeSeconds * 1000 - interval * 1000;
+                        if (fireTimeMs <= nowMs
+                            && fireTimeMs > nowMs - CONTEST_CATCHUP_WINDOW_MS
+                            && contest.startTimeSeconds * 1000 > nowMs
+                            && !stored[`notified_${contest.site}_${contest.id}_${interval}`]) {
+                            try {
+                                await fireContestReminder(contest, interval);
+                            } catch (e) {
+                                console.warn('Catch-up notify failed:', contest.site, contest.id, e);
+                            }
+                        }
+                    }
                 }
             }
         } catch (e) {
@@ -176,7 +220,118 @@ async function checkUpcomingContests() {
     return inflightCheck;
 }
 
-async function fetchContestsForNotifications(intervals) {
+/**
+ * Maximum window after a reminder's scheduled fire time during which a missed
+ * reminder is still delivered as catch-up (browser may have been closed/sleeping
+ * across the fire time). 2 hours balances "deliver soon reminders that just
+ * passed" against "don't spam stale reminders from a long offline period".
+ */
+const CONTEST_CATCHUP_WINDOW_MS = 2 * 60 * 60 * 1000;
+
+/**
+ * Build the alarm name for a (contest, interval) reminder. Chrome 150+ caps
+ * alarm names at 1024 bytes; ids are short so this is well within range.
+ */
+function contestReminderAlarmName(site, id, interval) {
+    return `${CONTEST_REMINDER_ALARM_PREFIX}${site}_${id}_${interval}`;
+}
+
+/**
+ * Schedule (or re-schedule) a single absolute-time contest reminder alarm.
+ * Re-creating an alarm with the same name cleanly replaces the prior one.
+ */
+function scheduleContestReminder(contest, interval, fireTimeMs) {
+    const name = contestReminderAlarmName(contest.site, contest.id, interval);
+    chrome.alarms.create(name, { when: fireTimeMs }).catch(() => {});
+}
+
+/**
+ * Clear all outstanding contest-reminder alarms (used when reminders are
+ * disabled, so no stale future notifications pop up).
+ */
+async function clearAllContestReminderAlarms() {
+    try {
+        const all = await chrome.alarms.getAll();
+        const names = all
+            .map(a => a.name)
+            .filter(n => n.startsWith(CONTEST_REMINDER_ALARM_PREFIX));
+        await Promise.all(names.map(n => chrome.alarms.clear(n).catch(() => {})));
+    } catch {}
+}
+
+/**
+ * Fire a contest reminder notification once per (contest, interval).
+ *
+ * This is the SINGLE canonical guard for "already notified?": it reads the
+ * `notified_<site>_<id>_<interval>` dedup key and aborts if already set,
+ * otherwise marks it as notified BEFORE sending. Checking-and-setting up front
+ * (instead of notify-then-set) closes two defects:
+ *   1. The alarm-fired path (handleContestReminderAlarm) used to send without
+ *      consulting dedup, so on browser wake it could race the catch-up path
+ *      and deliver the same reminder twice.
+ *   2. Contests with no URL (e.g. a LeetCode contest missing titleSlug) were
+ *      marked notified even though no notification was ever shown, permanently
+ *      suppressing them.
+ *
+ * Calls are serialized via `reminderFireChain` so that two concurrent callers
+ * (an overdue `crem_` alarm firing on startup while `checkUpcomingContests`
+ * catch-up runs the same (contest, interval)) cannot interleave their
+ * get-then-set and both see "not notified". Chrome storage.local has no
+ * compare-and-swap, so this in-SW mutex is the only way to make the
+ * check-and-set race-free. Each link catches its own errors so a single
+ * failure never poisons the chain.
+ *
+ * `interval` is the reminder setting (seconds before start); the displayed
+ * time-to-start is computed from the actual remaining time, not the setting,
+ * so the message is always accurate.
+ *
+ * @returns {Promise<boolean>} resolves true if a notification was actually sent
+ */
+let reminderFireChain = Promise.resolve();
+
+async function fireContestReminder(contest, interval) {
+    const run = async () => {
+        if (!contest || !contest.url) return false;
+
+        const dedupKey = `notified_${contest.site}_${contest.id}_${interval}`;
+        const { [dedupKey]: alreadyNotified } = await chrome.storage.local.get(dedupKey);
+        if (alreadyNotified) return false;
+
+        // Set the dedup key BEFORE sending so a concurrent caller that starts
+        // after this set (next link in the chain) sees it as notified.
+        await chrome.storage.local.set({ [dedupKey]: Date.now() });
+        await sendContestNotification(contest, interval);
+        return true;
+    };
+    // Serialize: chain this call after the previous one. Wrap so a rejection in
+    // a prior link doesn't propagate (each link is independent).
+    const next = reminderFireChain.then(run, run);
+    reminderFireChain = next.catch(() => {});
+    return next;
+}
+
+/**
+ * Handler for fired contest-reminder alarms. Parses (site, id, interval) from
+ * the alarm name and delivers the notification from the stashed contest payload
+ * (saved at schedule time under contest_data_<site>_<id>).
+ */
+async function handleContestReminderAlarm(alarmName) {
+    const body = alarmName.slice(CONTEST_REMINDER_ALARM_PREFIX.length);
+    const lastUnderscore = body.lastIndexOf('_');
+    if (lastUnderscore < 0) return;
+    const interval = parseInt(body.slice(lastUnderscore + 1), 10);
+    const siteAndId = body.slice(0, lastUnderscore);
+    if (!Number.isFinite(interval) || !siteAndId) return;
+    const key = `contest_data_${siteAndId}`;
+    try {
+        const { [key]: contest } = await chrome.storage.local.get(key);
+        if (contest) await fireContestReminder(contest, interval);
+    } catch (e) {
+        console.warn('Contest reminder alarm handler failed:', e);
+    }
+}
+
+async function fetchContestsForNotifications() {
     const now = Math.floor(Date.now() / 1000);
 
     const results = await Promise.allSettled([
@@ -188,19 +343,15 @@ async function fetchContestsForNotifications(intervals) {
             if (cfResp?.status !== 'OK' || !Array.isArray(cfResp.result)) return [];
             return cfResp.result.filter(c => c.phase === 'BEFORE').reduce((acc, c) => {
                 const until = c.startTimeSeconds - now;
-                if (until < 0) return acc;
-                const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
-                if (triggeredInterval !== undefined) {
-                    acc.push({
-                        id: c.id,
-                        site: 'CodeForces',
-                        name: c.name,
-                        url: `https://codeforces.com/contest/${c.id}`,
-                        start_time: c.startTimeSeconds * 1000,
-                        startTimeSeconds: c.startTimeSeconds,
-                        triggeredInterval
-                    });
-                }
+                if (until < 0 || until > CONTEST_HORIZON_S) return acc;
+                acc.push({
+                    id: String(c.id),
+                    site: 'CodeForces',
+                    name: c.name,
+                    url: `https://codeforces.com/contest/${c.id}`,
+                    start_time: c.startTimeSeconds * 1000,
+                    startTimeSeconds: c.startTimeSeconds
+                });
                 return acc;
             }, []);
         })(),
@@ -222,19 +373,15 @@ async function fetchContestsForNotifications(intervals) {
                 const startTimeSec = parseDate(c.contest_start_date_iso);
                 if (!startTimeSec) return acc;
                 const until = startTimeSec - now;
-                if (until < 0) return acc;
-                const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
-                if (triggeredInterval !== undefined) {
-                    acc.push({
-                        id: c.contest_code || `cc_${startTimeSec}_${(c.contest_name || 'unknown').replace(/\s+/g, '_')}`,
-                        site: 'CodeChef',
-                        name: c.contest_name || 'CodeChef Contest',
-                        url: c.contest_code ? `https://www.codechef.com/${c.contest_code}` : 'https://www.codechef.com/contests',
-                        start_time: startTimeSec * 1000,
-                        startTimeSeconds: startTimeSec,
-                        triggeredInterval
-                    });
-                }
+                if (until < 0 || until > CONTEST_HORIZON_S) return acc;
+                acc.push({
+                    id: c.contest_code || `cc_${startTimeSec}_${(c.contest_name || 'unknown').replace(/\s+/g, '_')}`,
+                    site: 'CodeChef',
+                    name: c.contest_name || 'CodeChef Contest',
+                    url: c.contest_code ? `https://www.codechef.com/${c.contest_code}` : 'https://www.codechef.com/contests',
+                    start_time: startTimeSec * 1000,
+                    startTimeSeconds: startTimeSec
+                });
                 return acc;
             }, []);
         })(),
@@ -252,28 +399,37 @@ async function fetchContestsForNotifications(intervals) {
             let rowMatch;
             while ((rowMatch = rowRegex.exec(tableMatch[1])) !== null) {
                 const rowHtml = rowMatch[1];
-                const hrefMatch = rowHtml.match(/<a[^>]+href="(\/contests\/[^"]+)"[^>]*>([^<]*)<\/a>/);
+                // AtCoder rows can contain multiple /contests/ links (e.g. rating
+                // predictors) before the actual contest name; pick the LAST one,
+                // mirroring the popup's DOMParser-based parser (AtCoderParser.parse).
+                const linkMatches = [...rowHtml.matchAll(/<a[^>]+href="(\/contests\/[^"]+)"[^>]*>([^<]*)<\/a>/g)];
                 const timeMatch = rowHtml.match(/<time[^>]*>([^<]*)<\/time>/);
-                if (!hrefMatch || !timeMatch) continue;
-                const href = hrefMatch[1];
-                const name = hrefMatch[2].trim();
+                if (!linkMatches.length || !timeMatch) continue;
+                const lastLink = linkMatches[linkMatches.length - 1];
+                const href = lastLink[1];
+                // Decode common HTML entities in the contest name (regex can't use DOM)
+                const rawName = lastLink[2].trim();
+                const name = rawName
+                    .replace(/&amp;/g, '&')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&quot;/g, '"')
+                    .replace(/&#039;/g, "'")
+                    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)));
                 if (!href || !name) continue;
-                const startTimeSec = Math.floor(new Date(timeMatch[1]).getTime() / 1000);
+                // AtCoder uses "2024-06-01 12:00:00+0900" — replace space with T for ISO parsing
+                const startTimeSec = Math.floor(new Date(timeMatch[1].replace(' ', 'T')).getTime() / 1000);
                 if (Number.isNaN(startTimeSec)) continue;
                 const until = startTimeSec - now;
-                if (until < 0) continue;
-                const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
-                if (triggeredInterval !== undefined) {
-                    contests.push({
-                        id: href.split('/').pop(),
-                        site: 'AtCoder',
-                        name,
-                        url: `https://atcoder.jp${href}`,
-                        start_time: startTimeSec * 1000,
-                        startTimeSeconds: startTimeSec,
-                        triggeredInterval
-                    });
-                }
+                if (until < 0 || until > CONTEST_HORIZON_S) continue;
+                contests.push({
+                    id: href.split('/').pop(),
+                    site: 'AtCoder',
+                    name,
+                    url: `https://atcoder.jp${href}`,
+                    start_time: startTimeSec * 1000,
+                    startTimeSeconds: startTimeSec
+                });
             }
             return contests;
         })(),
@@ -292,19 +448,15 @@ async function fetchContestsForNotifications(intervals) {
                 if (!startTimeSec) return acc;
                 if (startTimeSec > 1e12) startTimeSec = Math.floor(startTimeSec / 1000);
                 const until = startTimeSec - now;
-                if (until < 0) return acc;
-                const triggeredInterval = intervals.find(i => Math.abs(until - i) <= CONTEST_WINDOW_MARGIN);
-                if (triggeredInterval !== undefined) {
-                    acc.push({
-                        id: c.titleSlug || c.title,
-                        site: 'LeetCode',
-                        name: c.title || 'LeetCode Contest',
-                        url: c.titleSlug ? `https://leetcode.com/contest/${c.titleSlug}` : null,
-                        start_time: startTimeSec * 1000,
-                        startTimeSeconds: startTimeSec,
-                        triggeredInterval
-                    });
-                }
+                if (until < 0 || until > CONTEST_HORIZON_S) return acc;
+                acc.push({
+                    id: c.titleSlug || c.title,
+                    site: 'LeetCode',
+                    name: c.title || 'LeetCode Contest',
+                    url: c.titleSlug ? `https://leetcode.com/contest/${c.titleSlug}` : null,
+                    start_time: startTimeSec * 1000,
+                    startTimeSeconds: startTimeSec
+                });
                 return acc;
             }, []);
         })(),
@@ -316,22 +468,56 @@ async function fetchContestsForNotifications(intervals) {
             allContests.push(...r.value);
         }
     }
+
+    // Stash each contest's payload in storage so the fired-alarm handler can
+    // deliver the notification without re-fetching. Keyed by site+id (no
+    // interval) since the payload is shared across all of a contest's reminders.
+    if (allContests.length) {
+        const dataObj = {};
+        for (const c of allContests) {
+            dataObj[`contest_data_${c.site}_${c.id}`] = c;
+        }
+        chrome.storage.local.set(dataObj).catch(() => {});
+    }
+
     return allContests;
 }
 
-function sendContestNotification(contest) {
+/**
+ * Format a "time until start" duration (ms) as a compact human string.
+ * Exported for unit testing.
+ */
+function formatTimeUntil(ms) {
+    if (ms <= 0) return 'soon';
+    const totalSec = Math.round(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (m > 0) return `${m}m`;
+    return `${s}s`;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports.formatTimeUntil = formatTimeUntil;
+}
+
+/**
+ * Build & send a contest notification. `interval` is the reminder setting that
+ * triggered this notification; the displayed time-to-start is computed from the
+ * REAL remaining time (contest.start_time - now), so the message is always
+ * accurate instead of parroting the setting.
+ */
+function sendContestNotification(contest, interval) {
     if (!contest.url) return Promise.resolve();
-    const time = new Date(contest.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const rawMinutes = contest.startTimeSeconds
-        ? (contest.startTimeSeconds - Math.floor(Date.now() / 1000)) / 60
-        : null;
-    const until = rawMinutes !== null ? Math.max(0, Math.round(rawMinutes)) : null;
-    const timeStr = until !== null
-        ? (until >= 60 ? `${Math.floor(until / 60)}h ${until % 60}m` : `${until}m`)
-        : 'soon';
+    const startMs = contest.start_time;
+    const time = new Date(startMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeStr = formatTimeUntil(startMs - Date.now());
 
     return new Promise(resolve => {
-        const notificationId = `contest_${contest.site}_${contest.id}_${contest.triggeredInterval}`;
+        // Namespace the notification id by interval so two reminders for the
+        // same contest don't clear-and-replace each other.
+        const notificationId = `contest_${contest.site}_${contest.id}_${interval}`;
         chrome.notifications.clear(notificationId).catch(() => {}).then(() => {
             chrome.notifications.create(notificationId, {
                 type: 'basic',
@@ -339,7 +525,11 @@ function sendContestNotification(contest) {
                 title: `🚀 Upcoming ${contest.site} Contest`,
                 message: `${contest.name}\nStarts at ${time} (in ~${timeStr})`,
                 priority: 2,
-                requireInteraction: false,
+                // Contest reminders stay until interacted with (requireInteraction)
+                // so a user who glances away doesn't miss the one notification for
+                // this interval, but a separate auto-dismiss alarm clears it after
+                // CONTEST_NOTIFICATION_AUTO_DISMISS_MS (5s) as a safety net.
+                requireInteraction: true,
                 buttons: [{ title: 'Open Contest' }]
             }, createdId => {
                 try {
@@ -347,7 +537,7 @@ function sendContestNotification(contest) {
                         chrome.storage.local.set({
                             [`notification_${createdId}`]: contest.url
                         }).catch(() => {});
-                        scheduleNotificationDismiss(createdId);
+                        scheduleNotificationDismiss(createdId, CONTEST_NOTIFICATION_AUTO_DISMISS_MS);
                     }
                 } catch {} finally {
                     resolve();
@@ -373,15 +563,15 @@ async function recoverTimerAlarms() {
                 return;
             }
             // Re-schedule alarms for remaining milestones
-            scheduleTimerAlarms(state);
+            await scheduleTimerAlarms(state);
         }
         // Start badge updates for both countdown and stopwatch
         updateTimerBadge();
     } catch (e) { console.warn('Timer recovery failed:', e); }
 }
 
-function scheduleTimerAlarms(state) {
-    clearTimerAlarms();
+async function scheduleTimerAlarms(state) {
+    await clearTimerAlarms();
 
     if (state.status !== 'RUNNING' || state.mode !== 'countdown') return;
 
@@ -389,6 +579,9 @@ function scheduleTimerAlarms(state) {
     const msLeft = state.endTime - now;
     const durationMs = state.durationMs || state.remainingMs || msLeft;
 
+    // minDuration uses strict > so that a timer set to exactly the milestone
+    // threshold (e.g. exactly 10 minutes) does NOT schedule a "10 min left" alarm
+    // that would fire at t=0 (which Chrome can delay by up to 1 minute).
     const milestones = [
         { name: 'timer_10min', offset: 10 * 60 * 1000, minDuration: 10 * 60 * 1000 },
         { name: 'timer_5min',  offset: 5 * 60 * 1000,  minDuration: 5 * 60 * 1000 },
@@ -397,20 +590,24 @@ function scheduleTimerAlarms(state) {
     ];
 
     for (const m of milestones) {
-        if (msLeft >= m.offset && durationMs >= m.minDuration) {
-            const fireTime = new Date(state.endTime - m.offset);
-            if (fireTime > now) {
-                chrome.alarms.create(m.name, { when: fireTime.getTime() });
-            }
+        const fireTimeMs = state.endTime - m.offset;
+        // Only schedule if: (a) there is still time left past this milestone,
+        // (b) the total timer duration strictly exceeds the milestone threshold
+        //     (avoids scheduling an alarm that fires immediately at t=0),
+        // (c) the computed fire time is strictly in the future.
+        if (msLeft > m.offset && durationMs > m.minDuration && fireTimeMs > now) {
+            chrome.alarms.create(m.name, { when: fireTimeMs });
         }
     }
 }
 
-function clearTimerAlarms() {
-    chrome.alarms.clear('timer_10min');
-    chrome.alarms.clear('timer_5min');
-    chrome.alarms.clear('timer_1min');
-    chrome.alarms.clear('timer_end');
+async function clearTimerAlarms() {
+    await Promise.all([
+        chrome.alarms.clear('timer_10min'),
+        chrome.alarms.clear('timer_5min'),
+        chrome.alarms.clear('timer_1min'),
+        chrome.alarms.clear('timer_end'),
+    ]);
 }
 
 async function handleTimerAlarm(alarmName) {
@@ -448,7 +645,7 @@ async function handleTimerAlarm(alarmName) {
 }
 
 async function handleTimerFinished(state) {
-    clearTimerAlarms();
+    await clearTimerAlarms();
     state.status = 'STOPPED';
     state.endTime = 0;
     state.remainingMs = 0;
@@ -470,13 +667,22 @@ function targetTimerSound() {
 }
 
 function sendTimerNotification(title, message) {
-    chrome.notifications.create({
+    const notificationId = `timer_${title.replace(/\s/g, '_').toLowerCase()}`;
+    chrome.notifications.clear(notificationId).catch(() => {});
+    chrome.notifications.create(notificationId, {
         type: 'basic',
         iconUrl: ICON_URL,
         title: `⏳ ${title}`,
         message,
         priority: 2,
         requireInteraction: true
+    }, createdId => {
+        // Schedule an auto-dismiss safety net. requireInteraction keeps the
+        // toast on screen until dismissed, but without this alarm a dismissed
+        // timer milestone would linger indefinitely. Matches the contest path.
+        if (createdId) {
+            scheduleNotificationDismiss(createdId, TIMER_NOTIFICATION_AUTO_DISMISS_MS);
+        }
     }).catch(() => {});
     targetTimerSound();
 }
@@ -489,6 +695,9 @@ async function clearContestNotifications() {
                 chrome.notifications.clear(id).catch(() => {});
             }
         }
+        // Also cancel any not-yet-fired reminder alarms so disabling reminders
+        // truly stops future contest notifications.
+        await clearAllContestReminderAlarms();
     } catch {}
 }
 
@@ -496,9 +705,9 @@ async function clearContestNotifications() {
 // NOTIFICATION LIFECYCLE — Auto-dismiss
 // ══════════════════════════════════════════════════════
 
-function scheduleNotificationDismiss(notificationId) {
+function scheduleNotificationDismiss(notificationId, ttlMs = TIMER_NOTIFICATION_AUTO_DISMISS_MS) {
     chrome.alarms.create(`dismiss_${notificationId}`, {
-        when: Date.now() + NOTIFICATION_AUTO_DISMISS_MS
+        when: Date.now() + ttlMs
     }).catch(() => {});
 }
 
@@ -508,22 +717,28 @@ function scheduleNotificationDismiss(notificationId) {
 
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     if (req.type === 'TIMER_STARTED') {
-        scheduleTimerAlarms(req.state);
-        updateTimerBadge();
+        scheduleTimerAlarms(req.state).then(() => updateTimerBadge());
     } else if (req.type === 'TIMER_PAUSED') {
-        clearTimerAlarms();
-        stopBadgeUpdateInterval();
-        stopBadgeUpdates();
+        clearTimerAlarms().then(() => {
+            stopBadgeUpdateInterval();
+            stopBadgeUpdates();
+        });
     } else if (req.type === 'TIMER_FINISHED') {
-        clearTimerAlarms();
-        stopBadgeUpdateInterval();
-        stopBadgeUpdates();
+        clearTimerAlarms().then(() => {
+            stopBadgeUpdateInterval();
+            stopBadgeUpdates();
+        });
     } else if (req.type === 'REMINDERS_TOGGLED') {
         if (req.enabled) {
             checkUpcomingContests();
         } else {
             clearContestNotifications();
         }
+    } else if (req.type === 'REMINDER_INTERVALS_CHANGED') {
+        // Reminder interval set changed: clear all scheduled contest reminders
+        // and re-schedule from the fresh interval list so removed intervals
+        // don't fire and newly-added ones do.
+        clearAllContestReminderAlarms().then(() => checkUpcomingContests());
     } else if (req.type === 'TIMER_NOTIFY') {
         sendTimerNotification(req.title, req.message);
     } else if (req.type === 'THEME_CHANGED') {
@@ -555,6 +770,16 @@ chrome.notifications.onButtonClicked.addListener(async (notificationId, btnIdx) 
     chrome.notifications.clear(notificationId).catch(() => {});
 });
 
+// Clicking the notification body (not the button) also opens the contest URL.
+// The URL is already stashed under notification_<id> at create time, so this
+// reuses it rather than leaving a body click as a no-op.
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+    const key = `notification_${notificationId}`;
+    const { [key]: url } = await chrome.storage.local.get(key);
+    if (url) chrome.tabs.create({ url, active: true }).catch(() => {});
+    chrome.notifications.clear(notificationId).catch(() => {});
+});
+
 // ══════════════════════════════════════════════════════
 // STORAGE CLEANUP
 // ══════════════════════════════════════════════════════
@@ -567,6 +792,7 @@ async function pruneStaleKeys() {
 
         const activeIds = new Set(Object.keys(await chrome.notifications.getAll()));
 
+        const now = Date.now();
         for (const k of Object.keys(all)) {
             if (k.startsWith('notification_')) {
                 const notifId = k.slice('notification_'.length);
@@ -575,9 +801,32 @@ async function pruneStaleKeys() {
                 }
             } else if (k.startsWith('notified_')) {
                 notifiedKeys.push({ key: k, time: all[k] });
+            } else if (k.startsWith('contest_data_')) {
+                // Drop stashed contest payloads whose start time has passed by
+                // more than a day; they're no longer needed by any reminder.
+                const c = all[k];
+                if (c && c.start_time && now - c.start_time > 24 * 60 * 60 * 1000) {
+                    toRemove.push(k);
+                }
             }
         }
-        if (notifiedKeys.length > 50) {
+        // Expire `notified_*` dedup keys once the corresponding contest has
+        // started (so a future contest that reuses an id — unlikely but safe —
+        // can notify again). Keys without matching contest_data are kept under
+        // the existing 500-entry LRU below.
+        const expired = notifiedKeys
+            .filter(({ key }) => {
+                // key = notified_<site>_<id>_<interval>
+                const m = key.match(/^notified_(.+?)_(\d+)$/);
+                if (!m) return false;
+                const dataKey = `contest_data_${m[1]}`;
+                const c = all[dataKey];
+                return c && c.start_time && now > c.start_time + 60 * 60 * 1000;
+            })
+            .map(({ key }) => key);
+        toRemove.push(...expired);
+
+        if (notifiedKeys.length > 500) {
             notifiedKeys.sort((a, b) => a.time - b.time);
             toRemove.push(...notifiedKeys.slice(0, notifiedKeys.length - 50).map(x => x.key));
         }

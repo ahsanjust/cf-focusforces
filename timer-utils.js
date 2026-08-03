@@ -1,10 +1,16 @@
 /**
  * FocusForces - Timer Utilities
  *
- * Pure functions used by both content.js (loaded as a content script
- * via manifest.json) and the Jest test suite. The CommonJS export block
- * at the bottom is a no-op in the browser, so the functions are declared
- * in the global scope and can be used by content.js directly.
+ * Pure timer state-machine helpers shared with the Jest test suite.
+ *
+ * NOTE: In the shipping extension the timer UI lives in the popup and the
+ * milestone notifications are driven by the background service worker's alarm
+ * system (scheduleTimerAlarms / handleTimerAlarm in background.js). That alarm
+ * logic is intentionally kept in sync with the threshold semantics here
+ * (strict > on durationMs), so these pure functions are a faithful reference
+ * model of the runtime behavior. The functions are injected before content.js
+ * via manifest.json and exposed on the global scope; the CommonJS export block
+ * at the bottom is a no-op in the browser.
  */
 
 /**
@@ -27,7 +33,11 @@ function formatTime(ms) {
  * @returns {boolean}
  */
 function shouldNotify10(msLeft, durationMs) {
-  return msLeft <= 10 * 60 * 1000 && durationMs >= 10 * 60 * 1000;
+  // Duration uses strict > (not >=) to match the background service worker's
+  // scheduleTimerAlarms semantics: a timer whose total duration is exactly the
+  // milestone threshold must NOT schedule a milestone alarm that would fire at
+  // t=0 (which Chrome can delay by up to 1 minute). See background.js.
+  return msLeft <= 10 * 60 * 1000 && durationMs > 10 * 60 * 1000;
 }
 
 /**
@@ -37,7 +47,7 @@ function shouldNotify10(msLeft, durationMs) {
  * @returns {boolean}
  */
 function shouldNotify5(msLeft, durationMs) {
-  return msLeft <= 5 * 60 * 1000 && durationMs >= 5 * 60 * 1000;
+  return msLeft <= 5 * 60 * 1000 && durationMs > 5 * 60 * 1000;
 }
 
 /**
@@ -47,7 +57,7 @@ function shouldNotify5(msLeft, durationMs) {
  * @returns {boolean}
  */
 function shouldNotify1(msLeft, durationMs) {
-  return msLeft <= 1 * 60 * 1000 && durationMs >= 1 * 60 * 1000;
+  return msLeft <= 1 * 60 * 1000 && durationMs > 1 * 60 * 1000;
 }
 
 /**

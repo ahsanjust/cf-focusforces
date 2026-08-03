@@ -58,7 +58,7 @@ npm run test:watch # Watch mode
 
 ### Contest Reminders
 - Configurable on/off toggle in popup
-- **Customizable reminder intervals**: 1 day, 1 hour, 30 minutes, 10 minutes, 5 minutes before contests
+- **Customizable reminder intervals**: 1 day, 12 hours, 5 hours, 2 hours, 1 hour, 30 minutes, 10 minutes, 5 minutes before contests
 - Multi-platform support: Codeforces, CodeChef, AtCoder, LeetCode
 - Prevents duplicate notifications via storage flags
 - Notifications auto-dismiss after 5 seconds

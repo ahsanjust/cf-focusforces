@@ -22,7 +22,7 @@
 
 /* ── Light Theme (default) ─────────────────────── */
 :root,
-[data-theme="light"] {
+[data-ff-theme="default"] {
   --bg-primary: #f0f2f5;
   --bg-card: #ffffff;
   --bg-card-hover: #fafbfc;
@@ -70,7 +70,7 @@
 }
 
 /* ── Dark Theme ────────────────────────────────── */
-[data-theme="dark"] {
+[data-ff-theme="dark"] {
   --bg-primary: #0e0e1a;
   --bg-card: #171728;
   --bg-card-hover: #1c1c30;
@@ -118,7 +118,7 @@
 }
 
 /* ── AMOLED Theme ──────────────────────────────── */
-[data-theme="amoled"] {
+[data-ff-theme="amoled"] {
   --bg-primary: #000000;
   --bg-card: #111111;
   --bg-card-hover: #161616;
@@ -166,7 +166,7 @@
 }
 
 /* ── High Contrast Theme ───────────────────────── */
-[data-theme="contrast"] {
+[data-ff-theme="contrast"] {
   --bg-primary: #000000;
   --bg-card: #141414;
   --bg-card-hover: #1e1e1e;
@@ -592,8 +592,8 @@ body {
 }
 
 .reminder-chip:hover span {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
 }
 
 .reminder-chip input:checked + span {
@@ -1245,17 +1245,17 @@ body {
 .tab-pane::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
 
 /* ── Theme-specific overrides ──────────────────── */
-[data-theme="contrast"] .gym-badge {
+[data-ff-theme="contrast"] .gym-badge {
   border-color: var(--accent);
   color: var(--accent);
 }
 
-[data-theme="dark"] .gym-badge {
+[data-ff-theme="dark"] .gym-badge {
   border-color: #60a5fa;
   color: #60a5fa;
 }
 
-[data-theme="amoled"] .gym-badge {
+[data-ff-theme="amoled"] .gym-badge {
   border-color: #60a5fa;
   color: #60a5fa;
 }

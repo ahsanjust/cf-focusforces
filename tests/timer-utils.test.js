@@ -310,4 +310,47 @@ describe('tickState', () => {
         expect(result.actions).not.toContain('NOTIFY_5');
         expect(result.actions).not.toContain('NOTIFY_1');
     });
+
+    // Pins the exact-duration boundary that diverged from the runtime alarm
+    // system before the strict-> alignment: a timer whose total duration is
+    // EXACTLY a milestone threshold must NOT emit that milestone (mirrors
+    // background.js scheduleTimerAlarms `durationMs > m.minDuration`).
+    test('does not emit NOTIFY_10 when duration is exactly 10 minutes', () => {
+        const now = Date.now();
+        const state = {
+            ...defaultTimerState(),
+            status: 'RUNNING',
+            endTime: now + 10 * 60 * 1000,
+            durationMs: 10 * 60 * 1000,
+            notifiedMilestones: []
+        };
+        const result = tickState(state, now);
+        expect(result.actions).not.toContain('NOTIFY_10');
+    });
+
+    test('does not emit NOTIFY_5 when duration is exactly 5 minutes', () => {
+        const now = Date.now();
+        const state = {
+            ...defaultTimerState(),
+            status: 'RUNNING',
+            endTime: now + 5 * 60 * 1000,
+            durationMs: 5 * 60 * 1000,
+            notifiedMilestones: []
+        };
+        const result = tickState(state, now);
+        expect(result.actions).not.toContain('NOTIFY_5');
+    });
+
+    test('does not emit NOTIFY_1 when duration is exactly 1 minute', () => {
+        const now = Date.now();
+        const state = {
+            ...defaultTimerState(),
+            status: 'RUNNING',
+            endTime: now + 1 * 60 * 1000,
+            durationMs: 1 * 60 * 1000,
+            notifiedMilestones: []
+        };
+        const result = tickState(state, now);
+        expect(result.actions).not.toContain('NOTIFY_1');
+    });
 });
