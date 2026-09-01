@@ -3,7 +3,7 @@
  * Contest notifications, timer alarms, and notification lifecycle.
  */
 
-importScripts('contest-utils.js');
+importScripts('contest-utils.js', 'timer-utils.js');
 
 // ══════════════════════════════════════════════════════
 // CONFIGURATION
@@ -12,8 +12,10 @@ importScripts('contest-utils.js');
 const CONTEST_CHECK_INTERVAL = 30;
 const CONTEST_FETCH_TIMEOUT_MS = 10000;
 const CONTEST_NOTIFICATION_AUTO_DISMISS_MS = 5 * 1000;        // contest reminders auto-dismiss 5s
-const TIMER_NOTIFICATION_AUTO_DISMISS_MS = 5 * 1000;          // timer alerts auto-dismiss 5s
+const TIMER_NOTIFICATION_AUTO_DISMISS_MS = 8 * 1000;          // timer alerts auto-dismiss 8s
 const TIMER_STORAGE_KEY = 'ff_timer_state';
+const TIMER_FINISH_SENT_KEY = 'ff_timer_finish_sent';
+const BADGE_REFRESH_ALARM = 'ffBadgeTick';
 const CONTEST_REMINDER_ALARM_PREFIX = 'crem_'; // crem_<site>_<id>_<intervalSec>
 const CONTEST_HORIZON_S = 15 * 24 * 60 * 60;  // only schedule reminders within 15 days
 
@@ -129,6 +131,10 @@ chrome.alarms.onAlarm.addListener(alarm => {
     } else if (alarm.name.startsWith('dismiss_')) {
         const notificationId = alarm.name.slice('dismiss_'.length);
         chrome.notifications.clear(notificationId).catch(() => {});
+    } else if (alarm.name === BADGE_REFRESH_ALARM) {
+        // Safety net for the 1s badge interval: chrome can terminate the
+        // service worker, freezing the badge. A periodic alarm re-arms it.
+        updateTimerBadge();
     } else if (alarm.name === 'pruneStaleKeys') {
         pruneStaleKeys();
     }
@@ -484,25 +490,6 @@ async function fetchContestsForNotifications() {
 }
 
 /**
- * Format a "time until start" duration (ms) as a compact human string.
- * Exported for unit testing.
- */
-function formatTimeUntil(ms) {
-    if (ms <= 0) return 'soon';
-    const totalSec = Math.round(ms / 1000);
-    const h = Math.floor(totalSec / 3600);
-    const m = Math.floor((totalSec % 3600) / 60);
-    const s = totalSec % 60;
-    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-    if (m > 0) return `${m}m`;
-    return `${s}s`;
-}
-
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports.formatTimeUntil = formatTimeUntil;
-}
-
-/**
  * Build & send a contest notification. `interval` is the reminder setting that
  * triggered this notification; the displayed time-to-start is computed from the
  * REAL remaining time (contest.start_time - now), so the message is always
@@ -566,6 +553,7 @@ async function recoverTimerAlarms() {
             await scheduleTimerAlarms(state);
         }
         // Start badge updates for both countdown and stopwatch
+        startBadgeRefresh();
         updateTimerBadge();
     } catch (e) { console.warn('Timer recovery failed:', e); }
 }
@@ -575,30 +563,17 @@ async function scheduleTimerAlarms(state) {
 
     if (state.status !== 'RUNNING' || state.mode !== 'countdown') return;
 
-    const now = Date.now();
-    const msLeft = state.endTime - now;
-    const durationMs = state.durationMs || state.remainingMs || msLeft;
+    // Read which milestones the user has enabled
+    const { ff_timer_notify_milestones: enabledMilestones = DEFAULT_TIMER_NOTIFY_MILESTONES } =
+        await chrome.storage.local.get({ ff_timer_notify_milestones: DEFAULT_TIMER_NOTIFY_MILESTONES });
 
-    // minDuration uses strict > so that a timer set to exactly the milestone
-    // threshold (e.g. exactly 10 minutes) does NOT schedule a "10 min left" alarm
-    // that would fire at t=0 (which Chrome can delay by up to 1 minute).
-    const milestones = [
-        { name: 'timer_10min', offset: 10 * 60 * 1000, minDuration: 10 * 60 * 1000 },
-        { name: 'timer_5min',  offset: 5 * 60 * 1000,  minDuration: 5 * 60 * 1000 },
-        { name: 'timer_1min',  offset: 1 * 60 * 1000,  minDuration: 1 * 60 * 1000 },
-        { name: 'timer_end',   offset: 0,               minDuration: 0 }
-    ];
-
-    for (const m of milestones) {
-        const fireTimeMs = state.endTime - m.offset;
-        // Only schedule if: (a) there is still time left past this milestone,
-        // (b) the total timer duration strictly exceeds the milestone threshold
-        //     (avoids scheduling an alarm that fires immediately at t=0),
-        // (c) the computed fire time is strictly in the future.
-        if (msLeft > m.offset && durationMs > m.minDuration && fireTimeMs > now) {
-            chrome.alarms.create(m.name, { when: fireTimeMs });
-        }
-    }
+    // Shared, unit-tested pure logic (timer-utils.computeTimerAlarmSchedules)
+    // computes which absolute-time alarms to create. Note: timer_end is always
+    // scheduled even if the 'finish' milestone is disabled — it is what
+    // finalizes the timer state and clears the badge, and the notification
+    // itself is gated separately inside handleTimerFinished/notifyTimerFinishedOnce.
+    const schedules = computeTimerAlarmSchedules(state, enabledMilestones, Date.now());
+    schedules.forEach(s => chrome.alarms.create(s.name, { when: s.when }));
 }
 
 async function clearTimerAlarms() {
@@ -610,6 +585,34 @@ async function clearTimerAlarms() {
     ]);
 }
 
+// Maps alarm name → milestone id used in ff_timer_notify_milestones storage key
+const ALARM_TO_MILESTONE_ID = {
+    'timer_10min': '10min',
+    'timer_5min':  '5min',
+    'timer_1min':  '1min',
+    'timer_end':   'finish'
+};
+
+// Per-milestone notification content
+const MILESTONE_NOTIFICATIONS = {
+    '10min': {
+        title: '10 Minutes Remaining',
+        message: 'Wrap up your current approach and start checking edge cases.'
+    },
+    '5min': {
+        title: '5 Minutes Left',
+        message: 'Submit what you have — then optimise if time allows.'
+    },
+    '1min': {
+        title: '⚠️ 1 Minute Left!',
+        message: 'Final minute — submit now if you have not already!'
+    },
+    'finish': {
+        title: '🏁 Time\'s Up!',
+        message: 'Session complete. Review your solution and submit.'
+    }
+};
+
 async function handleTimerAlarm(alarmName) {
     try {
         const { [TIMER_STORAGE_KEY]: state } = await chrome.storage.local.get(TIMER_STORAGE_KEY);
@@ -617,27 +620,24 @@ async function handleTimerAlarm(alarmName) {
 
         if (alarmName === 'timer_end') {
             await handleTimerFinished(state);
-        } else if (alarmName === 'timer_10min') {
-            const milestones = state.notifiedMilestones || [];
-            if (!milestones.includes('10min')) {
-                sendTimerNotification('10 Minutes Left', 'Keep pushing, you are doing great!');
-                state.notifiedMilestones = [...milestones, '10min'];
-                await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
-            }
-        } else if (alarmName === 'timer_5min') {
-            const milestones = state.notifiedMilestones || [];
-            if (!milestones.includes('5min')) {
-                sendTimerNotification('5 Minutes Left', 'Focus in — finalize your logic.');
-                state.notifiedMilestones = [...milestones, '5min'];
-                await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
-            }
-        } else if (alarmName === 'timer_1min') {
-            const milestones = state.notifiedMilestones || [];
-            if (!milestones.includes('1min')) {
-                sendTimerNotification('1 Minute Left', 'Almost there — wrap up your solution!');
-                state.notifiedMilestones = [...milestones, '1min'];
-                await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
-            }
+            return;
+        }
+
+        const milestoneId = ALARM_TO_MILESTONE_ID[alarmName];
+        if (!milestoneId) return;
+
+        // Double-check the user still has this milestone enabled (they may have
+        // changed it after the alarm was scheduled).
+        const { ff_timer_notify_milestones: enabledMilestones = DEFAULT_TIMER_NOTIFY_MILESTONES } =
+            await chrome.storage.local.get({ ff_timer_notify_milestones: DEFAULT_TIMER_NOTIFY_MILESTONES });
+        if (!enabledMilestones.includes(milestoneId)) return;
+
+        const notified = state.notifiedMilestones || [];
+        if (!notified.includes(milestoneId)) {
+            const { title, message } = MILESTONE_NOTIFICATIONS[milestoneId];
+            sendTimerNotification(title, message);
+            state.notifiedMilestones = [...notified, milestoneId];
+            await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
         }
     } catch (e) {
         console.error('Timer alarm handling failed:', e);
@@ -652,21 +652,161 @@ async function handleTimerFinished(state) {
     state.elapsed = 0;
     state.durationMs = 0;
     state.lastStarted = 0;
+    state.notifiedMilestones = [];
     await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state });
-    sendTimerNotification('Time is Up!', 'Your focus session has concluded.');
+
+    // Deliver the finish notification exactly once — the shared dedup flag
+    // (TIMER_FINISH_SENT_KEY) also covers the popup-side finish path so the
+    // notification can never be skipped NOR duplicated.
+    await notifyTimerFinishedOnce();
+
+    stopBadgeRefresh();
     stopBadgeUpdateInterval();
     stopBadgeUpdates();
 }
 
-function targetTimerSound() {
-    chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
-        if (tabs.length) {
-            chrome.tabs.sendMessage(tabs[0].id, { type: 'PLAY_TIMER_SOUND' }).catch(() => {});
+/**
+ * Deliver the "Time's Up!" finish notification exactly once per timer run.
+ *
+ * Both the background alarm path (handleTimerFinished) and the popup-side
+ * finish path (TIMER_FINISHED with `expired`) converge here. A dedicated
+ * storage flag (TIMER_FINISH_SENT_KEY) — cleared on every TIMER_STARTED —
+ * guarantees a notification is never skipped (the old popup-vs-alarm race
+ * could silently drop it) and never duplicated (the alarm path can't double
+ * with the popup path). Calls are serialized via `finishNotifyChain` because
+ * chrome.storage.local has no compare-and-swap.
+ */
+let finishNotifyChain = Promise.resolve();
+
+function notifyTimerFinishedOnce() {
+    const run = async () => {
+        try {
+            const {
+                ff_timer_notify_milestones: enabledMilestones = DEFAULT_TIMER_NOTIFY_MILESTONES,
+                [TIMER_FINISH_SENT_KEY]: alreadyNotified = false,
+                [TIMER_STORAGE_KEY]: current
+            } = await chrome.storage.local.get({
+                ff_timer_notify_milestones: DEFAULT_TIMER_NOTIFY_MILESTONES,
+                [TIMER_FINISH_SENT_KEY]: false,
+                [TIMER_STORAGE_KEY]: null
+            });
+            if (alreadyNotified) return;
+
+            // A new timer run may have started while this call was queued (the
+            // popup can finish one session and start another within the same
+            // second). The "Time's Up!" notification belongs to the session
+            // that just ended — bail if a fresh RUNNING state is already in
+            // storage.
+            if (current && current.status === 'RUNNING') return;
+
+            // Mark BEFORE sending so a concurrent caller that starts after this
+            // set sees it as notified.
+            await chrome.storage.local.set({ [TIMER_FINISH_SENT_KEY]: true });
+
+            // Respect the user's opt-in milestone set and master toggle
+            // (sendTimerNotification re-checks ff_timer_notifications_enabled).
+            if (!enabledMilestones.includes('finish')) return;
+            const { title, message } = MILESTONE_NOTIFICATIONS['finish'];
+            sendTimerNotification(title, message);
+        } catch (e) {
+            console.warn('Finish notification failed:', e);
         }
-    });
+    };
+    const next = finishNotifyChain.then(run, run);
+    finishNotifyChain = next.catch(() => {});
+    return next;
 }
 
-function sendTimerNotification(title, message) {
+// ── Badge refresh safety net ──────────────────────────
+// The 1s badge interval lives in this service worker; if Chrome terminates
+// the worker the badge would freeze until the next alarm. A 1-minute periodic
+// alarm re-arms/updates the badge so staleness is bounded to ~1 minute even
+// in the worst case.
+
+function startBadgeRefresh() {
+    chrome.alarms.create(BADGE_REFRESH_ALARM, { periodInMinutes: 1 }).catch(() => {});
+}
+
+function stopBadgeRefresh() {
+    chrome.alarms.clear(BADGE_REFRESH_ALARM).catch(() => {});
+}
+
+// ── Notification sound ────────────────────────────────
+// Play the timer sound on the active tab's content script when possible;
+// otherwise fall back to an offscreen audio document so the sound works on
+// ANY page (previously it was silently dropped on non-supported sites).
+
+let offscreenReadyPromise = null;
+
+async function ensureOffscreenDocument() {
+    if (typeof chrome.offscreen === 'undefined') return;
+    if (!offscreenReadyPromise) {
+        offscreenReadyPromise = (async () => {
+            const hasDoc = await chrome.offscreen.hasDocument();
+            if (!hasDoc) {
+                await chrome.offscreen.createDocument({
+                    url: 'offscreen.html',
+                    reasons: ['AUDIO_PLAYBACK'],
+                    justification: 'Play FocusForces timer notification sounds on any page'
+                });
+            }
+        })().catch(err => {
+            offscreenReadyPromise = null; // allow retry on the next sound
+            console.debug('FocusForces: offscreen audio unavailable', err);
+            throw err;
+        });
+    }
+    return offscreenReadyPromise;
+}
+
+async function sendOffscreenSound() {
+    try {
+        await chrome.runtime.sendMessage({ type: 'FF_PLAY_SOUND' });
+    } catch {
+        // First-ever use: the offscreen document may still be booting.
+        await new Promise(r => setTimeout(r, 250));
+        await chrome.runtime.sendMessage({ type: 'FF_PLAY_SOUND' });
+    }
+}
+
+async function playTimerSound() {
+    // Preferred path: the active tab's content script (crisp, zero overhead).
+    try {
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (tabs.length) {
+            await chrome.tabs.sendMessage(tabs[0].id, { type: 'PLAY_TIMER_SOUND' });
+            return;
+        }
+    } catch (_) {}
+
+    // Firefox background script direct audio playback
+    if (typeof Audio !== 'undefined') {
+        try {
+            const audio = new Audio(chrome.runtime.getURL('assets/notify.wav'));
+            await audio.play();
+            return;
+        } catch (e) {
+            console.debug('FocusForces: direct audio playback failed', e);
+        }
+    }
+
+    // Chrome Fallback: play in an offscreen document.
+    if (typeof chrome.offscreen !== 'undefined') {
+        try {
+            await ensureOffscreenDocument();
+            await sendOffscreenSound();
+        } catch (e) {
+            console.debug('FocusForces: could not play timer sound', e);
+        }
+    }
+}
+
+async function sendTimerNotification(title, message) {
+    const { ff_timer_notifications_enabled } = await chrome.storage.local.get({
+        ff_timer_notifications_enabled: true
+    });
+    if (ff_timer_notifications_enabled === false) return;
+
     const notificationId = `timer_${title.replace(/\s/g, '_').toLowerCase()}`;
     chrome.notifications.clear(notificationId).catch(() => {});
     chrome.notifications.create(notificationId, {
@@ -684,7 +824,7 @@ function sendTimerNotification(title, message) {
             scheduleNotificationDismiss(createdId, TIMER_NOTIFICATION_AUTO_DISMISS_MS);
         }
     }).catch(() => {});
-    targetTimerSound();
+    playTimerSound();
 }
 
 async function clearContestNotifications() {
@@ -717,23 +857,47 @@ function scheduleNotificationDismiss(notificationId, ttlMs = TIMER_NOTIFICATION_
 
 chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
     if (req.type === 'TIMER_STARTED') {
+        // A new timer run begins: clear the finish-notification dedup flag.
+        chrome.storage.local.remove(TIMER_FINISH_SENT_KEY).catch(() => {});
+        startBadgeRefresh();
         scheduleTimerAlarms(req.state).then(() => updateTimerBadge());
     } else if (req.type === 'TIMER_PAUSED') {
+        stopBadgeRefresh();
         clearTimerAlarms().then(() => {
             stopBadgeUpdateInterval();
             stopBadgeUpdates();
         });
     } else if (req.type === 'TIMER_FINISHED') {
+        stopBadgeRefresh();
         clearTimerAlarms().then(() => {
             stopBadgeUpdateInterval();
             stopBadgeUpdates();
         });
+        // The popup detected the countdown hit zero (it may have beaten the
+        // timer_end alarm). Deliver the finish notification from here so the
+        // popup-vs-alarm race can never drop it.
+        if (req.expired) {
+            notifyTimerFinishedOnce();
+        }
     } else if (req.type === 'REMINDERS_TOGGLED') {
         if (req.enabled) {
             checkUpcomingContests();
         } else {
             clearContestNotifications();
         }
+    } else if (req.type === 'TIMER_NOTIFY_TOGGLED') {
+        // Toggle is read from storage on each alarm fire, so no immediate action needed.
+    } else if (req.type === 'TIMER_NOTIFY_MILESTONES_CHANGED') {
+        // Milestone set changed: re-schedule timer alarms so newly-disabled milestones
+        // won't fire and newly-enabled ones will (if timer is currently running).
+        (async () => {
+            try {
+                const { [TIMER_STORAGE_KEY]: state } = await chrome.storage.local.get(TIMER_STORAGE_KEY);
+                if (state && state.status === 'RUNNING' && state.mode === 'countdown') {
+                    await scheduleTimerAlarms(state);
+                }
+            } catch {}
+        })();
     } else if (req.type === 'REMINDER_INTERVALS_CHANGED') {
         // Reminder interval set changed: clear all scheduled contest reminders
         // and re-schedule from the fresh interval list so removed intervals
@@ -755,7 +919,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
             });
         });
     }
-    return true;
+    // Note: no sendResponse is ever used, so the channel is not held open.
 });
 
 // ══════════════════════════════════════════════════════

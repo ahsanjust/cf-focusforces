@@ -70,6 +70,70 @@ function isDanger(msLeft) {
 }
 
 /**
+ * The danger rule actually used by the popup UI: pulsing red only when under
+ * 5 minutes remain AND the timer's total duration was at least 10 minutes
+ * (a 4-minute timer is not "dangerously short" — it was always short). This
+ * is the single source of truth shared by popup.js (render/tick) and the
+ * tickState state machine; previously popup duplicated it inline.
+ * @param {number} msLeft      milliseconds remaining
+ * @param {number} durationMs  total timer duration (may be 0/undefined)
+ * @returns {boolean}
+ */
+function isDangerForTimer(msLeft, durationMs) {
+  return msLeft <= 5 * 60 * 1000 && (durationMs || 0) >= 10 * 60 * 1000;
+}
+
+/**
+ * Compute which timer milestone alarms the background service worker should
+ * create for a given state. Pure function mirroring (and tested against) the
+ * runtime scheduleTimerAlarms logic so the shipped behavior is the tested
+ * behavior.
+ *
+ * Semantics (identical to the old background implementation):
+ *   - only a RUNNING countdown schedules alarms;
+ *   - the total duration must strictly exceed the milestone threshold (an
+ *     exactly-10-minute timer does NOT get a "10 min left" alarm that would
+ *     fire at t=0);
+ *   - the fire time must be strictly in the future;
+ *   - `timer_end` is ALWAYS scheduled (regardless of the user's milestone
+ *     set) because it finalizes the timer state and clears the badge even
+ *     when the "finish" notification is disabled;
+ *   - the other milestones are scheduled only when present in
+ *     `enabledMilestones` (the user's opt-in set from ff_timer_notify_milestones).
+ *
+ * @param {object} state            timer state ({status, mode, endTime, durationMs, remainingMs})
+ * @param {string[]} enabledMilestones  milestone ids the user enabled
+ * @param {number} now              current wall-clock time (Date.now())
+ * @returns {Array<{name: string, when: number}>}
+ */
+function computeTimerAlarmSchedules(state, enabledMilestones, now) {
+  if (!state || state.status !== 'RUNNING' || state.mode !== 'countdown') return [];
+
+  const enabled = Array.isArray(enabledMilestones) ? enabledMilestones : [];
+  const msLeft = state.endTime - now;
+  const durationMs = state.durationMs || state.remainingMs || msLeft;
+
+  const milestones = [
+    { name: 'timer_10min', milestoneId: '10min',  offset: 10 * 60 * 1000, minDuration: 10 * 60 * 1000 },
+    { name: 'timer_5min',  milestoneId: '5min',   offset: 5 * 60 * 1000,  minDuration: 5 * 60 * 1000 },
+    { name: 'timer_1min',  milestoneId: '1min',   offset: 1 * 60 * 1000,  minDuration: 1 * 60 * 1000 },
+    { name: 'timer_end',   milestoneId: 'finish', offset: 0,               minDuration: 0 }
+  ];
+
+  const schedules = [];
+  for (const m of milestones) {
+    // timer_end always runs (state finalization); others respect the opt-in set.
+    if (m.milestoneId !== 'finish' && !enabled.includes(m.milestoneId)) continue;
+
+    const fireTimeMs = state.endTime - m.offset;
+    if (msLeft > m.offset && durationMs > m.minDuration && fireTimeMs > now) {
+      schedules.push({ name: m.name, when: fireTimeMs });
+    }
+  }
+  return schedules;
+}
+
+/**
  * Compute remainingMs from user input, clamping to valid ranges.
  * @param {string|number} mm minutes (0-999)
  * @param {string|number} ss seconds (0-59)
@@ -117,7 +181,7 @@ function tickState(state, now) {
   const nextState = { ...state };
   const actions = [];
 
-  const shouldBeDanger = isDanger(msLeft);
+  const shouldBeDanger = isDangerForTimer(msLeft, state.durationMs);
 
   if (msLeft <= 0) {
     nextState.status = 'STOPPED';
@@ -158,8 +222,10 @@ if (typeof module !== 'undefined' && module.exports) {
     shouldNotify5,
     shouldNotify1,
     isDanger,
+    isDangerForTimer,
     computeRemainingMs,
     defaultTimerState,
-    tickState
+    tickState,
+    computeTimerAlarmSchedules
   };
 }

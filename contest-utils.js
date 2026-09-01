@@ -18,6 +18,30 @@ const DEFAULT_REMINDER_INTERVALS = [86400, 43200, 18000, 7200, 3600, 1800, 600, 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Default set of timer milestone notifications the user is opted into
+ * (mirrors the milestone chips in the popup). Shared by popup.js and the
+ * background service worker via importScripts so the two contexts can never
+ * drift apart.
+ */
+const DEFAULT_TIMER_NOTIFY_MILESTONES = ['10min', '5min', '1min', 'finish'];
+
+/**
+ * Format a "time until" duration (ms) as a compact human string.
+ * @param {number} ms
+ * @returns {string}
+ */
+function formatTimeUntil(ms) {
+    if (ms <= 0) return 'soon';
+    const totalSec = Math.round(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (m > 0) return `${m}m`;
+    return `${s}s`;
+}
+
+/**
  * Determine contest status from its status field.
  * @param {object} c  contest object with a `status` property
  * @returns {'ongoing'|'upcoming'|'other'}
@@ -132,10 +156,12 @@ if (typeof module !== 'undefined' && module.exports) {
         CONTEST_HORIZON_MS,
         TWENTY_FOUR_HOURS_MS,
         DEFAULT_REMINDER_INTERVALS,
+        DEFAULT_TIMER_NOTIFY_MILESTONES,
         getContestStatus,
         formatDuration,
         formatDateTime,
         timeUntil,
+        formatTimeUntil,
         contestComparator,
         filterAndSort,
         sortByTime,

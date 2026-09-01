@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "FocusForces",
   "version": "2.0.0",
+  "minimum_chrome_version": "116",
   "description": "Universal focus timer, contest tracker, and distraction-free coding. Multiple themes, persistent timer, and smart notifications. Made by Ahsan_.",
   "permissions": [
     "storage",
@@ -28,25 +29,32 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "focusforces@ahsan.dev",
+      "strict_min_version": "109.0"
+    }
+  },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {
       "matches": ["https://codeforces.com/*"],
-      "js": ["timer-utils.js", "content.js", "submitify.js"],
+      "js": ["timer-utils.js", "content.js", "submitify.js", "catwalk-utils.js", "catwalk.js", "ac-utils.js", "accelebrate.js"],
       "css": ["content.css", "cf-theme.css"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://atcoder.jp/*"],
-      "js": ["timer-utils.js", "content.js"],
+      "js": ["timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
       "css": ["content.css", "atcoder-theme.css"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://www.codechef.com/*"],
-      "js": ["timer-utils.js", "content.js"],
+      "js": ["timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
       "css": ["content.css", "codechef-theme.css"],
       "run_at": "document_start"
     }

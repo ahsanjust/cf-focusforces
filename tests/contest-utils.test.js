@@ -6,11 +6,13 @@ const {
     formatDuration,
     formatDateTime,
     timeUntil,
+    formatTimeUntil,
     contestComparator,
     filterAndSort,
     sortByTime,
     resolveReminderIntervals,
     DEFAULT_REMINDER_INTERVALS,
+    DEFAULT_TIMER_NOTIFY_MILESTONES,
     TWENTY_FOUR_HOURS_MS
 } = require('../contest-utils');
 
@@ -112,6 +114,33 @@ describe('timeUntil', () => {
         const future = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
         const result = timeUntil(future);
         expect(result).toMatch(/\d+h \d+m/);
+    });
+});
+
+describe('formatTimeUntil', () => {
+    test('returns "soon" for non-positive durations', () => {
+        expect(formatTimeUntil(0)).toBe('soon');
+        expect(formatTimeUntil(-1000)).toBe('soon');
+    });
+
+    test('formats seconds-only durations', () => {
+        expect(formatTimeUntil(30 * 1000)).toBe('30s');
+    });
+
+    test('formats minutes', () => {
+        expect(formatTimeUntil(90 * 1000)).toBe('1m');
+        expect(formatTimeUntil(2 * 60 * 1000 + 45 * 1000)).toBe('2m');
+    });
+
+    test('formats hours with and without minutes', () => {
+        expect(formatTimeUntil(2 * 3600 * 1000)).toBe('2h');
+        expect(formatTimeUntil(2 * 3600 * 1000 + 30 * 60 * 1000)).toBe('2h 30m');
+    });
+});
+
+describe('DEFAULT_TIMER_NOTIFY_MILESTONES', () => {
+    test('includes the four milestone ids in canonical order', () => {
+        expect(DEFAULT_TIMER_NOTIFY_MILESTONES).toEqual(['10min', '5min', '1min', 'finish']);
     });
 });
 

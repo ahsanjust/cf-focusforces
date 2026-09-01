@@ -74,6 +74,38 @@
       </div>
     </div>
 
+    <!-- Zen Paws Toggle -->
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Zen Paws</span>
+          <span class="setting-desc">Cats roam your page for calm vibes</span>
+        </div>
+        <label class="switch" for="zen-paws-toggle" title="Toggle Zen Paws">
+          <input type="checkbox" id="zen-paws-toggle" aria-label="Toggle Zen Paws">
+          <span class="switch-track">
+            <span class="switch-thumb"></span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- AC Celebration Toggle -->
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">AC Celebration</span>
+          <span class="setting-desc">A soft sparkle when you get Accepted</span>
+        </div>
+        <label class="switch" for="ac-celebrate-toggle" title="Toggle AC Celebration">
+          <input type="checkbox" id="ac-celebrate-toggle" aria-label="Toggle AC Celebration">
+          <span class="switch-track">
+            <span class="switch-thumb"></span>
+          </span>
+        </label>
+      </div>
+    </div>
+
     <!-- Contest Reminders -->
     <div class="setting-card">
       <div class="setting-row">
@@ -128,6 +160,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Timer Notifications -->
+    <div class="setting-card">
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">Timer Notifications</span>
+          <span class="setting-desc">Get notified at key countdown moments</span>
+        </div>
+        <label class="switch" for="timer-notify-toggle" title="Toggle timer notifications" aria-expanded="true">
+          <input type="checkbox" id="timer-notify-toggle" checked aria-label="Toggle timer notifications">
+          <span class="switch-track">
+            <span class="switch-thumb"></span>
+          </span>
+        </label>
+      </div>
+      <div id="timer-notify-section" class="reminder-section" aria-expanded="true">
+        <div class="reminder-header">
+          <span class="reminder-title">Alert me at:</span>
+        </div>
+        <div class="reminder-chips" id="timer-notify-options">
+          <label class="reminder-chip">
+            <input type="checkbox" class="timer-notify-item" value="10min" checked aria-label="Alert at 10 minutes left">
+            <span>10 Min</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="timer-notify-item" value="5min" checked aria-label="Alert at 5 minutes left">
+            <span>5 Min</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="timer-notify-item" value="1min" checked aria-label="Alert at 1 minute left">
+            <span>1 Min</span>
+          </label>
+          <label class="reminder-chip">
+            <input type="checkbox" class="timer-notify-item" value="finish" checked aria-label="Alert when timer finishes">
+            <span>Finish</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- Timer Panel -->
@@ -143,7 +215,7 @@
       </div>
     </div>
     <div class="timer-body">
-      <div class="timer-display" id="timer-display" role="timer" aria-live="polite">00:00:00</div>
+      <div class="timer-display" id="timer-display" role="timer" aria-live="off">00:00:00</div>
       <div class="timer-inputs" id="timer-inputs">
         <label>
           <input type="number" id="timer-mm" min="0" max="999" placeholder="MM" value="25"> m
@@ -183,6 +255,7 @@
   </footer>
 
   <script src="contest-utils.js"></script>
+  <script src="timer-utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

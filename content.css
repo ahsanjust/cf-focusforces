@@ -213,3 +213,74 @@
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ── Zen Mode Layout ───────────────────────────── */
+
+/* Hide the entire header (including the login/logout bar left over) */
+body.ff-zen-mode-active #header {
+  display: none !important;
+}
+
+/* Hide the navigation tab bar (the first .menu-box containing PROBLEMS/SUBMIT/etc) */
+body.ff-zen-mode-active .roundbox.menu-box {
+  display: none !important;
+}
+
+/* Hide the sidebar entirely */
+body.ff-zen-mode-active #sidebar {
+  display: none !important;
+  float: none !important;
+  width: 0 !important;
+}
+
+/* Make the outer body wrapper full-width (CF uses a centered fixed-width #body) */
+body.ff-zen-mode-active #body {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Remove top margin/padding from pageContent so it starts at the very top */
+body.ff-zen-mode-active #pageContent {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* The content-with-sidebar wrapper has margin-right reserved for the sidebar -
+   reset it so the content expands to fill all available space.
+   Do NOT set width:100% here — it cascades into sample test boxes. */
+body.ff-zen-mode-active .content-with-sidebar,
+body.ff-zen-mode-active #content {
+  margin-right: 0 !important;
+  float: none !important;
+}
+
+/* Give the problem statement comfortable padding now that it fills the screen */
+body.ff-zen-mode-active .problem-statement {
+  margin: 0 !important;
+  max-width: none !important;
+  padding-left: 1.5em !important;
+  padding-top: 1em !important;
+}
+
+/* Zen Mode keeps Scout + Problem Tags in a toolbar above the statement so
+   they remain accessible without eating into the full-width layout. */
+body.ff-zen-mode-active .ff-zen-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-start;
+  max-width: 1050px;
+  margin: 0 auto 10px;
+  padding: 0 1.2em;
+}
+
+body.ff-zen-mode-active .ff-zen-toolbar .sidebox {
+  float: none !important;
+  width: auto !important;
+  min-width: 220px;
+  margin: 0 !important;
+}
+

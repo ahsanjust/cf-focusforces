@@ -7,9 +7,11 @@ const {
     shouldNotify5,
     shouldNotify1,
     isDanger,
+    isDangerForTimer,
     computeRemainingMs,
     defaultTimerState,
-    tickState
+    tickState,
+    computeTimerAlarmSchedules
 } = require('../timer-utils');
 
 describe('formatTime', () => {
@@ -119,6 +121,23 @@ describe('isDanger', () => {
 
     test('returns true for 0 milliseconds', () => {
         expect(isDanger(0)).toBe(true);
+    });
+});
+
+describe('isDangerForTimer', () => {
+    test('returns true when <= 5 min left and total duration >= 10 min', () => {
+        expect(isDangerForTimer(5 * 60 * 1000, 25 * 60 * 1000)).toBe(true);
+        expect(isDangerForTimer(60 * 1000, 10 * 60 * 1000)).toBe(true);
+    });
+
+    test('returns false when more than 5 min remain', () => {
+        expect(isDangerForTimer(6 * 60 * 1000, 25 * 60 * 1000)).toBe(false);
+    });
+
+    test('returns false when the total duration is under 10 min', () => {
+        expect(isDangerForTimer(2 * 60 * 1000, 5 * 60 * 1000)).toBe(false);
+        expect(isDangerForTimer(2 * 60 * 1000, 0)).toBe(false);
+        expect(isDangerForTimer(2 * 60 * 1000, undefined)).toBe(false);
     });
 });
 
@@ -352,5 +371,75 @@ describe('tickState', () => {
         };
         const result = tickState(state, now);
         expect(result.actions).not.toContain('NOTIFY_1');
+    });
+});
+
+describe('computeTimerAlarmSchedules', () => {
+    const now = Date.now();
+    const ALL = ['10min', '5min', '1min', 'finish'];
+    const runningCountdown = (endTime, durationMs, extra = {}) => ({
+        status: 'RUNNING',
+        mode: 'countdown',
+        endTime,
+        durationMs,
+        remainingMs: 0,
+        ...extra
+    });
+
+    test('returns [] for non-running or stopwatch states', () => {
+        expect(computeTimerAlarmSchedules(
+            { status: 'STOPPED', mode: 'countdown', endTime: now + 600000 },
+            ALL, now
+        )).toEqual([]);
+        expect(computeTimerAlarmSchedules(
+            { status: 'RUNNING', mode: 'stopwatch', endTime: 0 },
+            ALL, now
+        )).toEqual([]);
+    });
+
+    test('schedules all four milestones for a 25-minute countdown', () => {
+        const endTime = now + 25 * 60 * 1000;
+        const sched = computeTimerAlarmSchedules(runningCountdown(endTime, 25 * 60 * 1000), ALL, now);
+        expect(sched.map(s => s.name)).toEqual(['timer_10min', 'timer_5min', 'timer_1min', 'timer_end']);
+        expect(sched.find(s => s.name === 'timer_10min').when).toBe(endTime - 10 * 60 * 1000);
+        expect(sched.find(s => s.name === 'timer_end').when).toBe(endTime);
+    });
+
+    test('skips milestones the user disabled but ALWAYS schedules timer_end', () => {
+        const endTime = now + 25 * 60 * 1000;
+        const sched = computeTimerAlarmSchedules(
+            runningCountdown(endTime, 25 * 60 * 1000),
+            ['5min', '1min'],
+            now
+        );
+        const names = sched.map(s => s.name);
+        expect(names).not.toContain('timer_10min');
+        expect(names).toContain('timer_5min');
+        expect(names).toContain('timer_1min');
+        // finish alarm must exist even with 'finish' opt-out: it finalizes state
+        expect(names).toContain('timer_end');
+    });
+
+    test('an exactly-10-minute timer does not schedule the 10-min alarm (strict >)', () => {
+        const endTime = now + 10 * 60 * 1000;
+        const sched = computeTimerAlarmSchedules(runningCountdown(endTime, 10 * 60 * 1000), ALL, now);
+        expect(sched.map(s => s.name)).not.toContain('timer_10min');
+        expect(sched.map(s => s.name)).toContain('timer_5min');
+    });
+
+    test('does not schedule alarms whose fire time has already passed', () => {
+        const endTime = now + 30 * 1000; // 30s left
+        const sched = computeTimerAlarmSchedules(runningCountdown(endTime, 25 * 60 * 1000), ALL, now);
+        expect(sched.map(s => s.name)).toEqual(['timer_end']);
+    });
+
+    test('falls back to remainingMs when durationMs is missing', () => {
+        const endTime = now + 25 * 60 * 1000;
+        const sched = computeTimerAlarmSchedules(
+            runningCountdown(endTime, 0, { remainingMs: 25 * 60 * 1000 }),
+            ALL,
+            now
+        );
+        expect(sched.length).toBe(4);
     });
 });

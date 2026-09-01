@@ -7,17 +7,25 @@ A professional Chrome extension for competitive programmers featuring a universa
 ```
 FocusForces/
 ├── manifest.json        # Extension manifest (MV3)
-├── background.js        # Service worker: alarms, notifications, timer monitoring
+├── background.js        # Service worker: alarms, notifications, timer monitoring, badge
 ├── popup.html           # Popup UI entry point
 ├── popup.js             # Popup logic: timer, theme, contests, settings
 ├── popup.css            # Popup styles with full theme system
-├── content.js           # Content script: Zen Mode, Scout, sidebar Timer
-├── content.css          # Content script styles (theme-aware)
-├── timer-utils.js       # Pure timer state machine (shared with tests)
-├── submitify.js         # Inline code submission helper
+├── content.js           # Content script: Zen Mode, Scout, Theme Sync
+├── content.css          # Content script styles (theme-aware, Zen layout)
+├── timer-utils.js       # Pure timer state machine + alarm scheduling (shared & tested)
+├── contest-utils.js     # Pure contest helpers + shared constants (shared & tested)
+├── catwalk-utils.js     # Pure Zen Paws logic: cat movement, meetings, paw prints (shared & tested)
+├── catwalk.js           # Zen Paws overlay: Shadow DOM, SVG cats, rAF animation loop
+├── ac-utils.js          # Pure AC Celebration logic: URL parsing, dedup, burst geometry (shared & tested)
+├── accelebrate.js       # AC Celebration overlay: verdict watcher, Shadow DOM burst, soft chime
+├── submitify.js         # Inline code submission helper (Codeforces)
+├── offscreen.html       # Offscreen audio document (plays sounds on any page)
+├── offscreen.js         # Offscreen audio logic
 ├── assets/
 │   └── notify.wav       # Timer notification sound
 ├── icons/               # Extension icons
+├── tests/               # Jest unit tests for the pure utility modules
 ├── jest.config.js       # Test configuration
 └── package.json         # Project metadata
 ```
@@ -32,10 +40,10 @@ npm run test:watch # Watch mode
 ## Features
 
 ### Theme System
-- **6 professional themes**: Light, Dark, AMOLED, Blue, Minimal, High Contrast
-- Smooth theme switching via dot picker in popup
+- **4 professional themes**: Default, Dark, AMOLED, High Contrast
+- Smooth theme switching via dot picker in popup (keyboard-navigable)
 - Persistent theme selection across sessions
-- Theme syncs to Codeforces sidebar cards (Timer + Scout)
+- Theme syncs to Codeforces/AtCoder/CodeChef pages and the Scout card
 - CSS custom property architecture for clean, maintainable theming
 
 ### Universal Focus Timer
@@ -65,15 +73,36 @@ npm run test:watch # Watch mode
 - Reliable scheduling via chrome.alarms (survives browser restart)
 
 ### Timer Notifications
-- **10 Minutes Left** / **5 Minutes Left** / **1 Minute Left** / **Time's Up!**
-- Auto-dismiss after 5 seconds (no manual dismissal needed)
+- **10 / 5 / 1 Minute Left** + **Time's Up!** — each milestone is independently toggleable via chips in the popup
+- Master on/off switch for all timer notifications
+- Auto-dismiss after 8 seconds (no manual dismissal needed)
 - Background alarms ensure notifications fire even if popup is closed
-- Sound notification with WAV file + Web Audio API fallback
+- Sound plays on the active page, with an offscreen-audio fallback for non-supported sites
+- Finish notification is guaranteed exactly-once (popup-vs-alarm race proof)
 
 ### Zen Mode
-- Hides distractions (community stats, news, footer, non-essential sidebar)
-- Preserves FocusForces components (Timer, Scout, Problem Tags)
+- Hides distractions (header, nav bar, community stats, news, footer, sidebar)
+- Full-width problem statement for distraction-free solving
+- Preserves the Scout card and Problem Tags by moving them into a toolbar above the statement
 - Toggle synced via `chrome.storage.local`
+
+### Zen Paws (Cat Walk)
+- Small, viewport-scaled SVG cats roam the bottom of the page for a calm, enchanting vibe
+- Cat density scales with screen width (2–5 cats); cats are 34–84px tall and never block content (`pointer-events: none` overlay)
+- Cats pause to rest, blink, leave fading paw prints, and float dust-motes drift upward
+- **Meeting choreography**: when two cats cross paths they stop, face each other, hop, share a `meow~` / `♥` bubble, then pass on (per-pair cooldown prevents repeat greetings)
+- **Cursor awareness**: a cat near your mouse sits and watches you, occasionally meowing
+- Shadow-DOM overlay isolates the animation from the host page's CSS (and vice versa)
+- Single `requestAnimationFrame` loop with delta-time; all movement via GPU-composited `transform: translate3d`; loop pauses when the tab is hidden
+- Respects `prefers-reduced-motion` (feature stays off); pure logic in `catwalk-utils.js` is unit-tested
+- Toggle synced via `chrome.storage.local` (`ff_zenPaws`)
+
+### AC Celebration
+- A calm, tasteful burst of light when a Codeforces submission is Accepted — a soft expanding ring, a gentle "Accepted" pill, and a few glowing sparks that drift outward and fade (plus a quiet chime)
+- Detects Accepted verdicts via DOM observation (covers live/AJAX updates) and an initial scan (covers the classic submit-then-reload flow)
+- Problem-scoped dedup persisted in `chrome.storage.local`, so a post-submit page reload never re-fires and old solved problems don't spam you on revisit
+- Shadow-DOM overlay, `pointer-events: none`, pure CSS transform/opacity animations; respects `prefers-reduced-motion`
+- Pure logic in `ac-utils.js` is unit-tested; toggle synced via `chrome.storage.local` (`ff_acCelebrate`)
 
 ### Scout (Tag Toggler)
 - Extracts problem tags and rating from DOM or Codeforces API

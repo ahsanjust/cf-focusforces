@@ -51,6 +51,11 @@
     let ffTimeout = null;
     let themeGuard = null;
 
+    // Zen relocation bookkeeping: [{ box, parent, next }] for the sideboxes
+    // moved into the Zen toolbar, and the toolbar element itself.
+    let zenRelocated = [];
+    let zenToolbarEl = null;
+
     // ── Audio (for notification sounds triggered by background) ──
     const notifySound = new Audio(chrome.runtime.getURL('assets/notify.wav'));
 
@@ -202,7 +207,12 @@
     }
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', ensureThemeApplied);
+        document.addEventListener('DOMContentLoaded', () => {
+            ensureThemeApplied();
+            // Re-apply Zen now that <body> exists (a document_start apply may
+            // have been skipped while the DOM was still being parsed).
+            if (zenModeEnabled) applyZenMode(true);
+        });
     }
 
     // Watch for <body> being replaced entirely (some CF pages re-render).
@@ -375,22 +385,80 @@
     }
 
     // ── Zen Mode ─────────────────────────────────
+    // Zen hides the header, nav bar and sidebar via CSS (body.ff-zen-mode-active)
+    // so the problem statement gets the full width. The FocusForces Scout card
+    // and the native Problem Tags box are KEPT accessible: they are moved into
+    // a small toolbar above the statement while Zen is active, and moved back
+    // to the sidebar when it is turned off.
+
+    function getZenKeepBoxes() {
+        return []; // Everything stays in the sidebar and is hidden by Zen Mode CSS.
+    }
+
+    function ensureZenToolbar() {
+        if (zenToolbarEl && zenToolbarEl.isConnected) return zenToolbarEl;
+        zenToolbarEl = document.createElement('div');
+        zenToolbarEl.id = 'ff-zen-toolbar';
+        zenToolbarEl.className = 'ff-zen-toolbar';
+        const pageContent = document.getElementById('pageContent')
+            || document.querySelector('.content-with-sidebar')
+            || document.getElementById('content');
+        if (pageContent) {
+            pageContent.insertBefore(zenToolbarEl, pageContent.firstChild);
+        } else {
+            document.body.appendChild(zenToolbarEl);
+        }
+        return zenToolbarEl;
+    }
+
+    function relocateZenBoxes(enabled) {
+        if (!IS_CF) return;
+        if (enabled) {
+            // Only relocate boxes not already moved (idempotent; also lets the
+            // Scout card, created later by initTagToggler, be picked up).
+            const keepers = getZenKeepBoxes().filter(box =>
+                !zenRelocated.some(r => r.box === box)
+            );
+            if (!keepers.length) return;
+            const toolbar = ensureZenToolbar();
+            keepers.forEach(box => {
+                zenRelocated.push({ box, parent: box.parentNode, next: box.nextSibling });
+                toolbar.appendChild(box);
+            });
+        } else if (zenRelocated.length) {
+            zenRelocated.forEach(({ box, parent, next }) => {
+                if (parent && parent.isConnected) {
+                    parent.insertBefore(box, next);
+                } else {
+                    // The original container vanished (SPA navigation); return
+                    // the box to the current sidebar so it isn't lost.
+                    const sidebar = document.getElementById('sidebar');
+                    (sidebar || document.body).appendChild(box);
+                }
+            });
+            zenRelocated = [];
+            if (zenToolbarEl) {
+                zenToolbarEl.remove();
+                zenToolbarEl = null;
+            }
+        }
+    }
+
     function applyZenMode(enabled) {
+        // document.body may not exist yet at document_start (storage resolves
+        // before <body> parses on slow loads) — the DOMContentLoaded handler
+        // re-applies Zen as soon as the DOM is ready.
+        if (!document.body) return;
+
+        document.body.classList.toggle('ff-zen-mode-active', enabled);
+
         CONFIG.ZEN_SELECTORS.forEach(sel => {
             document.querySelectorAll(sel).forEach(el => {
                 el.classList.toggle('ff-zen-hidden', enabled);
             });
         });
 
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) {
-            sidebar.querySelectorAll('.sidebox').forEach(box => {
-                const txt = box.textContent.toLowerCase();
-                const keep = txt.includes('problem tags') ||
-                    txt.includes('ff scout');
-                box.classList.toggle('ff-zen-hidden', enabled && !keep);
-            });
-        }
+        relocateZenBoxes(enabled);
     }
 
     (async () => {

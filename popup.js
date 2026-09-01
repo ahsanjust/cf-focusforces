@@ -80,21 +80,11 @@ const ThemeModule = (() => {
 // ══════════════════════════════════════════════════════
 
 const TimerModule = (() => {
+    // Shared pure helpers live in timer-utils.js (loaded before popup.js in
+    // popup.html): formatTime, computeRemainingMs, defaultTimerState,
+    // isDangerForTimer. This keeps one tested source of truth.
     let timerState = defaultTimerState();
     let timerIntervalId = null;
-
-    function defaultTimerState() {
-        return {
-            status: 'STOPPED',
-            mode: 'countdown',
-            endTime: 0,
-            elapsed: 0,
-            lastStarted: 0,
-            durationMs: 0,
-            remainingMs: 0,
-            notifiedMilestones: []
-        };
-    }
 
     async function loadTimerState() {
         try {
@@ -108,20 +98,6 @@ const TimerModule = (() => {
 
     async function saveTimerState(state) {
         try { await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state }); } catch {}
-    }
-
-    function formatTimeMs(ms) {
-        const sec = Math.max(0, Math.ceil(ms / 1000));
-        const h = Math.floor(sec / 3600);
-        const m = Math.floor((sec % 3600) / 60);
-        const s = sec % 60;
-        return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
-    }
-
-    function computeRemainingMs(mm, ss) {
-        const clampedMm = Math.min(999, Math.max(0, parseInt(mm, 10) || 0));
-        const clampedSs = Math.min(59, Math.max(0, parseInt(ss, 10) || 0));
-        return (clampedMm * 60 + clampedSs) * 1000;
     }
 
     function getState() {
@@ -141,11 +117,8 @@ const TimerModule = (() => {
     }
 
     return {
-        defaultTimerState,
         loadTimerState,
         saveTimerState,
-        formatTimeMs,
-        computeRemainingMs,
         getState,
         setState,
         getIntervalId,
@@ -252,20 +225,20 @@ const TimerUIModule = (() => {
             actionBtn.textContent = 'Pause';
             if (isCountdown) {
                 const msLeft = Math.max(0, state.endTime - Date.now());
-                display.textContent = TimerModule.formatTimeMs(msLeft);
-                display.classList.toggle('danger', msLeft <= 300000 && state.durationMs >= 600000);
+                display.textContent = formatTime(msLeft);
+                display.classList.toggle('danger', isDangerForTimer(msLeft, state.durationMs));
             } else {
                 const elapsed = state.elapsed + (Date.now() - state.lastStarted);
-                display.textContent = TimerModule.formatTimeMs(elapsed);
+                display.textContent = formatTime(elapsed);
                 display.classList.remove('danger');
             }
         } else if (state.status === 'PAUSED') {
             actionBtn.textContent = 'Resume';
             if (isCountdown) {
-                display.textContent = TimerModule.formatTimeMs(state.remainingMs);
-                display.classList.toggle('danger', state.remainingMs <= 300000 && state.durationMs >= 600000);
+                display.textContent = formatTime(state.remainingMs);
+                display.classList.toggle('danger', isDangerForTimer(state.remainingMs, state.durationMs));
             } else {
-                display.textContent = TimerModule.formatTimeMs(state.elapsed);
+                display.textContent = formatTime(state.elapsed);
                 display.classList.remove('danger');
             }
         } else {
@@ -289,7 +262,7 @@ const TimerActions = (() => {
             const mmInput = document.getElementById('timer-mm');
             const ssInput = document.getElementById('timer-ss');
             if (state.status === 'STOPPED') {
-                state.remainingMs = TimerModule.computeRemainingMs(mmInput?.value, ssInput?.value);
+                state.remainingMs = computeRemainingMs(mmInput?.value, ssInput?.value);
                 state.notifiedMilestones = [];
             }
             if (state.remainingMs <= 0) return;
@@ -330,7 +303,7 @@ const TimerActions = (() => {
     function reset() {
         TimerInterval.stop();
         const currentMode = TimerModule.getState().mode;
-        TimerModule.setState({ ...TimerModule.defaultTimerState(), mode: currentMode });
+        TimerModule.setState({ ...defaultTimerState(), mode: currentMode });
         TimerModule.saveTimerState(TimerModule.getState());
         TimerUIModule.render();
         chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: TimerModule.getState() }).catch(() => {});
@@ -339,11 +312,14 @@ const TimerActions = (() => {
     function finish() {
         TimerInterval.stop();
         const currentMode = TimerModule.getState().mode;
-        const state = { ...TimerModule.defaultTimerState(), mode: currentMode };
+        const state = { ...defaultTimerState(), mode: currentMode };
         TimerModule.setState(state);
         TimerModule.saveTimerState(state);
         TimerUIModule.render();
-        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state }).catch(() => {});
+        // `expired: true` tells the background this was a NATURAL expiry (not a
+        // manual reset), so it delivers the "Time's Up!" notification even if
+        // the popup's tick beat the background's timer_end alarm to the punch.
+        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state, expired: true }).catch(() => {});
     }
 
     return { start, pause, reset, finish };
@@ -377,8 +353,8 @@ const TimerInterval = (() => {
             const msLeft = Math.max(0, state.endTime - Date.now());
             const display = document.getElementById('timer-display');
             if (display) {
-                display.textContent = TimerModule.formatTimeMs(msLeft);
-                display.classList.toggle('danger', msLeft <= 300000 && state.durationMs >= 600000);
+                display.textContent = formatTime(msLeft);
+                display.classList.toggle('danger', isDangerForTimer(msLeft, state.durationMs));
             }
 
             if (msLeft <= 0) {
@@ -391,7 +367,7 @@ const TimerInterval = (() => {
             const elapsed = state.elapsed + (Date.now() - state.lastStarted);
             const display = document.getElementById('timer-display');
             if (display) {
-                display.textContent = TimerModule.formatTimeMs(elapsed);
+                display.textContent = formatTime(elapsed);
             }
         }
     }
@@ -494,10 +470,13 @@ const AtCoderParser = (() => {
 // ══════════════════════════════════════════════════════
 
 const ContestCache = (() => {
+    // getMain/getGym return the full stored entry ({data, ts}) when it is still
+    // fresh, or null when expired/missing. Callers use the presence of the
+    // entry to decide whether a network refetch is needed at all.
     async function getMain() {
         try {
             const { [CACHE_KEY]: stored } = await chrome.storage.local.get(CACHE_KEY);
-            if (stored && Date.now() - stored.ts < CACHE_TTL_MS) return stored.data;
+            if (stored && Date.now() - stored.ts < CACHE_TTL_MS) return stored;
         } catch {}
         return null;
     }
@@ -509,7 +488,7 @@ const ContestCache = (() => {
     async function getGym() {
         try {
             const { [GYM_CACHE_KEY]: stored } = await chrome.storage.local.get(GYM_CACHE_KEY);
-            if (stored && Date.now() - stored.ts < GYM_CACHE_TTL_MS) return stored.data;
+            if (stored && Date.now() - stored.ts < GYM_CACHE_TTL_MS) return stored;
         } catch {}
         return null;
     }
@@ -905,8 +884,10 @@ const ContestListModule = (() => {
 
         const [cachedMain, cachedGym] = await Promise.all([ContestCache.getMain(), ContestCache.getGym()]);
         if (myGen !== loadGeneration) return;
-        currentMain = cachedMain || [];
-        currentGym = cachedGym || [];
+        currentMain = cachedMain?.data || [];
+        currentGym = cachedGym?.data || [];
+        const mainFresh = !!cachedMain;
+        const gymFresh = !!cachedGym;
 
         if (currentMain.length || currentGym.length) {
             ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
@@ -914,29 +895,35 @@ const ContestListModule = (() => {
             ContestRenderer.setLoadingState(list);
         }
 
-        ContestFetch.fetchMain().then(main => {
-            if (myGen !== loadGeneration) return;
-            currentMain = main;
-            ContestCache.setMain(main);
-            ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
-        }).catch(e => {
-            if (myGen !== loadGeneration) return;
-            if (!currentMain.length && !currentGym.length) {
-                const msg = !navigator.onLine
-                    ? 'You appear to be offline. Connect to the internet and try again.'
-                    : (e.message || 'Error loading contests');
-                ContestRenderer.renderError(msg);
-            }
-        });
-
-        ContestFetch.fetchGym().then(gym => {
-            if (myGen !== loadGeneration) return;
-            if (gym && gym.length) {
-                currentGym = gym;
-                ContestCache.setGym(gym);
+        // Only hit the network when the cache is stale — the cache is no longer
+        // just an instant-render placeholder but an actual request de-duplicator.
+        if (!mainFresh) {
+            ContestFetch.fetchMain().then(main => {
+                if (myGen !== loadGeneration) return;
+                currentMain = main;
+                ContestCache.setMain(main);
                 ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
-            }
-        }).catch(() => {});
+            }).catch(e => {
+                if (myGen !== loadGeneration) return;
+                if (!currentMain.length && !currentGym.length) {
+                    const msg = !navigator.onLine
+                        ? 'You appear to be offline. Connect to the internet and try again.'
+                        : (e.message || 'Error loading contests');
+                    ContestRenderer.renderError(msg);
+                }
+            });
+        }
+
+        if (!gymFresh) {
+            ContestFetch.fetchGym().then(gym => {
+                if (myGen !== loadGeneration) return;
+                if (gym && gym.length) {
+                    currentGym = gym;
+                    ContestCache.setGym(gym);
+                    ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
+                }
+            }).catch(() => {});
+        }
     }
 
     function startAutoRefresh() {
@@ -1009,6 +996,72 @@ const ReminderSettingsModule = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
+// MODULE: Timer Notification Settings
+// ══════════════════════════════════════════════════════
+
+// DEFAULT_TIMER_NOTIFY_MILESTONES comes from contest-utils.js (single source
+// shared with the background service worker via importScripts).
+
+const TimerNotifySettingsModule = (() => {
+    async function init() {
+        const timerNotifyToggle = document.getElementById('timer-notify-toggle');
+        const timerNotifySection = document.getElementById('timer-notify-section');
+
+        const {
+            ff_timer_notifications_enabled,
+            ff_timer_notify_milestones
+        } = await chrome.storage.local.get({
+            ff_timer_notifications_enabled: true,
+            ff_timer_notify_milestones: DEFAULT_TIMER_NOTIFY_MILESTONES
+        });
+
+        const masterEnabled = ff_timer_notifications_enabled !== false;
+        const activeMilestones = Array.isArray(ff_timer_notify_milestones)
+            ? ff_timer_notify_milestones
+            : DEFAULT_TIMER_NOTIFY_MILESTONES;
+
+        // Initialise master toggle
+        timerNotifyToggle.checked = masterEnabled;
+        timerNotifySection.style.display = masterEnabled ? 'block' : 'none';
+        timerNotifySection.setAttribute('aria-expanded', String(masterEnabled));
+
+        // Master toggle — collapse/expand chips section
+        timerNotifyToggle.addEventListener('change', async e => {
+            const enabled = e.target.checked;
+            try { await chrome.storage.local.set({ ff_timer_notifications_enabled: enabled }); } catch {}
+            timerNotifySection.style.display = enabled ? 'block' : 'none';
+            timerNotifySection.setAttribute('aria-expanded', String(enabled));
+            e.target.closest('.switch').setAttribute('aria-expanded', String(enabled));
+            chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_TOGGLED', enabled }).catch(() => {});
+        });
+
+        // Wire up each milestone chip
+        const chips = document.querySelectorAll('.timer-notify-item');
+        chips.forEach(chip => {
+            chip.checked = activeMilestones.includes(chip.value);
+
+            chip.addEventListener('change', async () => {
+                // Prevent unchecking the last active chip — use the master
+                // toggle to disable all notifications entirely.
+                const checkedChips = Array.from(chips).filter(c => c.checked);
+                if (!chip.checked && checkedChips.length === 0) {
+                    chip.checked = true;
+                    return;
+                }
+                const newMilestones = Array.from(chips)
+                    .filter(c => c.checked)
+                    .map(c => c.value);
+                try { await chrome.storage.local.set({ ff_timer_notify_milestones: newMilestones }); } catch {}
+                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_MILESTONES_CHANGED', milestones: newMilestones }).catch(() => {});
+            });
+        });
+    }
+
+    return { init };
+})();
+
+
+// ══════════════════════════════════════════════════════
 // MODULE: Settings — Zen Mode
 // ══════════════════════════════════════════════════════
 
@@ -1034,10 +1087,76 @@ const SettingsModule = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Notifications
+// MODULE: Settings — Zen Paws (Cat Walk)
 // ══════════════════════════════════════════════════════
 
+const ZenPawsModule = (() => {
+    async function init() {
+        const pawsToggle = document.getElementById('zen-paws-toggle');
+        if (!pawsToggle) return;
+        const { ff_zenPaws } = await chrome.storage.local.get('ff_zenPaws');
+        pawsToggle.checked = !!ff_zenPaws;
 
+        pawsToggle.addEventListener('change', async e => {
+            const enabled = e.target.checked;
+            try { await chrome.storage.local.set({ ff_zenPaws: enabled }); } catch {}
+
+            // Best-effort broadcast to every content-script site. The content
+            // script ALSO watches chrome.storage.onChanged, so the toggle is
+            // reliable even if a tab is missed here.
+            try {
+                chrome.tabs.query({
+                    url: [
+                        'https://codeforces.com/*',
+                        'https://atcoder.jp/*',
+                        'https://www.codechef.com/*'
+                    ]
+                }, tabs => {
+                    tabs.forEach(tab => {
+                        if (tab.id) {
+                            chrome.tabs.sendMessage(tab.id, { type: 'ZEN_PAWS_TOGGLED', enabled }).catch(() => {});
+                        }
+                    });
+                });
+            } catch {}
+        });
+    }
+
+    return { init };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Settings — AC Celebration
+// ══════════════════════════════════════════════════════
+
+const ACCelebrateModule = (() => {
+    async function init() {
+        const toggle = document.getElementById('ac-celebrate-toggle');
+        if (!toggle) return;
+        const { ff_acCelebrate } = await chrome.storage.local.get('ff_acCelebrate');
+        toggle.checked = !!ff_acCelebrate;
+
+        toggle.addEventListener('change', async e => {
+            const enabled = e.target.checked;
+            try { await chrome.storage.local.set({ ff_acCelebrate: enabled }); } catch {}
+
+            // Best-effort broadcast to Codeforces tabs. The content script also
+            // watches chrome.storage.onChanged, so the toggle is reliable even
+            // if a tab is missed here.
+            try {
+                chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
+                    tabs.forEach(tab => {
+                        if (tab.id) {
+                            chrome.tabs.sendMessage(tab.id, { type: 'AC_CELEBRATE_TOGGLED', enabled }).catch(() => {});
+                        }
+                    });
+                });
+            } catch {}
+        });
+    }
+
+    return { init };
+})();
 
 // ══════════════════════════════════════════════════════
 // APP — Initialization
@@ -1055,10 +1174,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ThemeModule.applyTheme(dot.dataset.ffTheme);
             }
         });
+        // Full radiogroup semantics: arrow-key / Home / End navigation between
+        // the theme dots (a11y).
+        themePicker.addEventListener('keydown', e => {
+            if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
+            e.preventDefault();
+            const dots = [...themePicker.querySelectorAll('.theme-dot')];
+            if (!dots.length) return;
+            // Index from the focused dot when possible (radiogroup convention),
+            // else from the active dot.
+            let idx = dots.findIndex(d => d === document.activeElement);
+            if (idx < 0) idx = dots.findIndex(d => d.classList.contains('active'));
+            if (idx < 0) idx = 0;
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') idx = (idx + 1) % dots.length;
+            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') idx = (idx - 1 + dots.length) % dots.length;
+            else if (e.key === 'Home') idx = 0;
+            else if (e.key === 'End') idx = dots.length - 1;
+            const dot = dots[idx];
+            if (dot?.dataset.ffTheme) {
+                ThemeModule.applyTheme(dot.dataset.ffTheme);
+                dot.focus();
+            }
+        });
     }
 
     SettingsModule.init();
+    ZenPawsModule.init();
+    ACCelebrateModule.init();
     ReminderSettingsModule.init();
+    TimerNotifySettingsModule.init();
 
     await TimerRecovery.recover();
     TimerUIModule.init();
