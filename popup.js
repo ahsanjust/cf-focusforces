@@ -1,6 +1,15 @@
 /**
  * FocusForces — Popup
- * Modular architecture: Theme, Timer, Contest Reminders, Contest List, Settings.
+ *
+ * Module map:
+ *   Theme          — palette selection + sync to page content scripts
+ *   Dial / Timer   — state machine, gauge rendering, presets, recovery
+ *   Sessions       — completed-session ledger ("sessions today / focused today")
+ *   Contests       — aggregation, caching, rendering, relative-time refresh
+ *   Views / Sheet  — navigation shell
+ *
+ * The contest fetch/parse/cache modules are intentionally self-contained and
+ * side-effect free so they stay easy to reason about and unit test.
  */
 
 // ══════════════════════════════════════════════════════
@@ -16,8 +25,70 @@ const GYM_CACHE_KEY = 'ff_gym_cache';
 
 const THEMES = ['default', 'dark', 'amoled', 'contrast'];
 const THEME_KEY = 'ff_theme';
+const THEME_BOOT_KEY = 'ff_theme_boot';
 const TIMER_STORAGE_KEY = 'ff_timer_state';
 const REMINDER_INTERVALS_KEY = 'ff_reminder_intervals';
+const SESSIONS_KEY = 'ff_sessions';
+
+const SESSION_RETENTION_DAYS = 30;
+const MIN_LOGGED_SESSION_MS = 60 * 1000;
+
+const DIAL_RADIUS = 88;
+const DIAL_CENTER = 110;
+const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_RADIUS;
+const TICK_COUNT = 60;
+const TICK_OUTER = 101;
+const TICK_INNER_MINOR = 96.5;
+const TICK_INNER_MAJOR = 94;
+
+const DANGER_THRESHOLD_MS = 5 * 60 * 1000;
+const DANGER_MIN_DURATION_MS = 10 * 60 * 1000;
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// ══════════════════════════════════════════════════════
+// SMALL UTILITIES
+// ══════════════════════════════════════════════════════
+
+const $ = id => document.getElementById(id);
+
+/** Local (not UTC) calendar day key — "today" must match the user's clock. */
+function localDayKey(date = new Date()) {
+    return [
+        date.getFullYear(),
+        String(date.getMonth() + 1).padStart(2, '0'),
+        String(date.getDate()).padStart(2, '0')
+    ].join('-');
+}
+
+/** Compact focus-time label: 1h 15m / 45m / 30s */
+function formatFocusSpan(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    if (total === 0) return '0m';
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (m > 0) return `${m}m`;
+    return `${total}s`;
+}
+
+function fmtDateTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleString([], {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+    });
+}
+
+/** "in 3h 12m" / "Running now" / "—" */
+function countdownLabel(iso) {
+    const t = new Date(iso).getTime();
+    if (isNaN(t)) return '—';
+    if (t - Date.now() <= 0) return 'Running now';
+    const left = ContestHelpers.timeUntil(iso);
+    return left ? `in ${left}` : 'soon';
+}
 
 // ══════════════════════════════════════════════════════
 // MODULE: Theme
@@ -26,41 +97,43 @@ const REMINDER_INTERVALS_KEY = 'ff_reminder_intervals';
 const ThemeModule = (() => {
     let currentTheme = 'default';
 
-    function applyTheme(theme) {
-        currentTheme = theme;
-        document.documentElement.setAttribute('data-ff-theme', theme);
-        document.querySelectorAll('.theme-dot').forEach(dot => {
-            const isActive = dot.dataset.ffTheme === theme;
-            dot.classList.toggle('active', isActive);
-            dot.setAttribute('aria-checked', String(isActive));
+    function applyTheme(theme, { persist = true } = {}) {
+        currentTheme = THEMES.includes(theme) ? theme : 'default';
+        document.documentElement.setAttribute('data-ff-theme', currentTheme);
+
+        document.querySelectorAll('.theme-card').forEach(card => {
+            const isActive = card.dataset.ffTheme === currentTheme;
+            card.setAttribute('aria-checked', String(isActive));
+            card.tabIndex = isActive ? 0 : -1;
         });
-        saveTheme(theme);
-        syncThemeToContentScript(theme);
-    }
 
-    async function saveTheme(theme) {
-        try { await chrome.storage.local.set({ [THEME_KEY]: theme }); } catch {}
-    }
+        // Keep the boot cache in sync so the next popup open paints instantly.
+        try { localStorage.setItem(THEME_BOOT_KEY, currentTheme); } catch (_) {}
 
-    async function loadTheme() {
-        try {
-            const { [THEME_KEY]: saved } = await chrome.storage.local.get(THEME_KEY);
-            const theme = saved && THEMES.includes(saved) ? saved : 'default';
-            applyTheme(theme);
-        } catch {
-            applyTheme('default');
+        if (persist) {
+            saveTheme(currentTheme);
+            syncThemeToContentScript(currentTheme);
         }
     }
 
+    async function saveTheme(theme) {
+        try { await chrome.storage.local.set({ [THEME_KEY]: theme }); } catch (_) {}
+    }
+
+    async function loadTheme() {
+        let theme = 'default';
+        try {
+            const { [THEME_KEY]: saved } = await chrome.storage.local.get(THEME_KEY);
+            if (saved && THEMES.includes(saved)) theme = saved;
+        } catch (_) {}
+        applyTheme(theme, { persist: false });
+    }
+
     function syncThemeToContentScript(theme) {
-        // Path 1: Send to background service worker, which broadcasts to ALL
-        // Codeforces tabs. This is the most reliable path because the service
-        // worker has a persistent listener and reaches every CF tab regardless
-        // of which tab is currently active.
+        // Path 1: background service worker → every contest-site tab.
         chrome.runtime.sendMessage({ type: 'THEME_CHANGED', theme }).catch(() => {});
 
-        // Path 2: Direct message to the active tab's content script for the
-        // fastest possible theme update on the visible page.
+        // Path 2: direct message to the visible tab for an instant repaint.
         chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
             if (tabs[0]?.id) {
                 chrome.tabs.sendMessage(tabs[0].id, { type: 'THEME_CHANGED', theme }).catch(() => {});
@@ -68,211 +141,423 @@ const ThemeModule = (() => {
         });
     }
 
-    function getCurrentTheme() {
-        return currentTheme;
-    }
+    const getCurrentTheme = () => currentTheme;
 
     return { applyTheme, loadTheme, getCurrentTheme };
 })();
-
 // ══════════════════════════════════════════════════════
-// MODULE: Timer — State & Helpers
+// MODULE: Timer — state & formatting
 // ══════════════════════════════════════════════════════
 
 const TimerModule = (() => {
-    // Shared pure helpers live in timer-utils.js (loaded before popup.js in
-    // popup.html): formatTime, computeRemainingMs, defaultTimerState,
-    // isDangerForTimer. This keeps one tested source of truth.
     let timerState = defaultTimerState();
     let timerIntervalId = null;
+    let lastLocalWrite = 0;
+
+    function defaultTimerState() {
+        return {
+            status: 'STOPPED',
+            mode: 'countdown',
+            endTime: 0,
+            elapsed: 0,
+            lastStarted: 0,
+            durationMs: 0,
+            remainingMs: 0,
+            notifiedMilestones: []
+        };
+    }
 
     async function loadTimerState() {
         try {
             const { [TIMER_STORAGE_KEY]: stored } = await chrome.storage.local.get(TIMER_STORAGE_KEY);
-            if (!stored) return defaultTimerState();
-            return { ...defaultTimerState(), ...stored };
-        } catch {
+            return stored ? { ...defaultTimerState(), ...stored } : defaultTimerState();
+        } catch (_) {
             return defaultTimerState();
         }
     }
 
     async function saveTimerState(state) {
-        try { await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state }); } catch {}
+        lastLocalWrite = Date.now();
+        try { await chrome.storage.local.set({ [TIMER_STORAGE_KEY]: state }); } catch (_) {}
     }
 
-    function getState() {
-        return timerState;
+    /** Gauge format: MM:SS below an hour, H:MM:SS above. */
+    function formatDial(ms) {
+        const sec = Math.max(0, Math.ceil(ms / 1000));
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        const pad = n => String(n).padStart(2, '0');
+        return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
     }
 
-    function setState(newState) {
-        timerState = newState;
+    function computeRemainingMs(mm, ss) {
+        const clampedMm = Math.min(999, Math.max(0, parseInt(mm, 10) || 0));
+        const clampedSs = Math.min(59, Math.max(0, parseInt(ss, 10) || 0));
+        return (clampedMm * 60 + clampedSs) * 1000;
     }
 
-    function getIntervalId() {
-        return timerIntervalId;
-    }
-
-    function setIntervalId(id) {
-        timerIntervalId = id;
-    }
+    const getState = () => timerState;
+    const setState = next => { timerState = next; };
+    const getIntervalId = () => timerIntervalId;
+    const setIntervalId = id => { timerIntervalId = id; };
+    const wroteRecently = () => Date.now() - lastLocalWrite < 400;
 
     return {
+        defaultTimerState,
         loadTimerState,
         saveTimerState,
+        formatDial,
+        computeRemainingMs,
         getState,
         setState,
         getIntervalId,
-        setIntervalId
+        setIntervalId,
+        wroteRecently
     };
 })();
 
-// ══════════════════════════════════════════════════════
-// MODULE: Timer — UI
-// ══════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════
+// MODULE: Sessions — completed-focus ledger
+// ═════════════════════════════════════════════════════
 
-const TimerUIModule = (() => {
-    function init() {
-        const display = document.getElementById('timer-display');
-        const mmInput = document.getElementById('timer-mm');
-        const ssInput = document.getElementById('timer-ss');
-        const inputsRow = document.getElementById('timer-inputs');
-        const actionBtn = document.getElementById('timer-action');
-        const resetBtn = document.getElementById('timer-reset');
-        const modeBtns = document.querySelectorAll('.timer-mode-btn');
-
-        if (!display || !actionBtn) return;
-
-        modeBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const state = TimerModule.getState();
-                if (state.status === 'RUNNING') return;
-                const mode = btn.dataset.mode;
-                TimerModule.setState({ ...state, mode });
-                modeBtns.forEach(b => {
-                    const isActive = b.dataset.mode === mode;
-                    b.classList.toggle('active', isActive);
-                    b.setAttribute('aria-checked', String(isActive));
-                });
-                if (mode === 'stopwatch') {
-                    inputsRow.style.display = 'none';
-                    display.textContent = '00:00:00';
-                } else {
-                    inputsRow.style.display = '';
-                }
-                render();
-                TimerModule.saveTimerState(TimerModule.getState());
-            });
-        });
-
-        if (TimerModule.getState().mode === 'stopwatch') {
-            modeBtns.forEach(b => {
-                const isActive = b.dataset.mode === 'stopwatch';
-                b.classList.toggle('active', isActive);
-                b.setAttribute('aria-checked', String(isActive));
-            });
-            inputsRow.style.display = 'none';
+const SessionModule = (() => {
+    async function read() {
+        try {
+            const { [SESSIONS_KEY]: stored } = await chrome.storage.local.get(SESSIONS_KEY);
+            return Array.isArray(stored) ? stored : [];
+        } catch (_) {
+            return [];
         }
-
-        actionBtn.addEventListener('click', () => {
-            const state = TimerModule.getState();
-            if (state.status === 'RUNNING') {
-                TimerActions.pause();
-            } else {
-                TimerActions.start();
-            }
-        });
-
-        resetBtn.addEventListener('click', () => {
-            TimerActions.reset();
-        });
-
-        [mmInput, ssInput].forEach(el => {
-            el.addEventListener('keydown', e => {
-                if (e.key === 'Enter' && TimerModule.getState().status !== 'RUNNING') {
-                    TimerActions.start();
-                }
-            });
-        });
-
-        render();
     }
 
-    function render() {
-        const display = document.getElementById('timer-display');
-        const mmInput = document.getElementById('timer-mm');
-        const ssInput = document.getElementById('timer-ss');
-        const inputsRow = document.getElementById('timer-inputs');
-        const actionBtn = document.getElementById('timer-action');
-        const modeBtns = document.querySelectorAll('.timer-mode-btn');
+    async function log(ms) {
+        if (!Number.isFinite(ms) || ms < MIN_LOGGED_SESSION_MS) return;
+        const cutoff = Date.now() - SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+        const list = (await read()).filter(s => s && s.ts >= cutoff);
+        list.push({ d: localDayKey(), ts: Date.now(), ms: Math.round(ms) });
+        try { await chrome.storage.local.set({ [SESSIONS_KEY]: list }); } catch (_) {}
+    }
 
-        if (!display || !actionBtn) return;
+    /** @returns {{count:number, ms:number, total:number}} */
+    async function summary() {
+        const list = await read();
+        const key = localDayKey();
+        const today = list.filter(s => s.d === key);
+        return {
+            count: today.length,
+            ms: today.reduce((sum, s) => sum + (s.ms || 0), 0),
+            total: list.length
+        };
+    }
 
-        const state = TimerModule.getState();
-        const isCountdown = state.mode === 'countdown';
-        const isActive = state.status === 'RUNNING' || state.status === 'PAUSED';
+    return { read, log, summary };
+})();
 
-        if (mmInput) mmInput.disabled = isActive;
-        if (ssInput) ssInput.disabled = isActive;
+// ══════════════════════════════════════════════════════
+// MODULE: Dial — the tick-marked gauge
+// ═════════════════════════════════════════════════════
 
-        modeBtns.forEach(btn => {
-            btn.disabled = isActive;
-            btn.style.opacity = isActive ? '0.5' : '';
-        });
+const DialModule = (() => {
+    let progressEl = null;
+    let headEl = null;
 
-        if (inputsRow) inputsRow.style.display = isCountdown ? '' : 'none';
+    function polar(radius, angle) {
+        return {
+            x: DIAL_CENTER + radius * Math.cos(angle),
+            y: DIAL_CENTER + radius * Math.sin(angle)
+        };
+    }
 
-        if (state.status === 'RUNNING') {
-            actionBtn.textContent = 'Pause';
-            if (isCountdown) {
-                const msLeft = Math.max(0, state.endTime - Date.now());
-                display.textContent = formatTime(msLeft);
-                display.classList.toggle('danger', isDangerForTimer(msLeft, state.durationMs));
-            } else {
-                const elapsed = state.elapsed + (Date.now() - state.lastStarted);
-                display.textContent = formatTime(elapsed);
-                display.classList.remove('danger');
-            }
-        } else if (state.status === 'PAUSED') {
-            actionBtn.textContent = 'Resume';
-            if (isCountdown) {
-                display.textContent = formatTime(state.remainingMs);
-                display.classList.toggle('danger', isDangerForTimer(state.remainingMs, state.durationMs));
-            } else {
-                display.textContent = formatTime(state.elapsed);
-                display.classList.remove('danger');
-            }
-        } else {
-            actionBtn.textContent = 'Start';
-            display.textContent = '00:00:00';
-            display.classList.remove('danger');
+    function buildTicks() {
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < TICK_COUNT; i++) {
+            const major = i % 5 === 0;
+            const angle = (i / TICK_COUNT) * Math.PI * 2;
+            const outer = polar(TICK_OUTER, angle);
+            const inner = polar(major ? TICK_INNER_MAJOR : TICK_INNER_MINOR, angle);
+            const line = document.createElementNS(SVG_NS, 'line');
+            line.setAttribute('x1', outer.x.toFixed(2));
+            line.setAttribute('y1', outer.y.toFixed(2));
+            line.setAttribute('x2', inner.x.toFixed(2));
+            line.setAttribute('y2', inner.y.toFixed(2));
+            if (major) line.setAttribute('class', 'major');
+            frag.appendChild(line);
         }
+        return frag;
+    }
+
+    function init() {
+        progressEl = $('dial-progress');
+        headEl = $('dial-head');
+        const ticksEl = $('dial-ticks');
+
+        if (ticksEl && !ticksEl.childElementCount) ticksEl.appendChild(buildTicks());
+
+        if (progressEl) {
+            progressEl.style.strokeDasharray = `${DIAL_CIRCUMFERENCE} ${DIAL_CIRCUMFERENCE}`;
+            progressEl.style.strokeDashoffset = '0';
+        }
+    }
+
+    /**
+     * @param {number} fraction 1 = full ring (a loaded session), 0 = drained.
+     *   The SVG is rotated -90° and the circle's dash runs counter-clockwise,
+     *   so the head travels clockwise from 12 o'clock at −f·2π.
+     */
+    function render(fraction) {
+        if (!progressEl || !headEl) return;
+        const f = Math.min(1, Math.max(0, Number.isFinite(fraction) ? fraction : 0));
+        progressEl.style.strokeDashoffset = String(DIAL_CIRCUMFERENCE * (1 - f));
+        const head = polar(DIAL_RADIUS, -f * Math.PI * 2);
+        headEl.setAttribute('cx', head.x.toFixed(2));
+        headEl.setAttribute('cy', head.y.toFixed(2));
     }
 
     return { init, render };
 })();
+// ═════════════════════════════════════════════════════
+// MODULE: Timer — UI
+// ═════════════════════════════════════════════════════
 
+const TimerUIModule = (() => {
+    let el = {};
+    let customOpen = false;
+
+    const isActive = () => {
+        const s = TimerModule.getState().status;
+        return s === 'RUNNING' || s === 'PAUSED';
+    };
+
+    function cache() {
+        el = {
+            card: $('timer-card'),
+            display: $('timer-display'),
+            sub: $('dial-sub'),
+            status: $('timer-status'),
+            action: $('timer-action'),
+            actionLabel: $('timer-action-label'),
+            play: document.querySelector('.ico-play'),
+            pause: document.querySelector('.ico-pause'),
+            inputsRow: $('timer-inputs'),
+            mm: $('timer-mm'),
+            ss: $('timer-ss'),
+            presets: Array.from(document.querySelectorAll('.preset[data-min]')),
+            customBtn: $('preset-custom'),
+            liveChip: $('live-chip'),
+            liveTime: $('live-chip-time'),
+            statSessions: $('stat-sessions'),
+            statFocus: $('stat-focus'),
+            aboutSessions: $('about-sessions'),
+            modeBtns: Array.from(document.querySelectorAll('.mode-btn'))
+        };
+    }
+
+    const configuredMs = () => TimerModule.computeRemainingMs(el.mm?.value, el.ss?.value);
+
+    function applyPreset(minutes, { render: shouldRender = true } = {}) {
+        const total = Math.max(0, Math.round(minutes * 60));
+        if (el.mm) el.mm.value = String(Math.floor(total / 60));
+        if (el.ss) el.ss.value = String(total % 60);
+        if (shouldRender) render();
+    }
+
+    function setMode(mode) {
+        if (isActive()) return;
+        const state = TimerModule.getState();
+        TimerModule.setState({ ...state, mode });
+        TimerModule.saveTimerState(TimerModule.getState());
+        render();
+    }
+
+    function init() {
+        cache();
+        if (!el.display || !el.action) return;
+
+        el.modeBtns.forEach(btn => {
+            btn.addEventListener('click', () => setMode(btn.dataset.mode));
+        });
+
+        el.presets.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (isActive()) return;
+                applyPreset(Number(btn.dataset.min));
+            });
+        });
+
+        el.customBtn?.addEventListener('click', () => {
+            if (isActive()) return;
+            customOpen = !customOpen;
+            el.customBtn.setAttribute('aria-expanded', String(customOpen));
+            render();
+            if (customOpen) {
+                el.mm?.focus({ preventScroll: true });
+                el.mm?.select();
+            }
+        });
+
+        [el.mm, el.ss].forEach(input => {
+            if (!input) return;
+            input.addEventListener('input', render);
+            input.addEventListener('change', () => {
+                const max = input === el.mm ? 999 : 59;
+                input.value = String(Math.min(max, Math.max(0, parseInt(input.value, 10) || 0)));
+                render();
+            });
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !isActive()) TimerActions.start();
+            });
+        });
+
+        el.action.addEventListener('click', () => {
+            if (TimerModule.getState().status === 'RUNNING') TimerActions.pause();
+            else TimerActions.start();
+        });
+
+        el.liveChip?.addEventListener('click', () => ViewModule.set('focus', { focus: true }));
+
+        applyPreset(25, { render: false });
+        render();
+    }
+    function render() {
+        if (!el.display) return;
+
+        const state = TimerModule.getState();
+        const isCountdown = state.mode === 'countdown';
+        const running = state.status === 'RUNNING';
+        const paused = state.status === 'PAUSED';
+        const active = running || paused;
+        const duration = state.durationMs || 0;
+
+        // Mode switch
+        el.modeBtns.forEach(btn => {
+            const on = btn.dataset.mode === state.mode;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-checked', String(on));
+            btn.disabled = active;
+        });
+
+        // Duration controls mirror the *effective* configured length, so a
+        // running 45m session keeps its chip lit even after the inputs change.
+        const configured = active ? duration : configuredMs();
+        const matched = isCountdown
+            ? el.presets.find(p => Number(p.dataset.min) * 60000 === configured)
+            : null;
+
+        el.presets.forEach(p => {
+            p.classList.toggle('is-active', p === matched);
+            p.disabled = active || !isCountdown;
+        });
+        if (el.customBtn) {
+            el.customBtn.classList.toggle('is-active', isCountdown && !matched);
+            el.customBtn.disabled = active || !isCountdown;
+        }
+        if (el.inputsRow) el.inputsRow.hidden = !(isCountdown && customOpen);
+
+        // Readout + gauge
+        let shownMs;
+        let fraction = 1;
+
+        if (!isCountdown) {
+            shownMs = running ? state.elapsed + (Date.now() - state.lastStarted) : state.elapsed;
+            fraction = 0;
+        } else if (running) {
+            shownMs = Math.max(0, state.endTime - Date.now());
+            fraction = duration > 0 ? shownMs / duration : 0;
+        } else if (paused) {
+            shownMs = Math.max(0, state.remainingMs);
+            fraction = duration > 0 ? shownMs / duration : 0;
+        } else {
+            shownMs = configuredMs();
+            fraction = 1;
+        }
+
+        const danger = isCountdown && active
+            && shownMs <= DANGER_THRESHOLD_MS
+            && duration >= DANGER_MIN_DURATION_MS;
+
+        el.display.textContent = TimerModule.formatDial(shownMs);
+
+        el.card?.classList.toggle('is-idle', !active);
+        el.card?.classList.toggle('is-running', running);
+        el.card?.classList.toggle('is-paused', paused);
+        el.card?.classList.toggle('is-danger', danger);
+        el.card?.classList.toggle('is-stopwatch', !isCountdown);
+        el.card?.classList.toggle('is-sweep', !isCountdown && running);
+
+        if (!isCountdown) {
+            el.status.textContent = running ? 'Tracking' : (paused ? 'Paused' : 'Ready');
+            el.sub.textContent = running ? 'Tracking' : (paused ? 'Paused' : 'No target');
+        } else if (danger) {
+            el.status.textContent = 'Ending soon';
+            el.sub.textContent = 'Wrap it up';
+        } else if (running) {
+            el.status.textContent = 'Focusing';
+            el.sub.textContent = 'Focus session';
+        } else if (paused) {
+            el.status.textContent = 'Paused';
+            el.sub.textContent = 'Paused';
+        } else {
+            el.status.textContent = 'Ready';
+            el.sub.textContent = `${Math.round(shownMs / 60000)} min session`;
+        }
+
+        el.actionLabel.textContent = running
+            ? 'Pause'
+            : (paused ? 'Resume' : (isCountdown ? 'Start focus' : 'Start tracking'));
+
+        // NOTE: `hidden` is an HTMLElement IDL property — it does not exist on
+        // SVGElement, so `svg.hidden = true` would only set a JS expando.
+        // Toggle a class instead so the icon swap actually repaints.
+        if (el.play) el.play.classList.toggle('is-off', running);
+        if (el.pause) el.pause.classList.toggle('is-off', !running);
+
+        DialModule.render(fraction);
+
+        if (el.liveChip) {
+            el.liveChip.hidden = !active;
+            el.liveChip.classList.toggle('is-paused', paused);
+            if (active && el.liveTime) el.liveTime.textContent = TimerModule.formatDial(shownMs);
+        }
+    }
+
+    async function refreshStats() {
+        const stats = await SessionModule.summary();
+        if (el.statSessions) el.statSessions.textContent = String(stats.count);
+        if (el.statFocus) el.statFocus.textContent = formatFocusSpan(stats.ms);
+        if (el.aboutSessions) {
+            el.aboutSessions.textContent = stats.total === 1 ? '1 session' : `${stats.total} sessions`;
+        }
+    }
+
+    function flashComplete() {
+        if (!el.card) return;
+        el.card.classList.add('just-finished');
+        setTimeout(() => el.card?.classList.remove('just-finished'), 2400);
+    }
+
+    return { init, render, refreshStats, flashComplete };
+})();
 // ══════════════════════════════════════════════════════
-// MODULE: Timer — Actions
-// ══════════════════════════════════════════════════════
+// MODULE: Timer — actions
+// ═════════════════════════════════════════════════════
 
 const TimerActions = (() => {
     function start() {
         const state = { ...TimerModule.getState() };
+
         if (state.mode === 'countdown') {
-            const mmInput = document.getElementById('timer-mm');
-            const ssInput = document.getElementById('timer-ss');
             if (state.status === 'STOPPED') {
-                state.remainingMs = computeRemainingMs(mmInput?.value, ssInput?.value);
+                state.remainingMs = TimerModule.computeRemainingMs($('timer-mm')?.value, $('timer-ss')?.value);
                 state.notifiedMilestones = [];
+                state.durationMs = 0;
             }
             if (state.remainingMs <= 0) return;
             state.status = 'RUNNING';
             state.durationMs = state.durationMs || state.remainingMs;
             state.endTime = Date.now() + state.remainingMs;
         } else {
-            if (state.status === 'STOPPED') {
-                state.elapsed = 0;
-            }
+            if (state.status === 'STOPPED') state.elapsed = 0;
             state.status = 'RUNNING';
             state.lastStarted = Date.now();
         }
@@ -281,7 +566,6 @@ const TimerActions = (() => {
         TimerModule.saveTimerState(state);
         TimerUIModule.render();
         TimerInterval.start();
-
         chrome.runtime.sendMessage({ type: 'TIMER_STARTED', state }).catch(() => {});
     }
 
@@ -302,39 +586,47 @@ const TimerActions = (() => {
 
     function reset() {
         TimerInterval.stop();
-        const currentMode = TimerModule.getState().mode;
-        TimerModule.setState({ ...defaultTimerState(), mode: currentMode });
-        TimerModule.saveTimerState(TimerModule.getState());
+        const next = { ...TimerModule.defaultTimerState(), mode: TimerModule.getState().mode };
+        TimerModule.setState(next);
+        TimerModule.saveTimerState(next);
         TimerUIModule.render();
-        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: TimerModule.getState() }).catch(() => {});
+        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: next }).catch(() => {});
     }
 
-    function finish() {
+    /** Countdown reached zero — bank the session, then reset. */
+    async function finish() {
+        const previous = TimerModule.getState();
+        const completedMs = previous.mode === 'countdown'
+            ? (previous.durationMs || previous.remainingMs)
+            : 0;
+
         TimerInterval.stop();
-        const currentMode = TimerModule.getState().mode;
-        const state = { ...defaultTimerState(), mode: currentMode };
-        TimerModule.setState(state);
-        TimerModule.saveTimerState(state);
+        const next = { ...TimerModule.defaultTimerState(), mode: previous.mode };
+        TimerModule.setState(next);
+        TimerModule.saveTimerState(next);
         TimerUIModule.render();
-        // `expired: true` tells the background this was a NATURAL expiry (not a
-        // manual reset), so it delivers the "Time's Up!" notification even if
-        // the popup's tick beat the background's timer_end alarm to the punch.
-        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state, expired: true }).catch(() => {});
+        chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: next }).catch(() => {});
+
+        if (completedMs > 0) {
+            await SessionModule.log(completedMs);
+            await TimerUIModule.refreshStats();
+            TimerUIModule.flashComplete();
+        }
     }
 
     return { start, pause, reset, finish };
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Timer — Interval
-// ══════════════════════════════════════════════════════
+// MODULE: Timer — interval
+// ═════════════════════════════════════════════════════
 
 const TimerInterval = (() => {
     function start() {
         stop();
-        // 1000ms is sufficient for a timer display; reduces UI thread pressure vs 500ms
-        const id = setInterval(tickTimer, 1000);
-        TimerModule.setIntervalId(id);
+        // One full re-render per second keeps readout, gauge, chip and labels
+        // perfectly consistent; the 0.9s CSS dash transition smooths the arc.
+        TimerModule.setIntervalId(setInterval(tick, 1000));
     }
 
     function stop() {
@@ -345,59 +637,169 @@ const TimerInterval = (() => {
         }
     }
 
-    function tickTimer() {
+    function tick() {
         const state = TimerModule.getState();
         if (state.status !== 'RUNNING') return;
-
-        if (state.mode === 'countdown') {
-            const msLeft = Math.max(0, state.endTime - Date.now());
-            const display = document.getElementById('timer-display');
-            if (display) {
-                display.textContent = formatTime(msLeft);
-                display.classList.toggle('danger', isDangerForTimer(msLeft, state.durationMs));
-            }
-
-            if (msLeft <= 0) {
-                TimerActions.finish();
-                return;
-            }
-
-
-        } else {
-            const elapsed = state.elapsed + (Date.now() - state.lastStarted);
-            const display = document.getElementById('timer-display');
-            if (display) {
-                display.textContent = formatTime(elapsed);
-            }
+        if (state.mode === 'countdown' && Date.now() >= state.endTime) {
+            TimerActions.finish();
+            return;
         }
+        TimerUIModule.render();
     }
 
     return { start, stop };
 })();
 
-// ══════════════════════════════════════════════════════
-// MODULE: Timer — Recovery
+// ═════════════════════════════════════════════════════
+// MODULE: Timer — recovery
 // ══════════════════════════════════════════════════════
 
 const TimerRecovery = (() => {
     async function recover() {
         const state = await TimerModule.loadTimerState();
         TimerModule.setState(state);
+
         if (state.status === 'RUNNING') {
             if (state.mode === 'countdown' && Date.now() >= state.endTime) {
-                TimerActions.finish();
-            } else {
-                TimerInterval.start();
+                await TimerActions.finish();
+                return;
             }
+            TimerInterval.start();
         }
         TimerUIModule.render();
     }
 
     return { recover };
 })();
+// ══════════════════════════════════════════════════════
+// MODULE: Views
+// ═════════════════════════════════════════════════════
+
+const ViewModule = (() => {
+    let current = 'focus';
+
+    function set(view, { focus = false } = {}) {
+        if (view !== 'focus' && view !== 'contests') return;
+        current = view;
+        document.body.dataset.view = view;
+
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            const on = tab.dataset.view === view;
+            tab.classList.toggle('is-active', on);
+            tab.setAttribute('aria-selected', String(on));
+            tab.tabIndex = on ? 0 : -1;
+        });
+
+        document.querySelectorAll('.view').forEach(section => {
+            const on = section.id === `view-${view}`;
+            section.classList.toggle('is-active', on);
+            section.setAttribute('aria-hidden', String(!on));
+        });
+
+        if (focus) {
+            const target = view === 'focus' ? $('timer-action') : $('refresh-btn');
+            target?.focus({ preventScroll: true });
+        }
+    }
+
+    function init() {
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => set(tab.dataset.view, { focus: true }));
+            tab.addEventListener('keydown', e => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                set(tab.dataset.view === 'focus' ? 'contests' : 'focus', { focus: true });
+            });
+        });
+        set('focus');
+    }
+
+    return { init, set, get: () => current };
+})();
+
+// ═════════════════════════════════════════════════════
+// MODULE: Settings sheet
+// ═════════════════════════════════════════════════════
+
+const SettingsSheetModule = (() => {
+    let sheet = null;
+    let scrim = null;
+    let isOpen = false;
+
+    function open() {
+        if (isOpen) return;
+        isOpen = true;
+        scrim.hidden = false;
+        sheet.classList.add('is-open');
+        sheet.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => scrim.classList.add('is-open'));
+        $('close-settings')?.focus({ preventScroll: true });
+    }
+
+    function close({ restoreFocus = true } = {}) {
+        if (!isOpen) return;
+        isOpen = false;
+        sheet.classList.remove('is-open');
+        sheet.setAttribute('aria-hidden', 'true');
+        scrim.classList.remove('is-open');
+        setTimeout(() => { if (!isOpen) scrim.hidden = true; }, 320);
+        if (restoreFocus) $('open-settings')?.focus({ preventScroll: true });
+    }
+
+    function init() {
+        sheet = $('settings-sheet');
+        scrim = $('scrim');
+        if (!sheet || !scrim) return;
+
+        $('open-settings')?.addEventListener('click', open);
+        $('close-settings')?.addEventListener('click', () => close());
+        scrim.addEventListener('click', () => close());
+    }
+
+    return { init, open, close, get isOpen() { return isOpen; } };
+})();
+
+// ═════════════════════════════════════════════════════
+// MODULE: Keyboard shortcuts
+// ═════════════════════════════════════════════════════
+
+const KeyboardModule = (() => {
+    function isTypingTarget(node) {
+        if (!node) return false;
+        const tag = node.tagName;
+        return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable;
+    }
+
+    function init() {
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && SettingsSheetModule.isOpen) {
+                e.preventDefault();
+                SettingsSheetModule.close();
+                return;
+            }
+
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            if (isTypingTarget(e.target)) return;
+            if (SettingsSheetModule.isOpen) return;
+
+            // Buttons already handle Space/Enter themselves.
+            if (e.target?.closest?.('button') && (e.key === ' ' || e.key === 'Enter')) return;
+
+            if (e.key === ' ') {
+                e.preventDefault();
+                if (TimerModule.getState().status === 'RUNNING') TimerActions.pause();
+                else TimerActions.start();
+            } else if (e.key === 'r' || e.key === 'R') {
+                TimerActions.reset();
+            }
+        });
+    }
+
+    return { init };
+})();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — Helpers (imported from contest-utils.js)
+// MODULE: Contest — shared helpers (from contest-utils.js)
 // ══════════════════════════════════════════════════════
 
 const ContestHelpers = (() => {
@@ -406,7 +808,7 @@ const ContestHelpers = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — AtCoder Parser
+// MODULE: Contest — AtCoder parser
 // ══════════════════════════════════════════════════════
 
 const AtCoderParser = (() => {
@@ -466,17 +868,14 @@ const AtCoderParser = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — Caching
+// MODULE: Contest — caching
 // ══════════════════════════════════════════════════════
 
 const ContestCache = (() => {
-    // getMain/getGym return the full stored entry ({data, ts}) when it is still
-    // fresh, or null when expired/missing. Callers use the presence of the
-    // entry to decide whether a network refetch is needed at all.
     async function getMain() {
         try {
             const { [CACHE_KEY]: stored } = await chrome.storage.local.get(CACHE_KEY);
-            if (stored && Date.now() - stored.ts < CACHE_TTL_MS) return stored;
+            if (stored && Date.now() - stored.ts < CACHE_TTL_MS) return stored.data;
         } catch {}
         return null;
     }
@@ -488,7 +887,7 @@ const ContestCache = (() => {
     async function getGym() {
         try {
             const { [GYM_CACHE_KEY]: stored } = await chrome.storage.local.get(GYM_CACHE_KEY);
-            if (stored && Date.now() - stored.ts < GYM_CACHE_TTL_MS) return stored;
+            if (stored && Date.now() - stored.ts < GYM_CACHE_TTL_MS) return stored.data;
         } catch {}
         return null;
     }
@@ -501,7 +900,7 @@ const ContestCache = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — Filter & Sort (imported from contest-utils.js)
+// MODULE: Contest — filter & sort
 // ══════════════════════════════════════════════════════
 
 const ContestSortFilter = (() => {
@@ -510,7 +909,7 @@ const ContestSortFilter = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — Fetching
+// MODULE: Contest — fetching
 // ══════════════════════════════════════════════════════
 
 const ContestFetch = (() => {
@@ -629,45 +1028,78 @@ const ContestFetch = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — Rendering
-// ══════════════════════════════════════════════════════
+// MODULE: Contest — rendering
+// ═════════════════════════════════════════════════════
 
 const ContestRenderer = (() => {
     let activeTab = 'near';
     let cachedNear = [];
     let cachedLater = [];
+    let visible = [];
 
-    function setListMessage(list, txt) {
-        const div = document.createElement('div');
-        div.className = 'state-message';
-        div.textContent = txt;
-        list.replaceChildren(div);
+    const ICON_CALENDAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3"/><path d="M3.5 10h17M8.5 3v4M15.5 3v4"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8.5v5"/><circle cx="12" cy="16.9" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="8.6"/></svg>';
+
+    const platformClass = site => PLATFORM_CONFIG[site]?.cls || 'other';
+    const platformBadgeText = site => PLATFORM_CONFIG[site]?.badge || site.slice(0, 3).toUpperCase();
+
+    /** Timing label that stays honest for live contests: "ends in 42m". */
+    function timingLabel(startIso, durationMin) {
+        const start = new Date(startIso).getTime();
+        if (isNaN(start)) return '—';
+        const now = Date.now();
+        if (start > now) {
+            const left = ContestHelpers.timeUntil(startIso);
+            return left ? `in ${left}` : 'soon';
+        }
+        const durationMs = (durationMin || 0) * 60000;
+        if (durationMs > 0) {
+            const remaining = start + durationMs - now;
+            if (remaining > 0) return `ends in ${formatFocusSpan(remaining)}`;
+        }
+        return 'Running now';
     }
 
-    function setLoadingState(list) {
-        const div = document.createElement('div');
-        div.className = 'state-message shimmer';
-        div.setAttribute('aria-label', 'Loading');
-        list.replaceChildren(div);
+    function urgencyFor(startIso) {
+        const msUntil = new Date(startIso).getTime() - Date.now();
+        if (!Number.isFinite(msUntil) || msUntil <= 0) return null;
+        if (msUntil <= 60 * 60 * 1000) return { cls: 'urgency-critical', label: '< 1h' };
+        if (msUntil <= 4 * 60 * 60 * 1000) return { cls: 'urgency-high', label: '< 4h' };
+        return null;
+    }
+
+    function spineValue(contest, status, urgency) {
+        if (status === 'ongoing') return 'var(--good)';
+        if (urgency?.cls === 'urgency-critical') return 'var(--bad)';
+        if (urgency?.cls === 'urgency-high') return 'var(--warn)';
+        return `var(--p-${platformClass(contest.site)})`;
+    }
+
+    function createBadge(text, className) {
+        const span = document.createElement('span');
+        span.className = className;
+        span.textContent = text;
+        return span;
     }
 
     function createCard(contest) {
-        if (!contest || !contest.site) return null;
+        if (!contest?.site) return null;
+
         const status = ContestHelpers.getContestStatus(contest);
-        const cfg = PLATFORM_CONFIG[contest.site] || { badge: contest.site, cls: 'other', color: '#616161' };
-        const card = document.createElement('div');
         const isOngoing = status === 'ongoing';
+        const urgency = isOngoing ? null : urgencyFor(contest.start_time);
 
-        let urgencyClass = '';
-        let urgencyLabel = '';
-        if (!isOngoing) {
-            const msUntil = new Date(contest.start_time).getTime() - Date.now();
-            if (msUntil <= 60 * 60 * 1000) { urgencyClass = 'urgency-critical'; urgencyLabel = '< 1h'; }
-            else if (msUntil <= 4 * 60 * 60 * 1000) { urgencyClass = 'urgency-high'; urgencyLabel = '< 4h'; }
-        }
+        const card = document.createElement('div');
+        card.className = ['contest-card', isOngoing ? 'is-ongoing' : '', urgency?.cls || ''].filter(Boolean).join(' ');
+        card.style.setProperty('--spine', spineValue(contest, status, urgency));
+        card.dataset.start = contest.start_time || '';
+        card.dataset.dur = String(contest.duration || 0);
+        card.tabIndex = 0;
 
-        card.className = ['contest-card', isOngoing ? 'is-ongoing' : '', urgencyClass].filter(Boolean).join(' ');
-        if (!isOngoing && !urgencyClass) card.style.borderLeftColor = cfg.color;
+        // ── top row: platform · name · status badges ──
+        const top = document.createElement('div');
+        top.className = 'contest-top';
+        top.appendChild(createBadge(platformBadgeText(contest.site), `platform-badge ${platformClass(contest.site)}`));
 
         const name = document.createElement('div');
         name.className = 'contest-name';
@@ -681,136 +1113,146 @@ const ContestRenderer = (() => {
         } else {
             name.textContent = contest.name || 'Untitled';
         }
+        top.appendChild(name);
 
-        const badges = document.createElement('div');
-        badges.className = 'contest-card-badges';
+        if (isOngoing) top.appendChild(createBadge('LIVE', 'chip-badge live-badge'));
+        if (contest.isGym) top.appendChild(createBadge('GYM', 'chip-badge gym-badge'));
 
-        if (isOngoing) {
-            const live = document.createElement('span');
-            live.className = 'live-badge';
-            live.textContent = 'LIVE';
-            badges.appendChild(live);
-        }
-
-        const platform = document.createElement('span');
-        platform.className = `platform-badge ${cfg.cls}`;
-        platform.textContent = cfg.badge;
-        badges.appendChild(platform);
-
-        if (contest.isGym) {
-            const gym = document.createElement('span');
-            gym.className = 'gym-badge';
-            gym.textContent = 'GYM';
-            badges.appendChild(gym);
-        }
-
-        if (urgencyLabel) {
-            const urg = document.createElement('span');
-            urg.className = `urgency-badge ${urgencyClass === 'urgency-critical' ? 'critical' : 'high'}`;
-            urg.textContent = urgencyLabel;
-            badges.appendChild(urg);
-        }
-
+        // ── bottom row: local start time · countdown ──
         const meta = document.createElement('div');
         meta.className = 'contest-meta';
-        meta.appendChild(Object.assign(document.createElement('span'), {
-            className: 'contest-time',
-            textContent: ContestHelpers.formatDateTime(contest.start_time)
-        }));
-        const countdown = !isOngoing ? ContestHelpers.timeUntil(contest.start_time) : null;
-        meta.appendChild(Object.assign(document.createElement('span'), {
-            className: isOngoing ? 'live-text' : 'contest-duration',
-            textContent: isOngoing
-                ? 'Running now'
-                : (countdown ? `${ContestHelpers.formatDuration(contest.duration)} · starts in ${countdown}` : ContestHelpers.formatDuration(contest.duration))
-        }));
 
-        card.append(name, badges, meta);
-        card.addEventListener('click', e => {
-            if (e.target.closest('a')) return;
-            if (contest.url) chrome.tabs.create({ url: contest.url, active: false });
+        const when = document.createElement('span');
+        when.className = 'contest-time';
+        when.textContent = fmtDateTime(contest.start_time);
+        if (contest.duration) {
+            when.textContent += ` · ${ContestHelpers.formatDuration(contest.duration)}`;
+            when.title = `${ContestHelpers.formatDuration(contest.duration)} long`;
+        }
+
+        const count = document.createElement('span');
+        count.className = 'contest-duration';
+        count.textContent = timingLabel(contest.start_time, contest.duration);
+
+        meta.append(when, count);
+        card.append(top, meta);
+
+        const open = () => { if (contest.url) chrome.tabs.create({ url: contest.url, active: false }); };
+        card.addEventListener('click', e => { if (!e.target.closest('a')) open(); });
+        card.addEventListener('keydown', e => {
+            if (e.key !== 'Enter' || e.target.closest('a')) return;
+            e.preventDefault();
+            open();
         });
+
         return card;
     }
+    function stateBlock({ icon, title, sub, actionLabel, onAction, isError = false }) {
+        const wrap = document.createElement('div');
+        wrap.className = `state-block${isError ? ' is-error' : ''}`;
 
-    function createTabBar(nearCount, laterCount) {
-        const bar = document.createElement('div');
-        bar.className = 'tab-bar';
+        const ico = document.createElement('div');
+        ico.className = 'state-ico';
+        ico.innerHTML = icon;
 
-        const nearTab = document.createElement('button');
-        nearTab.className = 'tab' + (activeTab === 'near' ? ' active' : '');
-        nearTab.dataset.tab = 'near';
-        nearTab.innerHTML = `Next 24 Hours <span class="tab-count">${nearCount}</span>`;
+        const h = document.createElement('div');
+        h.className = 'state-title';
+        h.textContent = title;
 
-        const laterTab = document.createElement('button');
-        laterTab.className = 'tab' + (activeTab === 'later' ? ' active' : '');
-        laterTab.dataset.tab = 'later';
-        laterTab.innerHTML = `All Contests <span class="tab-count">${laterCount}</span>`;
+        wrap.append(ico, h);
 
-        bar.append(nearTab, laterTab);
+        if (sub) {
+            const p = document.createElement('div');
+            p.className = 'state-sub';
+            p.textContent = sub;
+            wrap.appendChild(p);
+        }
 
-        bar.addEventListener('click', e => {
-            const btn = e.target.closest('.tab');
-            if (!btn || btn.classList.contains('active')) return;
-            activeTab = btn.dataset.tab;
-            renderCurrentTab();
-        });
+        if (actionLabel && onAction) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'state-action';
+            btn.textContent = actionLabel;
+            btn.addEventListener('click', () => onAction(btn));
+            wrap.appendChild(btn);
+        }
 
-        return bar;
+        return wrap;
     }
 
-    function buildPane(items, emptyMsg) {
-        const pane = document.createElement('div');
-        pane.className = 'tab-pane';
-        if (!items.length) {
-            pane.appendChild(Object.assign(document.createElement('div'), {
-                className: 'state-message', textContent: emptyMsg
-            }));
-            return pane;
-        }
-        let hasCards = false;
-        ContestSortFilter.sortByTime(items).forEach(c => {
-            const card = createCard(c);
-            if (card) { pane.appendChild(card); hasCards = true; }
+    function syncTabs() {
+        document.querySelectorAll('.tabs').forEach(bar => { bar.dataset.tab = activeTab; });
+        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+            const on = tab.dataset.tab === activeTab;
+            tab.classList.toggle('is-active', on);
+            tab.setAttribute('aria-selected', String(on));
         });
-        if (!hasCards) {
-            pane.appendChild(Object.assign(document.createElement('div'), {
-                className: 'state-message', textContent: 'No contests to display.'
-            }));
+        const nearCount = $('tab-near-count');
+        const laterCount = $('tab-later-count');
+        if (nearCount) nearCount.textContent = String(cachedNear.length);
+        if (laterCount) laterCount.textContent = String(cachedLater.length);
+    }
+
+    function syncNavBadge() {
+        const badge = $('nav-contest-count');
+        if (!badge) return;
+        badge.textContent = String(cachedNear.length);
+        const soonest = cachedNear.find(c => ContestHelpers.getContestStatus(c) !== 'ongoing');
+        const urgent = !!soonest && (new Date(soonest.start_time).getTime() - Date.now()) <= 60 * 60 * 1000;
+        badge.classList.toggle('is-hot', urgent);
+        badge.classList.toggle('is-armed', !urgent && cachedNear.length > 0);
+    }
+
+    function setTab(tab) {
+        if (tab !== 'near' && tab !== 'later') return;
+        activeTab = tab;
+        syncTabs();
+        renderCurrentTab();
+    }
+
+    function buildItems(items, emptyTitle, emptySub) {
+        const frag = document.createDocumentFragment();
+        const cards = ContestSortFilter.sortByTime(items).map(createCard).filter(Boolean);
+
+        if (!cards.length) {
+            frag.appendChild(stateBlock({ icon: ICON_CALENDAR, title: emptyTitle, sub: emptySub }));
+            return frag;
         }
-        return pane;
+        cards.forEach(card => frag.appendChild(card));
+        return frag;
     }
 
     function renderCurrentTab() {
-        const list = document.getElementById('contest-list');
-        const tabBar = list.querySelector('.tab-bar');
-        const oldPane = list.querySelector('.tab-pane');
-
-        if (tabBar) {
-            tabBar.querySelectorAll('.tab').forEach(t => {
-                t.classList.toggle('active', t.dataset.tab === activeTab);
-            });
-        }
-
-        const items = activeTab === 'near' ? cachedNear : cachedLater;
-        const emptyMsg = activeTab === 'near' ? 'No contests in the next 24 hours.' : 'No upcoming contests.';
-        const pane = buildPane(items, emptyMsg);
-        if (oldPane) pane.classList.add('entering');
-
-        if (oldPane) {
-            oldPane.classList.add('exiting');
-            setTimeout(() => oldPane.remove(), 250);
-        }
-
-        if (tabBar) tabBar.after(pane);
-        else list.appendChild(pane);
+        const list = $('contest-list');
+        if (!list) return;
+        const isNear = activeTab === 'near';
+        list.replaceChildren(buildItems(
+            isNear ? cachedNear : cachedLater,
+            isNear ? 'Nothing in the next 24 hours' : 'No upcoming contests',
+            isNear
+                ? 'Your next contest shows up here with a live countdown.'
+                : 'Contests from all four platforms land here as soon as they are announced.'
+        ));
     }
-
     function render(contests) {
-        const list = document.getElementById('contest-list');
+        const list = $('contest-list');
+        if (!list) return;
 
-        if (!contests.length) {
-            setListMessage(list, 'No active contests.');
+        const items = Array.isArray(contests) ? contests : [];
+
+        if (!items.length) {
+            cachedNear = [];
+            cachedLater = [];
+            syncTabs();
+            syncNavBadge();
+            list.replaceChildren(stateBlock({
+                icon: ICON_CALENDAR,
+                title: 'No active contests',
+                sub: 'Nothing on the radar right now — a good moment for a practice session.',
+                actionLabel: 'Refresh',
+                onAction: btn => ContestListModule.refresh(btn)
+            }));
+            NextUpModule.update([]);
             return;
         }
 
@@ -818,7 +1260,7 @@ const ContestRenderer = (() => {
         cachedNear = [];
         cachedLater = [];
 
-        contests.forEach(c => {
+        items.forEach(c => {
             const isOngoing = ContestHelpers.getContestStatus(c) === 'ongoing';
             const startMs = new Date(c.start_time).getTime();
             if (!isNaN(startMs) && (isOngoing || (startMs - now <= TWENTY_FOUR_HOURS_MS && startMs > now))) {
@@ -827,167 +1269,389 @@ const ContestRenderer = (() => {
             cachedLater.push(c);
         });
 
-        const items = activeTab === 'near' ? cachedNear : cachedLater;
-        const emptyMsg = activeTab === 'near' ? 'No contests in the next 24 hours.' : 'No upcoming contests.';
-
-        const fragment = document.createDocumentFragment();
-        fragment.appendChild(createTabBar(cachedNear.length, cachedLater.length));
-        fragment.appendChild(buildPane(items, emptyMsg));
-
-        list.className = 'contest-list';
-        list.replaceChildren(fragment);
+        syncTabs();
+        syncNavBadge();
+        renderCurrentTab();
+        NextUpModule.update(items);
     }
 
     function renderError(msg) {
-        const list = document.getElementById('contest-list');
-        const wrapper = document.createElement('div');
-        wrapper.className = 'error';
-        const icon = document.createElement('div');
-        icon.className = 'error-icon';
-        icon.textContent = '!';
-        const span = document.createElement('span');
-        span.className = 'error-msg';
-        span.textContent = msg;
-        wrapper.append(icon, span);
-        const retry = document.createElement('button');
-        retry.type = 'button';
-        retry.className = 'retry-btn';
-        retry.textContent = 'Retry';
-        retry.addEventListener('click', () => {
-            retry.textContent = 'Loading...';
-            retry.disabled = true;
-            ContestListModule.load().finally(() => {
-                retry.textContent = 'Retry';
-                retry.disabled = false;
-            });
-        });
-        wrapper.appendChild(retry);
-        list.replaceChildren(wrapper);
+        const list = $('contest-list');
+        if (!list) return;
+        list.replaceChildren(stateBlock({
+            icon: ICON_ALERT,
+            title: 'Radar offline',
+            sub: msg,
+            actionLabel: 'Try again',
+            onAction: btn => ContestListModule.refresh(btn),
+            isError: true
+        }));
     }
 
-    return { render, renderCurrentTab, renderError, setLoadingState, setListMessage };
-})();
+    function setLoadingState() {
+        const list = $('contest-list');
+        if (!list) return;
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < 3; i++) {
+            const card = document.createElement('div');
+            card.className = 'skeleton-card';
+            if (i > 0) card.setAttribute('aria-hidden', 'true');
+            else card.setAttribute('aria-label', 'Loading contests');
+            card.append(document.createElement('span'), document.createElement('span'), document.createElement('span'));
+            frag.appendChild(card);
+        }
+        list.replaceChildren(frag);
+    }
 
+    /** Re-label countdowns in place so scrolling position survives a refresh. */
+    function refreshTimes() {
+        document.querySelectorAll('.contest-card[data-start]').forEach(card => {
+            const node = card.querySelector('.contest-duration');
+            if (node) node.textContent = timingLabel(card.dataset.start, Number(card.dataset.dur));
+        });
+        syncNavBadge();
+        NextUpModule.refresh();
+    }
+
+    function init() {
+        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+            tab.addEventListener('click', () => setTab(tab.dataset.tab));
+            tab.addEventListener('keydown', e => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                setTab(tab.dataset.tab === 'near' ? 'later' : 'near');
+                document.querySelector(`.tab[data-tab="${activeTab}"]`)?.focus({ preventScroll: true });
+            });
+        });
+        syncTabs();
+    }
+
+    const getActive = () => [...cachedNear, ...cachedLater];
+
+    return {
+        init, render, renderCurrentTab, renderError, setLoadingState,
+        refreshTimes, getActive, timingLabel, urgencyFor
+    };
+})();
 // ══════════════════════════════════════════════════════
-// MODULE: Contest — List Controller
+// MODULE: Next-up card (Focus view)
 // ══════════════════════════════════════════════════════
+
+const NextUpModule = (() => {
+    let contest = null;
+
+    function applyHeat(btn, startIso) {
+        const msUntil = new Date(startIso).getTime() - Date.now();
+        btn.classList.toggle('is-hot', msUntil > 0 && msUntil <= 60 * 60 * 1000);
+        btn.classList.toggle('is-warm', msUntil > 60 * 60 * 1000 && msUntil <= 4 * 60 * 60 * 1000);
+    }
+
+    function renderCard() {
+        const slot = $('next-up');
+        if (!slot) return;
+        slot.replaceChildren();
+        if (!contest?.url) return;
+
+        const isOngoing = ContestHelpers.getContestStatus(contest) === 'ongoing';
+        const cls = PLATFORM_CONFIG[contest.site]?.cls || 'other';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'nextup';
+        btn.style.setProperty('--spine', isOngoing ? 'var(--good)' : `var(--p-${cls})`);
+
+        const top = document.createElement('span');
+        top.className = 'nextup-top';
+
+        const badge = document.createElement('span');
+        badge.className = `platform-badge ${cls}`;
+        badge.textContent = PLATFORM_CONFIG[contest.site]?.badge || '—';
+
+        const eyebrow = document.createElement('span');
+        eyebrow.className = 'nextup-eyebrow';
+        eyebrow.textContent = isOngoing ? 'Live now' : 'Next up';
+
+        top.append(badge, eyebrow);
+
+        const name = document.createElement('span');
+        name.className = 'nextup-name';
+        name.textContent = contest.name || 'Untitled';
+
+        const bot = document.createElement('span');
+        bot.className = 'nextup-bot';
+
+        const when = document.createElement('span');
+        when.className = 'nextup-when';
+        when.textContent = fmtDateTime(contest.start_time);
+
+        const count = document.createElement('span');
+        count.className = 'nextup-count';
+        count.textContent = ContestRenderer.timingLabel(contest.start_time, contest.duration);
+
+        bot.append(when, count);
+        btn.append(top, name, bot);
+
+        applyHeat(btn, contest.start_time);
+        btn.addEventListener('click', () => chrome.tabs.create({ url: contest.url, active: true }));
+        slot.appendChild(btn);
+    }
+
+    function update(list) {
+        const sorted = ContestSortFilter.sortByTime(Array.isArray(list) ? list : []);
+        contest = sorted[0] || null;
+        renderCard();
+        updateBrandSub();
+    }
+
+    function refresh() {
+        const slot = $('next-up');
+        if (slot) {
+            const btn = slot.querySelector('.nextup');
+            const count = slot.querySelector('.nextup-count');
+            if (contest && btn && count) {
+                count.textContent = ContestRenderer.timingLabel(contest.start_time, contest.duration);
+                applyHeat(btn, contest.start_time);
+            }
+        }
+        updateBrandSub();
+    }
+
+    /**
+     * The rail subtitle doubles as a live contest signal. It deliberately shows
+     * *timing* rather than the contest title — titles are long enough to be
+     * ellipsised on a 400px popup, and the countdown is the thing that matters.
+     */
+    function updateBrandSub() {
+        const sub = $('brand-sub');
+        if (!sub) return;
+
+        if (!contest) {
+            sub.textContent = 'Contest radar ready';
+            sub.classList.remove('is-hot');
+            return;
+        }
+
+        const msUntil = new Date(contest.start_time).getTime() - Date.now();
+        const isOngoing = ContestHelpers.getContestStatus(contest) === 'ongoing';
+
+        if (isOngoing) {
+            sub.textContent = 'A contest is live right now';
+            sub.classList.add('is-hot');
+            return;
+        }
+
+        const left = ContestHelpers.timeUntil(contest.start_time);
+        sub.textContent = msUntil > 0 && left
+            ? `Next contest in ${left}`
+            : 'Next contest starting soon';
+        sub.classList.toggle('is-hot', msUntil > 0 && msUntil <= 60 * 60 * 1000);
+    }
+
+    return { update, refresh, updateBrandSub };
+})();
+// ══════════════════════════════════════════════════════
+// MODULE: Contest — list controller
+// ═════════════════════════════════════════════════════
 
 const ContestListModule = (() => {
     let currentMain = [];
     let currentGym = [];
     let refreshIntervalId = null;
+    let tickIntervalId = null;
     let loadGeneration = 0;
+    let lastSync = 0;
+    let syncing = false;
 
-    async function load() {
-        const list = document.getElementById('contest-list');
+    function footText() {
+        if (syncing) return lastSync ? 'Refreshing…' : 'Syncing…';
+        if (!lastSync) return 'Not synced yet';
+        const secs = Math.round((Date.now() - lastSync) / 1000);
+        if (secs < 10) return 'Updated just now';
+        if (secs < 60) return `Updated ${secs}s ago`;
+        const mins = Math.round(secs / 60);
+        return mins < 60 ? `Updated ${mins}m ago` : `Updated ${Math.round(mins / 60)}h ago`;
+    }
+
+    function refreshFoot() {
+        const node = $('updated-ago');
+        if (node) node.textContent = footText();
+    }
+
+    function showTimezone() {
+        const node = $('tz-label');
+        if (!node) return;
+        try {
+            const offset = -new Date().getTimezoneOffset();
+            const sign = offset >= 0 ? '+' : '−';
+            const hours = Math.floor(Math.abs(offset) / 60);
+            const mins = Math.abs(offset) % 60;
+            node.textContent = `times in GMT${sign}${hours}${mins ? `:${String(mins).padStart(2, '0')}` : ''}`;
+        } catch (_) {
+            node.textContent = 'local time';
+        }
+    }
+
+    async function load({ silent = false } = {}) {
         const myGen = ++loadGeneration;
+        syncing = true;
+        refreshFoot();
 
         const [cachedMain, cachedGym] = await Promise.all([ContestCache.getMain(), ContestCache.getGym()]);
         if (myGen !== loadGeneration) return;
-        currentMain = cachedMain?.data || [];
-        currentGym = cachedGym?.data || [];
-        const mainFresh = !!cachedMain;
-        const gymFresh = !!cachedGym;
+
+        currentMain = cachedMain || [];
+        currentGym = cachedGym || [];
 
         if (currentMain.length || currentGym.length) {
             ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
-        } else {
-            ContestRenderer.setLoadingState(list);
+        } else if (!silent) {
+            ContestRenderer.setLoadingState();
         }
 
-        // Only hit the network when the cache is stale — the cache is no longer
-        // just an instant-render placeholder but an actual request de-duplicator.
-        if (!mainFresh) {
-            ContestFetch.fetchMain().then(main => {
-                if (myGen !== loadGeneration) return;
-                currentMain = main;
-                ContestCache.setMain(main);
+        try {
+            const main = await ContestFetch.fetchMain();
+            if (myGen !== loadGeneration) return;
+            currentMain = main;
+            await ContestCache.setMain(main);
+            lastSync = Date.now();
+            ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
+        } catch (error) {
+            if (myGen !== loadGeneration) return;
+            if (!currentMain.length && !currentGym.length) {
+                const message = !navigator.onLine
+                    ? 'You appear to be offline. Reconnect and try again.'
+                    : (error?.message || 'Could not reach the contest servers.');
+                ContestRenderer.renderError(message);
+            }
+        } finally {
+            if (myGen === loadGeneration) {
+                syncing = false;
+                refreshFoot();
+            }
+        }
+
+        ContestFetch.fetchGym().then(gym => {
+            if (myGen !== loadGeneration) return;
+            if (gym?.length) {
+                currentGym = gym;
+                ContestCache.setGym(gym);
                 ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
-            }).catch(e => {
-                if (myGen !== loadGeneration) return;
-                if (!currentMain.length && !currentGym.length) {
-                    const msg = !navigator.onLine
-                        ? 'You appear to be offline. Connect to the internet and try again.'
-                        : (e.message || 'Error loading contests');
-                    ContestRenderer.renderError(msg);
-                }
-            });
+            }
+        }).catch(() => {});
+    }
+
+    /** Manual refresh — also drives the spinner and state-action loading text. */
+    function refresh(button) {
+        const isStateAction = !!button?.classList?.contains('state-action');
+        const originalLabel = button?.textContent;
+
+        if (button) {
+            button.disabled = true;
+            button.classList.add('is-spinning');
+            if (isStateAction) button.textContent = 'Retrying…';
         }
 
-        if (!gymFresh) {
-            ContestFetch.fetchGym().then(gym => {
-                if (myGen !== loadGeneration) return;
-                if (gym && gym.length) {
-                    currentGym = gym;
-                    ContestCache.setGym(gym);
-                    ContestRenderer.render(ContestSortFilter.sortByTime([...currentMain, ...currentGym]));
-                }
-            }).catch(() => {});
-        }
+        return load().finally(() => {
+            if (!button) return;
+            button.disabled = false;
+            button.classList.remove('is-spinning');
+            if (isStateAction && button.isConnected) button.textContent = originalLabel;
+        });
     }
 
     function startAutoRefresh() {
         stopAutoRefresh();
-        refreshIntervalId = setInterval(load, 60000);
+        refreshIntervalId = setInterval(() => load({ silent: true }), 60000);
+        tickIntervalId = setInterval(() => {
+            ContestRenderer.refreshTimes();
+            refreshFoot();
+        }, 20000);
     }
 
     function stopAutoRefresh() {
-        if (refreshIntervalId) {
-            clearInterval(refreshIntervalId);
-            refreshIntervalId = null;
-        }
+        if (refreshIntervalId) { clearInterval(refreshIntervalId); refreshIntervalId = null; }
+        if (tickIntervalId) { clearInterval(tickIntervalId); tickIntervalId = null; }
     }
 
-    return { load, startAutoRefresh, stopAutoRefresh };
+    return { load, refresh, startAutoRefresh, stopAutoRefresh, showTimezone };
+})();
+// ══════════════════════════════════════════════════════
+// MODULE: Settings — Zen Mode
+// ═════════════════════════════════════════════════════
+
+const SettingsModule = (() => {
+    async function init() {
+        const zenToggle = $('zen-toggle');
+        if (!zenToggle) return;
+
+        try {
+            const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
+            zenToggle.checked = !!ff_zenMode;
+        } catch (_) {}
+
+        zenToggle.addEventListener('change', async e => {
+            const enabled = e.target.checked;
+            try { await chrome.storage.local.set({ ff_zenMode: enabled }); } catch (_) {}
+            chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
+                tabs.forEach(tab => {
+                    if (tab.id) chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
+                });
+            });
+        });
+    }
+
+    return { init };
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Reminder Settings
-// ══════════════════════════════════════════════════════
+// MODULE: Settings — contest reminders
+// ═════════════════════════════════════════════════════
 
 const ReminderSettingsModule = (() => {
     async function init() {
-        const reminderToggle = document.getElementById('reminder-toggle');
-        const { ff_reminders_enabled, ff_reminder_intervals } = await chrome.storage.local.get({
+        const toggle = $('reminder-toggle');
+        const section = $('reminder-section');
+        if (!toggle || !section) return;
+
+        const stored = await chrome.storage.local.get({
             ff_reminders_enabled: true,
             ff_reminder_intervals: DEFAULT_REMINDER_INTERVALS
         });
-        
-        const remindersEnabled = ff_reminders_enabled !== false;
-        reminderToggle.checked = remindersEnabled;
-        document.getElementById('reminder-section').style.display = remindersEnabled ? 'block' : 'none';
-        
-        reminderToggle.addEventListener('change', async e => {
-            const enabled = e.target.checked;
-            try { await chrome.storage.local.set({ ff_reminders_enabled: enabled }); } catch {}
-            document.getElementById('reminder-section').style.display = enabled ? 'block' : 'none';
-            document.getElementById('reminder-section').setAttribute('aria-expanded', String(enabled));
-            e.target.closest('.switch').setAttribute('aria-expanded', String(enabled));
-            chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled }).catch(() => {});
+
+        const enabled = stored.ff_reminders_enabled !== false;
+        toggle.checked = enabled;
+        section.hidden = !enabled;
+
+        toggle.addEventListener('change', async e => {
+            const on = e.target.checked;
+            try { await chrome.storage.local.set({ ff_reminders_enabled: on }); } catch (_) {}
+            section.hidden = !on;
+            chrome.runtime.sendMessage({ type: 'REMINDERS_TOGGLED', enabled: on }).catch(() => {});
         });
 
         const options = document.querySelectorAll('.reminder-item');
+        const storedIntervals = Array.isArray(stored.ff_reminder_intervals)
+            ? stored.ff_reminder_intervals
+            : DEFAULT_REMINDER_INTERVALS;
+
         options.forEach(opt => {
-            const val = parseInt(opt.value, 10);
-            opt.checked = ff_reminder_intervals.includes(val);
-            
+            const value = parseInt(opt.value, 10);
+            opt.checked = storedIntervals.includes(value);
+
             opt.addEventListener('change', async () => {
-                // Keep at least one reminder chip enabled via the chip UI: the
-                // master "Contest Reminders" toggle is the intended way to fully
-                // disable reminders, so we block unchecking the last chip here.
-                // (The background still treats a stored `[]` as "no reminders",
-                // so this is UX reinforcement, not the sole guard.)
+                // Keep at least one chip lit: the master switch above is the
+                // intended way to silence everything. (The background worker
+                // still treats a stored [] as "no reminders", so this is UX
+                // reinforcement rather than the only guard.)
                 if (!opt.checked && Array.from(options).filter(o => o.checked).length === 0) {
                     opt.checked = true;
                     return;
                 }
-                const newIntervals = Array.from(options)
+                const intervals = Array.from(options)
                     .filter(o => o.checked)
                     .map(o => parseInt(o.value, 10));
-                try { await chrome.storage.local.set({ ff_reminder_intervals: newIntervals }); } catch {}
-                // Distinct message so the background can clear & re-schedule the
-                // per-(contest,interval) absolute alarms for the new interval set.
-                chrome.runtime.sendMessage({ type: 'REMINDER_INTERVALS_CHANGED', intervals: newIntervals }).catch(() => {});
+                try { await chrome.storage.local.set({ [REMINDER_INTERVALS_KEY]: intervals }); } catch (_) {}
+                chrome.runtime.sendMessage({ type: 'REMINDER_INTERVALS_CHANGED', intervals }).catch(() => {});
             });
         });
     }
@@ -996,219 +1660,71 @@ const ReminderSettingsModule = (() => {
 })();
 
 // ══════════════════════════════════════════════════════
-// MODULE: Timer Notification Settings
-// ══════════════════════════════════════════════════════
+// MODULE: Storage bridge — keep the popup honest when the
+// on-page Focus Dock changes the session underneath it.
+// ═════════════════════════════════════════════════════
 
-// DEFAULT_TIMER_NOTIFY_MILESTONES comes from contest-utils.js (single source
-// shared with the background service worker via importScripts).
+const StorageBridge = (() => {
+    function init() {
+        try {
+            chrome.storage.onChanged.addListener((changes, area) => {
+                if (area !== 'local' || !changes[TIMER_STORAGE_KEY]) return;
+                if (TimerModule.wroteRecently()) return;
 
-const TimerNotifySettingsModule = (() => {
-    async function init() {
-        const timerNotifyToggle = document.getElementById('timer-notify-toggle');
-        const timerNotifySection = document.getElementById('timer-notify-section');
+                const next = changes[TIMER_STORAGE_KEY].newValue;
+                if (!next) return;
 
-        const {
-            ff_timer_notifications_enabled,
-            ff_timer_notify_milestones
-        } = await chrome.storage.local.get({
-            ff_timer_notifications_enabled: true,
-            ff_timer_notify_milestones: DEFAULT_TIMER_NOTIFY_MILESTONES
-        });
+                TimerModule.setState({ ...TimerModule.defaultTimerState(), ...next });
+                const state = TimerModule.getState();
 
-        const masterEnabled = ff_timer_notifications_enabled !== false;
-        const activeMilestones = Array.isArray(ff_timer_notify_milestones)
-            ? ff_timer_notify_milestones
-            : DEFAULT_TIMER_NOTIFY_MILESTONES;
-
-        // Initialise master toggle
-        timerNotifyToggle.checked = masterEnabled;
-        timerNotifySection.style.display = masterEnabled ? 'block' : 'none';
-        timerNotifySection.setAttribute('aria-expanded', String(masterEnabled));
-
-        // Master toggle — collapse/expand chips section
-        timerNotifyToggle.addEventListener('change', async e => {
-            const enabled = e.target.checked;
-            try { await chrome.storage.local.set({ ff_timer_notifications_enabled: enabled }); } catch {}
-            timerNotifySection.style.display = enabled ? 'block' : 'none';
-            timerNotifySection.setAttribute('aria-expanded', String(enabled));
-            e.target.closest('.switch').setAttribute('aria-expanded', String(enabled));
-            chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_TOGGLED', enabled }).catch(() => {});
-        });
-
-        // Wire up each milestone chip
-        const chips = document.querySelectorAll('.timer-notify-item');
-        chips.forEach(chip => {
-            chip.checked = activeMilestones.includes(chip.value);
-
-            chip.addEventListener('change', async () => {
-                // Prevent unchecking the last active chip — use the master
-                // toggle to disable all notifications entirely.
-                const checkedChips = Array.from(chips).filter(c => c.checked);
-                if (!chip.checked && checkedChips.length === 0) {
-                    chip.checked = true;
-                    return;
-                }
-                const newMilestones = Array.from(chips)
-                    .filter(c => c.checked)
-                    .map(c => c.value);
-                try { await chrome.storage.local.set({ ff_timer_notify_milestones: newMilestones }); } catch {}
-                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_MILESTONES_CHANGED', milestones: newMilestones }).catch(() => {});
-            });
-        });
-    }
-
-    return { init };
-})();
-
-
-// ══════════════════════════════════════════════════════
-// MODULE: Settings — Zen Mode
-// ══════════════════════════════════════════════════════
-
-const SettingsModule = (() => {
-    async function init() {
-        const zenToggle = document.getElementById('zen-toggle');
-        const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
-        zenToggle.checked = !!ff_zenMode;
-        zenToggle.addEventListener('change', async e => {
-            const enabled = e.target.checked;
-            try { await chrome.storage.local.set({ ff_zenMode: enabled }); } catch {}
-            chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
-                tabs.forEach(tab => {
-                    if (tab.id) {
-                        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
+                if (state.status === 'RUNNING') {
+                    if (state.mode === 'countdown' && Date.now() >= state.endTime) {
+                        TimerActions.finish();
+                        return;
                     }
-                });
+                    TimerInterval.start();
+                } else {
+                    TimerInterval.stop();
+                }
+                TimerUIModule.render();
             });
-        });
+        } catch (_) {}
     }
 
     return { init };
 })();
-
 // ══════════════════════════════════════════════════════
-// MODULE: Settings — Zen Paws (Cat Walk)
-// ══════════════════════════════════════════════════════
-
-const ZenPawsModule = (() => {
-    async function init() {
-        const pawsToggle = document.getElementById('zen-paws-toggle');
-        if (!pawsToggle) return;
-        const { ff_zenPaws } = await chrome.storage.local.get('ff_zenPaws');
-        pawsToggle.checked = !!ff_zenPaws;
-
-        pawsToggle.addEventListener('change', async e => {
-            const enabled = e.target.checked;
-            try { await chrome.storage.local.set({ ff_zenPaws: enabled }); } catch {}
-
-            // Best-effort broadcast to every content-script site. The content
-            // script ALSO watches chrome.storage.onChanged, so the toggle is
-            // reliable even if a tab is missed here.
-            try {
-                chrome.tabs.query({
-                    url: [
-                        'https://codeforces.com/*',
-                        'https://atcoder.jp/*',
-                        'https://www.codechef.com/*'
-                    ]
-                }, tabs => {
-                    tabs.forEach(tab => {
-                        if (tab.id) {
-                            chrome.tabs.sendMessage(tab.id, { type: 'ZEN_PAWS_TOGGLED', enabled }).catch(() => {});
-                        }
-                    });
-                });
-            } catch {}
-        });
-    }
-
-    return { init };
-})();
-
-// ══════════════════════════════════════════════════════
-// MODULE: Settings — AC Celebration
-// ══════════════════════════════════════════════════════
-
-const ACCelebrateModule = (() => {
-    async function init() {
-        const toggle = document.getElementById('ac-celebrate-toggle');
-        if (!toggle) return;
-        const { ff_acCelebrate } = await chrome.storage.local.get('ff_acCelebrate');
-        toggle.checked = !!ff_acCelebrate;
-
-        toggle.addEventListener('change', async e => {
-            const enabled = e.target.checked;
-            try { await chrome.storage.local.set({ ff_acCelebrate: enabled }); } catch {}
-
-            // Best-effort broadcast to Codeforces tabs. The content script also
-            // watches chrome.storage.onChanged, so the toggle is reliable even
-            // if a tab is missed here.
-            try {
-                chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
-                    tabs.forEach(tab => {
-                        if (tab.id) {
-                            chrome.tabs.sendMessage(tab.id, { type: 'AC_CELEBRATE_TOGGLED', enabled }).catch(() => {});
-                        }
-                    });
-                });
-            } catch {}
-        });
-    }
-
-    return { init };
-})();
-
-// ══════════════════════════════════════════════════════
-// APP — Initialization
+// APP — initialisation
 // ══════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Theme first — every other surface inherits its palette.
     await ThemeModule.loadTheme();
 
-    // Theme dot picker
-    const themePicker = document.getElementById('theme-picker');
-    if (themePicker) {
-        themePicker.addEventListener('click', e => {
-            const dot = e.target.closest('.theme-dot');
-            if (dot && dot.dataset.ffTheme) {
-                ThemeModule.applyTheme(dot.dataset.ffTheme);
-            }
-        });
-        // Full radiogroup semantics: arrow-key / Home / End navigation between
-        // the theme dots (a11y).
-        themePicker.addEventListener('keydown', e => {
-            if (!['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) return;
-            e.preventDefault();
-            const dots = [...themePicker.querySelectorAll('.theme-dot')];
-            if (!dots.length) return;
-            // Index from the focused dot when possible (radiogroup convention),
-            // else from the active dot.
-            let idx = dots.findIndex(d => d === document.activeElement);
-            if (idx < 0) idx = dots.findIndex(d => d.classList.contains('active'));
-            if (idx < 0) idx = 0;
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') idx = (idx + 1) % dots.length;
-            else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') idx = (idx - 1 + dots.length) % dots.length;
-            else if (e.key === 'Home') idx = 0;
-            else if (e.key === 'End') idx = dots.length - 1;
-            const dot = dots[idx];
-            if (dot?.dataset.ffTheme) {
-                ThemeModule.applyTheme(dot.dataset.ffTheme);
-                dot.focus();
-            }
-        });
-    }
+    document.querySelectorAll('.theme-card').forEach(card => {
+        card.addEventListener('click', () => ThemeModule.applyTheme(card.dataset.ffTheme));
+    });
 
+    DialModule.init();
+    ViewModule.init();
+    SettingsSheetModule.init();
+    KeyboardModule.init();
+    TimerUIModule.init();
     SettingsModule.init();
-    ZenPawsModule.init();
-    ACCelebrateModule.init();
     ReminderSettingsModule.init();
-    TimerNotifySettingsModule.init();
+    ContestRenderer.init();
+    StorageBridge.init();
+    ContestListModule.showTimezone();
+
+    $('refresh-btn')?.addEventListener('click', e => ContestListModule.refresh(e.currentTarget));
 
     await TimerRecovery.recover();
-    TimerUIModule.init();
+    await TimerUIModule.refreshStats();
 
     await ContestListModule.load();
     ContestListModule.startAutoRefresh();
+
+    document.body.classList.add('is-ready');
 });
 
 window.addEventListener('beforeunload', () => {
