@@ -10,7 +10,8 @@ const {
     formatMs,
     cleanSampleText,
     extractCodeforcesProblemMeta,
-    computeScrollProgress
+    computeScrollProgress,
+    parseProblemContext
 } = require('../zen-utils');
 
 describe('computeZenWidth', () => {
@@ -180,5 +181,31 @@ describe('computeScrollProgress', () => {
 
     test('handles non-scrollable page', () => {
         expect(computeScrollProgress(0, 500, 600)).toBe(0);
+    });
+});
+
+describe('parseProblemContext', () => {
+    test('extracts Codeforces contest problem context', () => {
+        const ctx = parseProblemContext('https://codeforces.com/contest/2024/problem/A', 'A. Meaning Mean - Codeforces');
+        expect(ctx.platform).toBe('Codeforces');
+        expect(ctx.code).toBe('CF 2024A');
+        expect(ctx.title).toBe('A. Meaning Mean');
+    });
+
+    test('extracts Codeforces problemset URL', () => {
+        const ctx = parseProblemContext('https://codeforces.com/problemset/problem/1900/B1', 'B1. Game with Colored Marbles - Codeforces');
+        expect(ctx.platform).toBe('Codeforces');
+        expect(ctx.code).toBe('CF 1900B1');
+    });
+
+    test('extracts AtCoder task context', () => {
+        const ctx = parseProblemContext('https://atcoder.jp/contests/abc370/tasks/abc370_a', 'A - Raise Real Numbers - AtCoder');
+        expect(ctx.platform).toBe('AtCoder');
+        expect(ctx.code).toBe('ABC370');
+    });
+
+    test('returns null for non-problem URLs', () => {
+        expect(parseProblemContext('https://codeforces.com/contests', 'Contests - Codeforces')).toBeNull();
+        expect(parseProblemContext(null, '')).toBeNull();
     });
 });

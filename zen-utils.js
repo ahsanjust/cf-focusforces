@@ -213,6 +213,57 @@
         return Math.min(100, Math.max(0, Math.round((scrollTop / total) * 100)));
     }
 
+    /**
+     * Parse competitive programming problem context from tab URL and document title.
+     * @param {string} url
+     * @param {string} title
+     * @returns {{platform: string, code: string, title: string, url: string}|null}
+     */
+    function parseProblemContext(url, title) {
+        if (!url) return null;
+        const normUrl = url.toLowerCase();
+        const rawTitle = (title || '').replace(/ - Codeforces$/i, '').replace(/ - AtCoder$/i, '').replace(/ \| CodeChef$/i, '').trim();
+
+        // Codeforces
+        const cfMatch = normUrl.match(/codeforces\.com\/(?:contest|gym)\/(\d+)\/problem\/([a-z0-9]+)/i)
+            || normUrl.match(/codeforces\.com\/problemset\/problem\/(\d+)\/([a-z0-9]+)/i);
+        if (cfMatch) {
+            const code = `CF ${cfMatch[1]}${cfMatch[2].toUpperCase()}`;
+            return {
+                platform: 'Codeforces',
+                code,
+                title: rawTitle || code,
+                url
+            };
+        }
+
+        // AtCoder
+        const atcMatch = normUrl.match(/atcoder\.jp\/contests\/([^/]+)\/tasks\/([^/]+)/i);
+        if (atcMatch) {
+            const code = atcMatch[1].toUpperCase();
+            return {
+                platform: 'AtCoder',
+                code,
+                title: rawTitle || code,
+                url
+            };
+        }
+
+        // CodeChef
+        const ccMatch = normUrl.match(/codechef\.com\/problems\/([^/?#]+)/i);
+        if (ccMatch) {
+            const code = ccMatch[1].toUpperCase();
+            return {
+                platform: 'CodeChef',
+                code,
+                title: rawTitle || code,
+                url
+            };
+        }
+
+        return null;
+    }
+
     return {
         ZEN_WIDTH_PRESETS,
         ZEN_FONT_PRESETS,
@@ -223,6 +274,7 @@
         formatMs,
         cleanSampleText,
         extractCodeforcesProblemMeta,
-        computeScrollProgress
+        computeScrollProgress,
+        parseProblemContext
     };
 }));

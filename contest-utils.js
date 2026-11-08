@@ -62,6 +62,23 @@ function formatDuration(m) {
 }
 
 /**
+ * Format an ISO datetime string to a rich locale string with day of week.
+ * @param {string} iso  ISO 8601 datetime string
+ * @returns {string}
+ */
+function formatContestDateTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return 'Unknown';
+    return d.toLocaleString([], {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+/**
  * Format an ISO datetime string to a short locale string.
  * @param {string} iso  ISO 8601 datetime string
  * @returns {string}
@@ -71,6 +88,45 @@ function formatDateTime(iso) {
     return isNaN(d.getTime()) ? 'Unknown' : d.toLocaleString([], {
         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
+}
+
+/**
+ * Generate a 1-click Google Calendar add URL for an upcoming contest.
+ * @param {object} contest
+ * @returns {string|null}
+ */
+function generateGoogleCalendarUrl(contest) {
+    if (!contest || !contest.start_time) return null;
+    const start = new Date(contest.start_time);
+    if (isNaN(start.getTime())) return null;
+
+    const durMin = Math.max(15, parseInt(contest.duration, 10) || 120);
+    const end = new Date(start.getTime() + durMin * 60000);
+
+    const fmtUtc = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const dates = `${fmtUtc(start)}/${fmtUtc(end)}`;
+    const text = encodeURIComponent(contest.name || 'Competitive Programming Contest');
+    const details = encodeURIComponent(`Contest URL: ${contest.url || ''}\nPlatform: ${contest.site || 'Online'}\nTracked with FocusForces.`);
+    const location = encodeURIComponent(contest.site || 'Online');
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&location=${location}`;
+}
+
+/**
+ * Tally contests by platform for tab chips.
+ * @param {object[]} contests
+ * @returns {{all: number, CodeForces: number, AtCoder: number, CodeChef: number, LeetCode: number}}
+ */
+function countContestsByPlatform(contests) {
+    const counts = { all: 0, CodeForces: 0, AtCoder: 0, CodeChef: 0, LeetCode: 0 };
+    if (!Array.isArray(contests)) return counts;
+    counts.all = contests.length;
+    for (const c of contests) {
+        if (c.site && counts[c.site] !== undefined) {
+            counts[c.site]++;
+        }
+    }
+    return counts;
 }
 
 /**
@@ -160,6 +216,9 @@ if (typeof module !== 'undefined' && module.exports) {
         getContestStatus,
         formatDuration,
         formatDateTime,
+        formatContestDateTime,
+        generateGoogleCalendarUrl,
+        countContestsByPlatform,
         timeUntil,
         formatTimeUntil,
         contestComparator,

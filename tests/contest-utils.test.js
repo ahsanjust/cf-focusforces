@@ -5,6 +5,9 @@ const {
     getContestStatus,
     formatDuration,
     formatDateTime,
+    formatContestDateTime,
+    generateGoogleCalendarUrl,
+    countContestsByPlatform,
     timeUntil,
     formatTimeUntil,
     contestComparator,
@@ -286,5 +289,61 @@ describe('resolveReminderIntervals', () => {
         const result = resolveReminderIntervals([], DEFAULT_REMINDER_INTERVALS);
         expect(result).toHaveLength(0);
         expect(result.length).not.toBe(DEFAULT_REMINDER_INTERVALS.length);
+    });
+});
+
+describe('formatContestDateTime', () => {
+    test('formats ISO string with weekday and time', () => {
+        const str = formatContestDateTime('2026-11-14T14:35:00Z');
+        expect(str).toContain('Nov');
+        expect(str).not.toBe('Unknown');
+    });
+
+    test('returns Unknown for invalid dates', () => {
+        expect(formatContestDateTime('invalid-date')).toBe('Unknown');
+    });
+});
+
+describe('generateGoogleCalendarUrl', () => {
+    test('generates valid Google Calendar render template link', () => {
+        const url = generateGoogleCalendarUrl({
+            name: 'Codeforces Round 999 (Div. 2)',
+            site: 'CodeForces',
+            start_time: '2026-11-15T14:35:00Z',
+            duration: 120,
+            url: 'https://codeforces.com/contest/999'
+        });
+        expect(url).toContain('https://calendar.google.com/calendar/render?action=TEMPLATE');
+        expect(url).toContain('Codeforces');
+        expect(url).toContain('dates=');
+    });
+
+    test('returns null when contest has no start_time', () => {
+        expect(generateGoogleCalendarUrl(null)).toBeNull();
+        expect(generateGoogleCalendarUrl({})).toBeNull();
+    });
+});
+
+describe('countContestsByPlatform', () => {
+    test('tallies contests accurately by platform', () => {
+        const sample = [
+            { site: 'CodeForces' },
+            { site: 'CodeForces' },
+            { site: 'AtCoder' },
+            { site: 'CodeChef' },
+            { site: 'LeetCode' }
+        ];
+        const counts = countContestsByPlatform(sample);
+        expect(counts.all).toBe(5);
+        expect(counts.CodeForces).toBe(2);
+        expect(counts.AtCoder).toBe(1);
+        expect(counts.CodeChef).toBe(1);
+        expect(counts.LeetCode).toBe(1);
+    });
+
+    test('handles empty or non-array inputs safely', () => {
+        const counts = countContestsByPlatform([]);
+        expect(counts.all).toBe(0);
+        expect(countContestsByPlatform(null).all).toBe(0);
     });
 });

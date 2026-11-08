@@ -25,7 +25,7 @@
     } catch (_) {}
 
     // ── Constants & Config ─────────────────────────────
-    const IS_CF = window.location.hostname.includes('codeforces.com');
+    const IS_CF = window.location.hostname.includes('codeforces.com') || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
     const IS_ATCODER = window.location.hostname.includes('atcoder.jp');
     const IS_CODECHEF = window.location.hostname.includes('codechef.com');
     const PLATFORM = (typeof ZenUtils !== 'undefined')
@@ -1243,16 +1243,40 @@
         let topicsVisible = false;
         let ratingVisible = false;
 
-        const createTagElement = (tag, isRating) => {
+        const createRatingElement = (rating) => {
+            const tierMeta = typeof resolveRankTier === 'function' ? resolveRankTier(rating) : null;
             const wrapper = document.createElement('div');
-            wrapper.className = 'roundbox borderTopRound borderBottomRound';
-            wrapper.style.cssText = 'margin:2px; padding:4px 8px; float:left;';
-            const span = document.createElement('span');
-            span.className = 'tag-box';
-            span.style.fontSize = '12px';
-            span.textContent = isRating ? `*${tag}` : tag;
-            wrapper.appendChild(span);
+            wrapper.className = 'ff-scout-rank-badge';
+            if (tierMeta) {
+                wrapper.style.color = tierMeta.color;
+                wrapper.style.borderColor = tierMeta.color;
+                wrapper.style.background = tierMeta.bg;
+
+                const tierName = document.createElement('span');
+                tierName.className = 'ff-scout-rank-name';
+                tierName.textContent = tierMeta.name;
+
+                const ratingVal = document.createElement('span');
+                ratingVal.className = 'ff-scout-rank-val';
+                ratingVal.textContent = `*${tierMeta.rating}`;
+
+                wrapper.append(tierName, ratingVal);
+            } else {
+                wrapper.textContent = `*${rating}`;
+            }
             return wrapper;
+        };
+
+        const createCategorizedTagElement = (tag) => {
+            const catMeta = typeof categorizeTag === 'function'
+                ? categorizeTag(tag)
+                : { color: '#6366f1', bg: 'rgba(99, 102, 241, 0.1)' };
+            const span = document.createElement('span');
+            span.className = 'ff-scout-pill';
+            span.style.color = catMeta.color;
+            span.style.background = catMeta.bg;
+            span.textContent = tag;
+            return span;
         };
 
         const clearContainers = () => {
@@ -1293,12 +1317,11 @@
             tags.forEach(tag => {
                 const title = (tag.getAttribute('title') || '').toLowerCase();
                 const text = tag.textContent.trim();
-                const cloned = (tag.closest('.roundbox') || tag).cloneNode(true);
                 if (title === 'difficulty' || text.startsWith('*')) {
-                    ratingContainer.appendChild(cloned);
+                    ratingContainer.appendChild(createRatingElement(text));
                     hasRating = true;
                 } else {
-                    topicsContainer.appendChild(cloned);
+                    topicsContainer.appendChild(createCategorizedTagElement(text));
                     hasTopics = true;
                 }
             });
@@ -1353,12 +1376,12 @@
             let hasTopics = false, hasRating = false;
 
             (problem.tags || []).forEach(tag => {
-                topicsContainer.appendChild(createTagElement(tag));
+                topicsContainer.appendChild(createCategorizedTagElement(tag));
                 hasTopics = true;
             });
 
             if (Number.isFinite(problem.rating)) {
-                ratingContainer.appendChild(createTagElement(problem.rating, true));
+                ratingContainer.appendChild(createRatingElement(problem.rating));
                 hasRating = true;
             }
 

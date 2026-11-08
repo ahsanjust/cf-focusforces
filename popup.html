@@ -159,6 +159,46 @@
       </article>
 
       <div class="nextup-slot" id="next-up"></div>
+
+      <!-- ── Practice Ledger (Session History) ── -->
+      <article class="panel ledger-card" id="ledger-card">
+        <header class="panel-head ledger-head" id="ledger-toggle-head">
+          <span class="micro">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="ledger-ico" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h8M8 18h5"/></svg>
+            <span>Today's Sessions</span>
+            <span class="ledger-count-badge" id="ledger-count-badge">0</span>
+          </span>
+          <button type="button" class="btn btn-ghost btn-sm ledger-exp-btn" id="ledger-exp-btn" aria-expanded="false" title="Toggle session history">
+            <span id="ledger-exp-arrow">▾</span>
+          </button>
+        </header>
+        <div class="ledger-body" id="ledger-body" hidden>
+          <div class="ledger-list" id="ledger-list">
+            <div class="ledger-empty">No focus sessions completed today yet.</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ── Practice Queue (Upsolve Bookmarks) ── -->
+      <article class="panel queue-card" id="queue-card">
+        <header class="panel-head queue-head">
+          <span class="micro">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span>Practice Queue</span>
+            <span class="queue-count-badge" id="queue-count-badge">0</span>
+          </span>
+          <button type="button" class="btn btn-ghost btn-sm queue-add-toggle" id="queue-add-toggle" title="Add problem to queue">+</button>
+        </header>
+        <div class="queue-add-box" id="queue-add-box" hidden>
+          <input type="text" id="queue-input" class="queue-input" placeholder="e.g. CF 2024A or problem URL" aria-label="Add problem">
+          <button type="button" class="btn btn-primary btn-sm" id="queue-add-btn">Add</button>
+        </div>
+        <div class="queue-body" id="queue-body">
+          <div class="queue-list" id="queue-list">
+            <div class="queue-empty">Practice queue is empty. Bookmark problems to solve later.</div>
+          </div>
+        </div>
+      </article>
     </section>
 
     <!-- ── Radar ────────────────────────────────────────────────── -->
@@ -176,11 +216,11 @@
 
       <div class="radar-toolbar">
         <div class="pfilter-chips" role="group" aria-label="Filter by platform">
-          <button type="button" class="pfilter is-active" data-platform="all">All</button>
-          <button type="button" class="pfilter" data-platform="CodeForces">CF</button>
-          <button type="button" class="pfilter" data-platform="AtCoder">AtCoder</button>
-          <button type="button" class="pfilter" data-platform="CodeChef">CodeChef</button>
-          <button type="button" class="pfilter" data-platform="LeetCode">LeetCode</button>
+          <button type="button" class="pfilter is-active" data-platform="all">All <span class="pfilter-count" id="pf-count-all"></span></button>
+          <button type="button" class="pfilter" data-platform="CodeForces">CF <span class="pfilter-count" id="pf-count-cf"></span></button>
+          <button type="button" class="pfilter" data-platform="AtCoder">AtCoder <span class="pfilter-count" id="pf-count-atcoder"></span></button>
+          <button type="button" class="pfilter" data-platform="CodeChef">CodeChef <span class="pfilter-count" id="pf-count-codechef"></span></button>
+          <button type="button" class="pfilter" data-platform="LeetCode">LeetCode <span class="pfilter-count" id="pf-count-leetcode"></span></button>
         </div>
         <div class="radar-search-box">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-ico" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -637,6 +677,7 @@
   <div class="toast-wrap" id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
 
   <script src="contest-utils.js"></script>
+  <script src="zen-utils.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

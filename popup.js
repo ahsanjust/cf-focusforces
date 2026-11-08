@@ -289,12 +289,24 @@ const SessionModule = (() => {
         }
     }
 
-    async function log(ms) {
+    async function log(ms, { mode = 'countdown', problem = '' } = {}) {
         if (!Number.isFinite(ms) || ms < MIN_LOGGED_SESSION_MS) return;
         const cutoff = Date.now() - SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
         const list = (await read()).filter(s => s && s.ts >= cutoff);
-        list.push({ d: localDayKey(), ts: Date.now(), ms: Math.round(ms) });
+        list.push({
+            d: localDayKey(),
+            ts: Date.now(),
+            ms: Math.round(ms),
+            mode,
+            problem: problem || (mode === 'stopwatch' ? 'Stopwatch Focus' : 'Focus Session')
+        });
         try { await chrome.storage.local.set({ [SESSIONS_KEY]: list }); } catch (_) {}
+    }
+
+    async function todaySessions() {
+        const list = await read();
+        const key = localDayKey();
+        return list.filter(s => s && s.d === key).sort((a, b) => (b.ts || 0) - (a.ts || 0));
     }
 
     /** @returns {{count:number, ms:number, total:number}} */
@@ -332,7 +344,273 @@ const SessionModule = (() => {
         return days;
     }
 
-    return { read, log, summary, weekly };
+    return { read, log, summary, weekly, todaySessions };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Active Problem Context
+// ══════════════════════════════════════════════════════
+
+async function detectActiveProblemContext() {
+    try {
+        const tabs = await new Promise(resolve => {
+            chrome.tabs.query({ active: true, currentWindow: true }, resolve);
+        });
+        if (tabs && tabs[0] && tabs[0].url) {
+            if (typeof ZenUtils !== 'undefined' && ZenUtils.parseProblemContext) {
+                return ZenUtils.parseProblemContext(tabs[0].url, tabs[0].title);
+            }
+        }
+    } catch (_) {}
+    return null;
+}
+
+// ══════════════════════════════════════════════════════
+// MODULE: Practice Ledger (Session History)
+// ══════════════════════════════════════════════════════
+
+const PracticeLedgerUI = (() => {
+    let isOpen = false;
+
+    async function render() {
+        const listEl = $('ledger-list');
+        const badgeEl = $('ledger-count-badge');
+        if (!listEl) return;
+
+        const sessions = await SessionModule.todaySessions();
+        if (badgeEl) badgeEl.textContent = String(sessions.length);
+
+        if (!sessions.length) {
+            listEl.replaceChildren();
+            const empty = document.createElement('div');
+            empty.className = 'ledger-empty';
+            empty.textContent = 'No focus sessions completed today yet.';
+            listEl.appendChild(empty);
+            return;
+        }
+
+        listEl.replaceChildren();
+        sessions.forEach(sess => {
+            const item = document.createElement('div');
+            item.className = 'ledger-item';
+
+            const left = document.createElement('div');
+            left.className = 'ledger-item-left';
+
+            const title = document.createElement('span');
+            title.className = 'ledger-item-title';
+            title.textContent = sess.problem || (sess.mode === 'stopwatch' ? 'Stopwatch Focus' : 'Focus Session');
+
+            const meta = document.createElement('span');
+            meta.className = 'ledger-item-meta';
+            const timeStr = new Date(sess.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            meta.textContent = `${timeStr} · ${sess.mode === 'stopwatch' ? 'Stopwatch' : 'Timer'}`;
+
+            left.append(title, meta);
+
+            const dur = document.createElement('span');
+            dur.className = 'ledger-item-dur';
+            dur.textContent = formatFocusSpan(sess.ms);
+
+            item.append(left, dur);
+            listEl.appendChild(item);
+        });
+    }
+
+    function init() {
+        const toggleHead = $('ledger-toggle-head');
+        const expBtn = $('ledger-exp-btn');
+        const body = $('ledger-body');
+        const arrow = $('ledger-exp-arrow');
+
+        const toggle = () => {
+            isOpen = !isOpen;
+            if (body) body.hidden = !isOpen;
+            if (arrow) arrow.textContent = isOpen ? '▴' : '▾';
+            if (expBtn) expBtn.setAttribute('aria-expanded', String(isOpen));
+            if (isOpen) render();
+        };
+
+        if (toggleHead) toggleHead.addEventListener('click', toggle);
+        if (expBtn) expBtn.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+        render();
+    }
+
+    return { init, render };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Practice Queue (Upsolve Bookmarks)
+// ══════════════════════════════════════════════════════
+
+const PracticeQueueModule = (() => {
+    const QUEUE_KEY = 'ff_practice_queue';
+
+    async function getQueue() {
+        try {
+            const { [QUEUE_KEY]: list } = await chrome.storage.local.get(QUEUE_KEY);
+            return Array.isArray(list) ? list : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    async function saveQueue(list) {
+        try {
+            await chrome.storage.local.set({ [QUEUE_KEY]: list });
+        } catch (_) {}
+    }
+
+    async function add(inputStr) {
+        const raw = (inputStr || '').trim();
+        if (!raw) return;
+
+        let title = raw;
+        let url = '';
+        let platform = 'Codeforces';
+
+        if (raw.startsWith('http://') || raw.startsWith('https://')) {
+            url = raw;
+            const parsed = typeof ZenUtils !== 'undefined' && ZenUtils.parseProblemContext ? ZenUtils.parseProblemContext(url, '') : null;
+            if (parsed) {
+                title = parsed.title || parsed.code;
+                platform = parsed.platform;
+            }
+        } else {
+            // Check if user typed "2024A" or "CF 2024A"
+            const cfMatch = raw.match(/^(?:cf\s*)?(\d+)\s*([a-z0-9]+)$/i);
+            if (cfMatch) {
+                const contestId = cfMatch[1];
+                const index = cfMatch[2].toUpperCase();
+                url = `https://codeforces.com/contest/${contestId}/problem/${index}`;
+                title = `CF ${contestId}${index}`;
+            }
+        }
+
+        const list = await getQueue();
+        const id = 'pq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        list.unshift({
+            id,
+            title,
+            url,
+            platform,
+            addedAt: Date.now(),
+            completed: false
+        });
+
+        await saveQueue(list);
+        await render();
+        ToastModule.show('Added to Practice Queue', { tone: 'good' });
+    }
+
+    async function toggleComplete(id) {
+        const list = await getQueue();
+        const item = list.find(x => x.id === id);
+        if (item) {
+            item.completed = !item.completed;
+            await saveQueue(list);
+            await render();
+        }
+    }
+
+    async function remove(id) {
+        let list = await getQueue();
+        list = list.filter(x => x.id !== id);
+        await saveQueue(list);
+        await render();
+    }
+
+    async function render() {
+        const listEl = $('queue-list');
+        const badgeEl = $('queue-count-badge');
+        if (!listEl) return;
+
+        const list = await getQueue();
+        if (badgeEl) badgeEl.textContent = String(list.filter(x => !x.completed).length);
+
+        if (!list.length) {
+            listEl.replaceChildren();
+            const empty = document.createElement('div');
+            empty.className = 'queue-empty';
+            empty.textContent = 'Practice queue is empty. Bookmark problems to solve later.';
+            listEl.appendChild(empty);
+            return;
+        }
+
+        listEl.replaceChildren();
+        list.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'queue-item' + (item.completed ? ' is-solved' : '');
+
+            const left = document.createElement('div');
+            left.className = 'queue-item-left';
+
+            const check = document.createElement('input');
+            check.type = 'checkbox';
+            check.className = 'queue-check';
+            check.checked = !!item.completed;
+            check.title = 'Mark as solved';
+            check.addEventListener('change', () => toggleComplete(item.id));
+
+            left.appendChild(check);
+
+            if (item.url) {
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.className = 'queue-link';
+                link.textContent = item.title;
+                left.appendChild(link);
+            } else {
+                const span = document.createElement('span');
+                span.className = 'queue-link';
+                span.textContent = item.title;
+                left.appendChild(span);
+            }
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'queue-del-btn';
+            del.textContent = '✕';
+            del.title = 'Remove problem';
+            del.addEventListener('click', () => remove(item.id));
+
+            row.append(left, del);
+            listEl.appendChild(row);
+        });
+    }
+
+    function init() {
+        const addToggle = $('queue-add-toggle');
+        const addBox = $('queue-add-box');
+        const addBtn = $('queue-add-btn');
+        const input = $('queue-input');
+
+        if (addToggle && addBox) {
+            addToggle.addEventListener('click', () => {
+                addBox.hidden = !addBox.hidden;
+                if (!addBox.hidden && input) input.focus();
+            });
+        }
+
+        if (addBtn && input) {
+            addBtn.addEventListener('click', () => {
+                add(input.value);
+                input.value = '';
+            });
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    add(input.value);
+                    input.value = '';
+                }
+            });
+        }
+
+        render();
+    }
+
+    return { init, add, render };
 })();
 
 // ══════════════════════════════════════════════════════
@@ -767,9 +1045,26 @@ const TimerActions = (() => {
         chrome.runtime.sendMessage({ type: 'TIMER_PAUSED', state }).catch(() => {});
     }
 
-    function reset() {
+    async function reset() {
+        const state = TimerModule.getState();
+        if (state.mode === 'stopwatch') {
+            const elapsed = state.status === 'RUNNING'
+                ? state.elapsed + (Date.now() - state.lastStarted)
+                : state.elapsed;
+            if (elapsed >= 60000) { // Auto-log stopwatch sessions >= 1 min
+                const activeProblem = await detectActiveProblemContext();
+                await SessionModule.log(elapsed, {
+                    mode: 'stopwatch',
+                    problem: activeProblem?.title || activeProblem?.code || 'Stopwatch Focus'
+                });
+                await TimerUIModule.refreshStats();
+                if (typeof PracticeLedgerUI !== 'undefined') PracticeLedgerUI.render();
+                ToastModule.show(`Stopwatch logged · ${formatFocusSpan(elapsed)}`, { tone: 'good', ttl: 3400 });
+            }
+        }
+
         TimerInterval.stop();
-        const next = { ...TimerModule.defaultTimerState(), mode: TimerModule.getState().mode };
+        const next = { ...TimerModule.defaultTimerState(), mode: state.mode };
         TimerModule.setState(next);
         TimerModule.saveTimerState(next);
         TimerUIModule.render();
@@ -791,8 +1086,13 @@ const TimerActions = (() => {
         chrome.runtime.sendMessage({ type: 'TIMER_FINISHED', state: next }).catch(() => {});
 
         if (completedMs > 0) {
-            await SessionModule.log(completedMs);
+            const activeProblem = await detectActiveProblemContext();
+            await SessionModule.log(completedMs, {
+                mode: 'countdown',
+                problem: activeProblem?.title || activeProblem?.code || 'Focus Session'
+            });
             await TimerUIModule.refreshStats();
+            if (typeof PracticeLedgerUI !== 'undefined') PracticeLedgerUI.render();
             TimerUIModule.flashComplete();
             ToastModule.show(`Session logged · ${formatFocusSpan(completedMs)}`, { tone: 'good', ttl: 3400 });
         }
@@ -1362,7 +1662,9 @@ const ContestRenderer = (() => {
         const timeItem = document.createElement('span');
         timeItem.className = 'rc-meta-item';
         const start = new Date(contest.start_time);
-        const dateStr = isNaN(start.getTime()) ? 'Unknown' : fmtDateTime(contest.start_time);
+        const dateStr = isNaN(start.getTime())
+            ? 'Unknown'
+            : (typeof formatContestDateTime === 'function' ? formatContestDateTime(contest.start_time) : fmtDateTime(contest.start_time));
         const timeIco = document.createElementNS(SVG_NS, 'svg');
         timeIco.setAttribute('class', 'rc-ico');
         timeIco.setAttribute('viewBox', '0 0 24 24');
@@ -1411,6 +1713,43 @@ const ContestRenderer = (() => {
             bot.append(timeItem, durItem);
         } else {
             bot.append(timeItem);
+        }
+
+        // 1-Click Add to Google Calendar
+        if (!isOngoing && typeof generateGoogleCalendarUrl === 'function') {
+            const calUrl = generateGoogleCalendarUrl(contest);
+            if (calUrl) {
+                const calLink = document.createElement('a');
+                calLink.href = calUrl;
+                calLink.target = '_blank';
+                calLink.rel = 'noopener';
+                calLink.className = 'rc-cal-btn';
+                calLink.title = 'Add to Google Calendar';
+
+                const calIco = document.createElementNS(SVG_NS, 'svg');
+                calIco.setAttribute('viewBox', '0 0 24 24');
+                calIco.setAttribute('width', '11');
+                calIco.setAttribute('height', '11');
+                calIco.setAttribute('fill', 'none');
+                calIco.setAttribute('stroke', 'currentColor');
+                calIco.setAttribute('stroke-width', '2');
+                const calRect = document.createElementNS(SVG_NS, 'rect');
+                calRect.setAttribute('x', '3');
+                calRect.setAttribute('y', '4');
+                calRect.setAttribute('width', '18');
+                calRect.setAttribute('height', '18');
+                calRect.setAttribute('rx', '2');
+                const calPath = document.createElementNS(SVG_NS, 'path');
+                calPath.setAttribute('d', 'M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4');
+                calIco.append(calRect, calPath);
+
+                const calText = document.createElement('span');
+                calText.textContent = '+Cal';
+
+                calLink.append(calIco, calText);
+                calLink.addEventListener('click', (e) => e.stopPropagation());
+                bot.appendChild(calLink);
+            }
         }
 
         card.append(top, title, bot);
@@ -1592,6 +1931,21 @@ const ContestRenderer = (() => {
                 onAction: btn => ContestListModule.refresh(btn)
             }));
     }
+    function updatePlatformCounts(items) {
+        if (typeof countContestsByPlatform !== 'function') return;
+        const counts = countContestsByPlatform(items);
+        const map = {
+            all: $('pf-count-all'),
+            CodeForces: $('pf-count-cf'),
+            AtCoder: $('pf-count-atcoder'),
+            CodeChef: $('pf-count-codechef'),
+            LeetCode: $('pf-count-leetcode')
+        };
+        for (const [key, node] of Object.entries(map)) {
+            if (node) node.textContent = `(${counts[key] || 0})`;
+        }
+    }
+
     function render(contests) {
         const list = $('contest-list');
         if (!list) return;
@@ -1603,6 +1957,7 @@ const ContestRenderer = (() => {
             cachedLater = [];
             syncTabs();
             syncNavBadge();
+            updatePlatformCounts([]);
             list.replaceChildren(stateBlock({
                 icon: ICON_CALENDAR,
                 title: 'Radar is clear',
@@ -1631,6 +1986,7 @@ const ContestRenderer = (() => {
 
         syncTabs();
         syncNavBadge();
+        updatePlatformCounts(cachedLater);
         renderCurrentTab();
         NextUpModule.update(items);
     }
@@ -2564,6 +2920,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     ReminderSettingsModule.init();
     PageFXModule.init();
     ContestRenderer.init();
+    PracticeLedgerUI.init();
+    PracticeQueueModule.init();
     StorageBridge.init();
     ContestListModule.showTimezone();
     InkBar.track(document.querySelector('.nav'), '.nav-ink', '.nav-tab');
