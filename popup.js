@@ -2108,26 +2108,213 @@ const FocusAlertsModule = (() => {
 // ══════════════════════════════════════════════════════
 
 const PageFXModule = (() => {
-    function wire(id, key, onLabel, offLabel) {
-        const toggle = $(id);
-        if (!toggle) return;
+    function playPreviewSound(style, volume) {
+        if (style === 'none') return;
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (!Ctx) return;
+            const ctx = new Ctx();
+            if (ctx.state === 'suspended') ctx.resume();
+            const now = ctx.currentTime;
+            const vol = Math.min(1, Math.max(0, volume));
 
-        chrome.storage.local.get({ [key]: false }).then(stored => {
-            toggle.checked = !!stored[key];
-        }).catch(() => {});
-
-        toggle.addEventListener('change', async e => {
-            const on = e.target.checked;
-            try { await chrome.storage.local.set({ [key]: on }); } catch (_) {}
-            // Content scripts watch ff_zenPaws / ff_acCelebrate directly, so the
-            // storage write is enough — no message round-trip required.
-            ToastModule.show(on ? onLabel : offLabel, { tone: on ? 'good' : 'info' });
-        });
+            switch (style) {
+                case 'fanfare':
+                    [
+                        { f: 523.25, t: 0, d: 0.16 },
+                        { f: 659.25, t: 0.12, d: 0.16 },
+                        { f: 783.99, t: 0.24, d: 0.22 },
+                        { f: 1046.50, t: 0.40, d: 0.75 }
+                    ].forEach(n => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(n.f, now + n.t);
+                        gain.gain.setValueAtTime(0, now + n.t);
+                        gain.gain.linearRampToValueAtTime(0.22 * vol, now + n.t + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + n.t + n.d);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + n.t);
+                        osc.stop(now + n.t + n.d + 0.05);
+                    });
+                    break;
+                case 'celestial':
+                    [659.25, 830.61, 987.77, 1318.51, 1479.98].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        const start = now + i * 0.06;
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, start);
+                        gain.gain.setValueAtTime(0, start);
+                        gain.gain.linearRampToValueAtTime(0.18 * vol, start + 0.015);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.85);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(start);
+                        osc.stop(start + 0.9);
+                    });
+                    break;
+                case 'arcade':
+                    [
+                        { f: 587.33, t: 0, d: 0.07 },
+                        { f: 739.99, t: 0.07, d: 0.07 },
+                        { f: 880.00, t: 0.14, d: 0.07 },
+                        { f: 1174.66, t: 0.21, d: 0.35 }
+                    ].forEach(n => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(n.f, now + n.t);
+                        gain.gain.setValueAtTime(0, now + n.t);
+                        gain.gain.linearRampToValueAtTime(0.12 * vol, now + n.t + 0.01);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + n.t + n.d);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + n.t);
+                        osc.stop(now + n.t + n.d);
+                    });
+                    break;
+                case 'zen':
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(432, now);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.25 * vol, now + 0.03);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 1.85);
+                    break;
+            }
+        } catch (_) {}
     }
 
-    function init() {
-        wire('paws-toggle', PAWS_KEY, 'Zen Paws on · they are on their way', 'Zen Paws off');
-        wire('ac-toggle', AC_KEY, 'AC celebration on · good luck out there', 'AC celebration off');
+    async function init() {
+        // ── 1. Zen Paws setup ──
+        const pawsToggle = $('paws-toggle');
+        const pawsOptions = $('paws-options');
+
+        const pawsStored = await chrome.storage.local.get({
+            [PAWS_KEY]: false,
+            ff_zenPaws_mode: 'playful',
+            ff_zenPaws_count: 3,
+            ff_zenPaws_size: 'normal'
+        });
+
+        if (pawsToggle) {
+            pawsToggle.checked = !!pawsStored[PAWS_KEY];
+            if (pawsOptions) pawsOptions.hidden = !pawsToggle.checked;
+
+            pawsToggle.addEventListener('change', async e => {
+                const on = e.target.checked;
+                try { await chrome.storage.local.set({ [PAWS_KEY]: on }); } catch (_) {}
+                if (pawsOptions) {
+                    pawsOptions.hidden = !on;
+                    if (on) pawsOptions.classList.add('is-animating');
+                }
+                ToastModule.show(on ? 'Zen Paws on · companions on their way' : 'Zen Paws off', { tone: on ? 'good' : 'info' });
+            });
+        }
+
+        // Paws radios: mode, count, size
+        document.querySelectorAll('input[name="paws_mode"]').forEach(radio => {
+            radio.checked = radio.value === pawsStored.ff_zenPaws_mode;
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_zenPaws_mode: radio.value }).catch(() => {});
+            });
+        });
+        document.querySelectorAll('input[name="paws_count"]').forEach(radio => {
+            radio.checked = Number(radio.value) === Number(pawsStored.ff_zenPaws_count);
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_zenPaws_count: Number(radio.value) }).catch(() => {});
+            });
+        });
+        document.querySelectorAll('input[name="paws_size"]').forEach(radio => {
+            radio.checked = radio.value === pawsStored.ff_zenPaws_size;
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_zenPaws_size: radio.value }).catch(() => {});
+            });
+        });
+
+        // ── 2. AC Celebration setup ──
+        const acToggle = $('ac-toggle');
+        const acOptions = $('ac-options');
+
+        const acStored = await chrome.storage.local.get({
+            [AC_KEY]: false,
+            ff_ac_style: 'full',
+            ff_ac_sound: 'fanfare',
+            ff_ac_volume: 0.7
+        });
+
+        if (acToggle) {
+            acToggle.checked = !!acStored[AC_KEY];
+            if (acOptions) acOptions.hidden = !acToggle.checked;
+
+            acToggle.addEventListener('change', async e => {
+                const on = e.target.checked;
+                try { await chrome.storage.local.set({ [AC_KEY]: on }); } catch (_) {}
+                if (acOptions) {
+                    acOptions.hidden = !on;
+                    if (on) acOptions.classList.add('is-animating');
+                }
+                ToastModule.show(on ? 'AC celebration on · good luck out there' : 'AC celebration off', { tone: on ? 'good' : 'info' });
+            });
+        }
+
+        // AC radios: style, sound
+        document.querySelectorAll('input[name="ac_style"]').forEach(radio => {
+            radio.checked = radio.value === acStored.ff_ac_style;
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_ac_style: radio.value }).catch(() => {});
+            });
+        });
+        document.querySelectorAll('input[name="ac_sound"]').forEach(radio => {
+            radio.checked = radio.value === acStored.ff_ac_sound;
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_ac_sound: radio.value }).catch(() => {});
+                // Play short preview when user selects a sound
+                const vol = Number($('ac-volume-slider')?.value || 70) / 100;
+                playPreviewSound(radio.value, vol);
+            });
+        });
+
+        // AC Volume Slider
+        const volSlider = $('ac-volume-slider');
+        const volVal = $('ac-volume-val');
+        if (volSlider && volVal) {
+            const initialVol = Math.round((typeof acStored.ff_ac_volume === 'number' ? acStored.ff_ac_volume : 0.7) * 100);
+            volSlider.value = initialVol;
+            volVal.textContent = `${initialVol}%`;
+
+            volSlider.addEventListener('input', () => {
+                volVal.textContent = `${volSlider.value}%`;
+                chrome.storage.local.set({ ff_ac_volume: Number(volSlider.value) / 100 }).catch(() => {});
+            });
+        }
+
+        // Preview celebration button
+        $('preview-ac-btn')?.addEventListener('click', async () => {
+            const soundRadio = document.querySelector('input[name="ac_sound"]:checked');
+            const sound = soundRadio ? soundRadio.value : 'fanfare';
+            const vol = Number($('ac-volume-slider')?.value || 70) / 100;
+
+            // 1. Play synthesized victory sound in popup
+            playPreviewSound(sound, vol);
+
+            // 2. Broadcast preview to active tab
+            try {
+                const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tabs[0]?.id) {
+                    chrome.tabs.sendMessage(tabs[0].id, { type: 'AC_CELEBRATE_PREVIEW' }).catch(() => {});
+                }
+            } catch (_) {}
+
+            ToastModule.show('Playing celebration preview', { tone: 'good' });
+        });
     }
 
     return { init };

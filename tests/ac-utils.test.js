@@ -141,3 +141,49 @@ describe('pickBurstParticles', () => {
         expect(a).toEqual(b);
     });
 });
+
+describe('pickCelebrationCopy', () => {
+    const { pickCelebrationCopy, AC_CELEBRATE_HEADLINES } = require('../ac-utils');
+
+    test('picks celebratory headline from curated list', () => {
+        const copy = pickCelebrationCopy(null, () => 0);
+        expect(AC_CELEBRATE_HEADLINES).toContain(copy.title);
+        expect(copy.subtitle).toContain('Accepted');
+    });
+
+    test('formats tailored subtitle when problem is provided', () => {
+        const copy = pickCelebrationCopy({ contestId: '2024', index: 'B' }, () => 0);
+        expect(copy.subtitle).toContain('2024B');
+    });
+});
+
+describe('pickConfettiParticles', () => {
+    const { pickConfettiParticles, AC_CELEBRATE_CONFETTI_COUNT } = require('../ac-utils');
+
+    test('generates full cascade of confetti particles', () => {
+        const confetti = pickConfettiParticles({ rand: RAND_05 });
+        expect(confetti).toHaveLength(AC_CELEBRATE_CONFETTI_COUNT);
+        confetti.forEach(c => {
+            expect(['ribbon', 'star', 'diamond']).toContain(c.shape);
+            expect(c.color).toMatch(/^#[0-9a-f]{6}$/i);
+            expect(Number.isFinite(c.vx)).toBe(true);
+            expect(Number.isFinite(c.vy)).toBe(true);
+        });
+    });
+});
+
+describe('parseSubmissionStats', () => {
+    const { parseSubmissionStats } = require('../ac-utils');
+
+    test('extracts time and memory from table row text', () => {
+        const stats = parseSubmissionStats('Accepted   124 ms   1800 KB   GNU C++20');
+        expect(stats.time).toBe('124 ms');
+        expect(stats.memory).toBe('1800 KB');
+    });
+
+    test('gracefully handles missing stats', () => {
+        const stats = parseSubmissionStats('Just Accepted');
+        expect(stats.time).toBeNull();
+        expect(stats.memory).toBeNull();
+    });
+});

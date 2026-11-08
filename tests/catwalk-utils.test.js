@@ -383,3 +383,77 @@ describe('shouldDropPawPrint', () => {
         expect(shouldDropPawPrint(c3, 1000)).toBe(false);
     });
 });
+
+describe('personalities and breeds', () => {
+    const { ZEN_PAWS_PERSONALITIES, pickPersonality } = require('../catwalk-utils');
+
+    test('picks deterministic personalities cycling across indices', () => {
+        expect(pickPersonality(0)).toBe('explorer');
+        expect(pickPersonality(1)).toBe('playful');
+        expect(pickPersonality(2)).toBe('loaf');
+        expect(pickPersonality(3)).toBe('sweet');
+        expect(pickPersonality(4)).toBe('explorer');
+    });
+
+    test('cats are created with personalities and breed metadata', () => {
+        const cats = createCats({ count: 4, viewportWidth: 1200, viewportHeight: 800 });
+        expect(cats[0].personality).toBe('explorer');
+        expect(cats[1].personality).toBe('playful');
+        expect(cats[2].personality).toBe('loaf');
+        expect(cats[3].personality).toBe('sweet');
+        expect(cats[0].palette.eye).toBeDefined();
+        expect(cats[0].palette.name).toBeDefined();
+    });
+});
+
+describe('petting interaction', () => {
+    const { startPet, effSpeed, isBusy } = require('../catwalk-utils');
+
+    test('petting puts cat in petted bliss with purr bubble and duration', () => {
+        const c = { pettedUntil: 0, action: 'walk' };
+        const res = startPet(c, 1000, () => 0);
+        expect(c.pettedUntil).toBe(3400); // 1000 + 2400
+        expect(c.action).toBe('petted');
+        expect(res.bubble).toBeDefined();
+        expect(effSpeed(c, 2000)).toBe(0);
+        expect(isBusy(c, 2000)).toBe(true);
+    });
+});
+
+describe('toy physics and interactions', () => {
+    const { spawnToy, stepToy, findCatToChaseToy, swatToy } = require('../catwalk-utils');
+
+    test('spawns a toy with initial upward bounce and lifetime', () => {
+        const toy = spawnToy({ x: 500, y: 400, now: 1000 });
+        expect(toy.x).toBe(500);
+        expect(toy.y).toBe(400);
+        expect(toy.vy).toBeLessThan(0);
+        expect(toy.expiresAt).toBe(13000);
+    });
+
+    test('stepToy applies gravity and handles floor bouncing', () => {
+        const toy = spawnToy({ x: 500, y: 400, now: 1000 });
+        toy.vy = 200; // falling down
+        const alive = stepToy(toy, 100, 600, 1000, 1100);
+        expect(alive).toBe(true);
+        expect(toy.y).toBeGreaterThan(400);
+    });
+
+    test('findCatToChaseToy picks eligible playful or explorer cat', () => {
+        const cats = [
+            { index: 0, x: 200, personality: 'loaf', meeting: null, pettedUntil: 0, actionUntil: 0 },
+            { index: 1, x: 250, personality: 'playful', meeting: null, pettedUntil: 0, actionUntil: 0 }
+        ];
+        const toy = { x: 300, expiresAt: 5000 };
+        const chosen = findCatToChaseToy(cats, toy, 1000);
+        expect(chosen).toBe(cats[1]); // playful cat preferred
+    });
+
+    test('swatToy imparts velocity to toy and makes cat hop', () => {
+        const toy = spawnToy({ x: 400, y: 600, now: 1000 });
+        const cat = { x: 380, hopUntil: 0 };
+        swatToy(toy, cat, 1000);
+        expect(toy.vx).toBeGreaterThan(0);
+        expect(cat.hopUntil).toBe(1500);
+    });
+});

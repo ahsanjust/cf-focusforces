@@ -1908,9 +1908,50 @@ kbd {
 }
 .tc-check svg { width: 10px; height: 10px; }
 .theme-card[aria-checked="true"] .tc-check { opacity: 1; transform: none; }/* ── Chips (reminder + alert intervals) ──────────────────────────────── */
-.reminder-section { display: flex; flex-direction: column; gap: 10px; }
-.reminder-section[hidden] { display: none; }
-.reminder-section.is-animating { animation: rise 0.3s var(--e-out) both; }
+.reminder-section,
+.fx-options { display: flex; flex-direction: column; gap: 10px; }
+.reminder-section[hidden],
+.fx-options[hidden] { display: none; }
+.reminder-section.is-animating,
+.fx-options.is-animating { animation: rise 0.3s var(--e-out) both; }
+
+.slider-group { align-items: center; }
+.slider-row { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; }
+.fx-slider {
+  flex: 1 1 auto;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-3);
+  border-radius: var(--r-full);
+  outline: none;
+  cursor: pointer;
+  border: 1px solid var(--line-soft);
+}
+.fx-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+  transition: transform 0.18s var(--e-out), filter 0.18s var(--e-io);
+}
+.fx-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
+}
+.slider-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 
 .rem-group { display: flex; align-items: flex-start; gap: 8px; }
 
