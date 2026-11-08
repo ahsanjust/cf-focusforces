@@ -7,8 +7,8 @@
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "npx web-ext lint",
-    "build": "npx web-ext build --overwrite-dest"
+    "lint": "node scripts/build-firefox.js lint",
+    "build": "node scripts/build-firefox.js build"
   },
   "devDependencies": {
     "jest": "^29.7.0",
