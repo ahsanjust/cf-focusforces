@@ -1,8 +1,9 @@
 {
   "name": "focusforces",
   "version": "2.1.0",
-  "private": true,
-  "description": "FocusForces Extension",
+  "description": "Precision focus chronometer, live contest radar, distraction-free Zen mode & custom themes for Codeforces, AtCoder, CodeChef, and LeetCode.",
+  "license": "MIT",
+  "author": "Ahsanul Haque <ahsanulhaque5588@gmail.com>",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",

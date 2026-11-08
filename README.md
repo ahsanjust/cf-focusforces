@@ -1,117 +1,221 @@
+<div align="center">
+
+<img src="icons/icon128.png" alt="FocusForces Logo" width="96" height="96" />
+
 # FocusForces
 
-A professional Chrome extension for competitive programmers featuring a universal timer, contest tracker, distraction-free mode, and multiple themes.
+### *The Ultimate Competitive Programming Companion*
 
-## Architecture
+An ultra-refined, distraction-free browser extension built for competitive programmers across **Codeforces**, **AtCoder**, **CodeChef**, and **LeetCode**.
 
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![Firefox MV3](https://img.shields.io/badge/Firefox-142%2B-ff7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/)
+[![Version](https://img.shields.io/badge/Version-2.1.0-emerald?style=for-the-badge)](package.json)
+[![Tests Passing](https://img.shields.io/badge/Tests-160%2F160%20Passed-success?style=for-the-badge&logo=jest&logoColor=white)](tests/)
+[![Code Quality](https://img.shields.io/badge/Linter-web--ext%200%20errors-blue?style=for-the-badge)](https://github.com/mozilla/web-ext)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+<br/>
+
+[Features](#-key-features) •
+[Supported Platforms](#-supported-platforms) •
+[Installation](#-installation--getting-started) •
+[Theme System](#-theme-system) •
+[Keyboard Shortcuts](#-keyboard-shortcuts) •
+[Architecture](#-architecture--codebase) •
+[Development](#-development--testing)
+
+</div>
+
+---
+
+## 💡 Why FocusForces?
+
+Competitive programming requires intense focus and rapid problem comprehension. Standard contest platforms often surround problem statements with distracting community chatter, unread blogs, spoiler tags, and clunky file upload dialogs.
+
+**FocusForces** eliminates the clutter while giving you an elite set of productivity tools: a precision focus chronometer that survives popup closes, a multi-platform contest radar with instant timezone conversion, in-place problem difficulty scouting without spoilers, full-width distraction-free Zen mode, and handcrafted dark themes that preserve iconic competitive programming rank colors.
+
+---
+
+## ⚡ Key Features
+
+### ⏱️ Precision Focus Chronometer
+- **Precision Dial Display:** Calibrated SVG dial with 60 engraved tick marks and 12 reinforced quarter markers.
+- **Dual Timing Engines:**
+  - **Countdown Mode:** Preset or custom countdown durations with danger threshold pulse (< 5 minutes).
+  - **Stopwatch Mode:** Seamless elapsed time tracking with dedicated status banner and head-bead silencing.
+- **Unbroken State Persistence:** Powered by `chrome.storage.local` and `chrome.alarms`—your timer keeps ticking accurately across popup closes, tab navigations, and browser restarts.
+- **Smart Milestone Alarms:** Optional audio alerts at `10m`, `5m`, `1m`, and `Time's Up!`, playable through on-page audio and offscreen documents with a built-in sound test button.
+
+### 📡 Multi-Platform Contest Radar
+- **4 Platforms in 1 Feed:** Live and upcoming rounds from **Codeforces**, **AtCoder**, **CodeChef**, and **LeetCode**.
+- **Modern 2-Row Cards:** Displays platform badge, real-time countdown, unclipped round titles, local start time, and duration.
+- **Instant Platform Filtering:** 1-click filter pills for `All`, `CF`, `AtCoder`, `CodeChef`, and `LeetCode`.
+- **Live Search:** Instant client-side search across all round titles with empty state recovery.
+- **Urgency Spine Indicators:** Color-coded card spines highlight rounds starting soon or currently in progress.
+- **Custom Contest Reminders:** Schedule notifications from 1 day up to 5 minutes prior to contest start.
+
+### 🧘 Zen Mode & Floating HUD
+- **Distraction-Free Problem View:** One click strips away headers, navigation bars, community stats, blog sideboxes, and footers.
+- **Full-Width Canvas:** Expands problem statements to maximize readable horizontal space.
+- **Persistent Tag & Scout Preservation:** Safely moves problem tags and the Scout widget into an accessible top bar without destroying DOM listeners.
+- **Zen HUD Bar:** Unobtrusive top toolbar displaying active Zen status with an instant "Exit Zen" action button.
+
+### 🕵️ Stealth Scout (Tags & Rating)
+- **Anti-Spoiler Practice:** Conceal problem difficulty ratings and topic tags while practicing so you aren't biased by known algorithmic techniques.
+- **On-Demand Peek:** Reveal tags or ratings with a single click when you need a nudge.
+- **Dual Retrieval Engine:** Instant DOM extraction with fallback to the Codeforces REST API.
+
+### 💻 Submitify Inline Code Editor
+- **No More File Uploads:** Replaces Codeforces' legacy file upload input with an inline syntax-styled monospace editor.
+- **Developer Ergonomics:** Full support for `Tab` key indentation (inserts 4 spaces instead of shifting focus) and `Ctrl+Enter` / `Cmd+Enter` form submission.
+- **PyPy Language Notices:** Helpful memory and execution hints when selecting Python/PyPy runtimes.
+
+### ✨ Ambient Companions & AC Celebration
+- **Zen Paws (Cat Walk):** Optional calming animated SVG cats that gracefully walk along the bottom of the viewport with custom pause, meeting, and cursor-interaction choreography.
+- **AC Celebration:** A gentle, celebratory ring of light and subtle chime whenever your submission verdict returns **Accepted (AC)**.
+
+---
+
+## 🎨 Theme System
+
+FocusForces features four meticulously engineered palettes designed for long contest sessions, with full Codeforces rank color preservation:
+
+| Theme | Aesthetic | Palette Details |
+| :--- | :--- | :--- |
+| **Paper Light** | Warm Editorial | Cream card surfaces (`#faf9f5`), crisp sepia borders (`#ded8ca`), and classic rank colors. |
+| **Midnight Dark** | Deep Navy Slate | Dark navy background (`#0a0b10`), elevated cards (`#12141d`), and indigo accent (`#a99bff`). |
+| **Ink AMOLED** | Pitch Black | Pure OLED black (`#000000`), subtle cards (`#0a0b0c`), and electric cyan accent (`#2fd6e8`). |
+| **Studio Contrast** | WCAG AAA Contrast | Pure black (`#000000`), bright yellow (`#facc15`), and high-definition borders (`#555555`). |
+
+### Codeforces Rank & Verdict Integrity
+- **Handle Ranks Preserved:** User handles retain their iconic rank hues (`.user-legendary`, `.user-red`, `.user-orange`, `.user-violet`, `.user-blue`, `.user-cyan`, `.user-green`, `.user-gray`).
+- **Legendary GM First-Letter Fix:** Restores the white first letter on dark themes (eliminating the classic black-on-black bug).
+- **Legible Verdicts:** TLE and MLE verdicts render in accessible sky blue (`#93c5fd`), eliminating invisible navy text on dark surfaces.
+- **Clean Sample Tests:** Sample test titles feature flexbox spacing with dedicated right-aligned "Copy" buttons.
+
+---
+
+## 🌐 Supported Platforms
+
+| Platform | Theme Integration | Contest Radar | Zen Mode | Scout Card | Submitify |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Codeforces** | ✅ Full | ✅ Live | ✅ Native | ✅ Full | ✅ Full |
+| **AtCoder** | ✅ Full | ✅ Live | ✅ Compatible | — | — |
+| **CodeChef** | ✅ Full | ✅ Live | ✅ Compatible | — | — |
+| **LeetCode** | — | ✅ Live | — | — | — |
+
+---
+
+## 🚀 Installation & Getting Started
+
+### Chrome, Brave, Edge & Chromium Browsers
+1. Clone or download this repository:
+   ```bash
+   git clone https://github.com/ahsanjust/cf-focusforces.git
+   cd cf-focusforces
+   ```
+2. Open your browser and navigate to the Extensions page:
+   - Chrome / Brave: `chrome://extensions/`
+   - Edge: `edge://extensions/`
+3. Toggle on **Developer mode** (top right switch).
+4. Click **Load unpacked** and select the `cf-focusforces` project root folder.
+5. Pin the **FocusForces** icon to your toolbar for quick access.
+
+### Mozilla Firefox
+1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on...**
+3. Select the `manifest.json` file inside the `cf-focusforces` folder.
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Context | Action |
+| :--- | :--- | :--- |
+| `Tab` | Submitify Codearea | Inserts 4 spaces for clean indentation |
+| `Ctrl + Enter` / `Cmd + Enter` | Submitify Codearea | Instantly submits the solution |
+| `Click Outside` | Live Search | Clears and collapses active contest filters |
+
+---
+
+## 🏗️ Architecture & Codebase
+
+The extension is architected according to **Chrome Manifest V3** and **Firefox WebExtension** standards with zero third-party runtime frameworks for maximum performance and security:
+
+```text
+cf-focusforces/
+├── manifest.json            # Extension configuration (MV3 permissions, CSP, content scripts)
+├── background.js            # Background service worker (alarms, notifications, audio routing)
+├── popup.html               # Popup interface (Chronometer, Radar, Settings tabs)
+├── popup.js                 # Popup state management, DOM rendering & event handlers
+├── popup.css                # Scoped theme tokens, responsive layouts, micro-animations
+├── content.js               # Content script (Zen mode DOM manager, Scout engine, theme sync)
+├── content.css              # Content script styles (Zen layout, Scout card, HUD bar)
+├── cf-theme.css             # Codeforces dark/amoled/contrast CSS overrides
+├── atcoder-theme.css        # AtCoder theme stylesheets
+├── codechef-theme.css       # CodeChef theme stylesheets
+├── submitify.js             # Inline code submission controller
+├── catwalk.js               # Zen Paws companion animation loop (Shadow DOM)
+├── catwalk-utils.js         # Pure mathematical utilities for companion movement
+├── accelebrate.js           # AC Celebration burst controller (Shadow DOM)
+├── ac-utils.js              # Pure verdict parsing and particle math utilities
+├── timer-utils.js           # Pure timer state machine & alarm calculation engine
+├── contest-utils.js         # Contest data transformation, sorting & filtering logic
+├── offscreen.html / .js     # Dedicated audio playback document for cross-page sound alerts
+├── tests/                   # Jest unit test suites for all utility modules
+├── assets/notify.wav        # Audio notification chime
+└── icons/                   # High-DPI application icons (16, 48, 128px)
 ```
-FocusForces/
-├── manifest.json        # Extension manifest (MV3)
-├── background.js        # Service worker: alarms, notifications, timer monitoring, badge
-├── popup.html           # Popup UI entry point
-├── popup.js             # Popup logic: timer, theme, contests, settings
-├── popup.css            # Popup styles with full theme system
-├── content.js           # Content script: Zen Mode, Scout, Theme Sync
-├── content.css          # Content script styles (theme-aware, Zen layout)
-├── timer-utils.js       # Pure timer state machine + alarm scheduling (shared & tested)
-├── contest-utils.js     # Pure contest helpers + shared constants (shared & tested)
-├── catwalk-utils.js     # Pure Zen Paws logic: cat movement, meetings, paw prints (shared & tested)
-├── catwalk.js           # Zen Paws overlay: Shadow DOM, SVG cats, rAF animation loop
-├── ac-utils.js          # Pure AC Celebration logic: URL parsing, dedup, burst geometry (shared & tested)
-├── accelebrate.js       # AC Celebration overlay: verdict watcher, Shadow DOM burst, soft chime
-├── submitify.js         # Inline code submission helper (Codeforces)
-├── offscreen.html       # Offscreen audio document (plays sounds on any page)
-├── offscreen.js         # Offscreen audio logic
-├── assets/
-│   └── notify.wav       # Timer notification sound
-├── icons/               # Extension icons
-├── tests/               # Jest unit tests for the pure utility modules
-├── jest.config.js       # Test configuration
-└── package.json         # Project metadata
-```
 
-## Development
+---
+
+## 🧪 Development & Testing
+
+FocusForces maintains a test suite covering timer state transitions, milestone alarms, contest formatting, and animation physics:
 
 ```bash
-npm test          # Run unit tests
-npm run test:watch # Watch mode
+# Install dependencies
+npm install
+
+# Run Jest unit test suite (160 tests)
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run Mozilla web-ext linter for manifest and security checks
+npm run lint
+
+# Build production ZIP package
+npm run build
 ```
 
-## Features
+---
 
-### Theme System
-- **4 professional themes**: Default, Dark, AMOLED, High Contrast
-- Smooth theme switching via dot picker in popup (keyboard-navigable)
-- Persistent theme selection across sessions
-- Theme syncs to Codeforces/AtCoder/CodeChef pages and the Scout card
-- CSS custom property architecture for clean, maintainable theming
+## 🛡️ Privacy & Permissions
 
-### Universal Focus Timer
-- **Countdown mode**: Set custom duration, counts down to zero
-- **Stopwatch mode**: Count up from zero for elapsed time tracking
-- Start / Pause / Resume / Reset controls
-- Timer persists in `chrome.storage.local` — survives popup close and browser restart
-- Background service worker monitors timer via alarms for reliable notifications
-- Content script sidebar timer on Codeforces problem pages stays in sync
-- Danger state (red pulsing) when under 5 minutes remain
-- Milestone notifications: 10min, 5min, 1min before end, and Time's Up!
+FocusForces values your privacy:
+- **No Personal Data Collected:** FocusForces does not track your browsing history or transmit your credentials.
+- **Local Storage Only:** All settings, timer states, and cached contest schedules are stored strictly in `chrome.storage.local` on your machine.
+- **Open Source:** Every line of code is inspectable in this repository.
 
-### Contest Tracker
-- Aggregates contests from **Codeforces**, **CodeChef**, **AtCoder**, and **LeetCode**
-- Tabbed view: "Next 24 Hours" and "All Contests"
-- Live contest badges with pulsing indicator
-- Urgency badges (< 1h critical, < 4h high)
-- 2-minute cache for main contests, 30-minute cache for gym contests
-- Click any contest card to open in a new tab
+---
 
-### Contest Reminders
-- Configurable on/off toggle in popup
-- **Customizable reminder intervals**: 1 day, 12 hours, 5 hours, 2 hours, 1 hour, 30 minutes, 10 minutes, 5 minutes before contests
-- Multi-platform support: Codeforces, CodeChef, AtCoder, LeetCode
-- Prevents duplicate notifications via storage flags
-- Notifications auto-dismiss after 5 seconds
-- Reliable scheduling via chrome.alarms (survives browser restart)
+## 🤝 Contributing
 
-### Timer Notifications
-- **10 / 5 / 1 Minute Left** + **Time's Up!** — each milestone is independently toggleable via chips in the popup
-- Master on/off switch for all timer notifications
-- Auto-dismiss after 8 seconds (no manual dismissal needed)
-- Background alarms ensure notifications fire even if popup is closed
-- Sound plays on the active page, with an offscreen-audio fallback for non-supported sites
-- Finish notification is guaranteed exactly-once (popup-vs-alarm race proof)
+Contributions, feature suggestions, and bug reports are warmly welcome!
+1. Fork the Project.
+2. Create your Feature Branch (`git checkout -b feat/AmazingFeature`).
+3. Commit your Changes (`git commit -m 'feat: add some AmazingFeature'`).
+4. Ensure all tests and linting pass (`npm test && npm run lint`).
+5. Push to the Branch (`git push origin feat/AmazingFeature`).
+6. Open a Pull Request.
 
-### Zen Mode
-- Hides distractions (header, nav bar, community stats, news, footer, sidebar)
-- Full-width problem statement for distraction-free solving
-- Preserves the Scout card and Problem Tags by moving them into a toolbar above the statement
-- Toggle synced via `chrome.storage.local`
+---
 
-### Zen Paws (Cat Walk)
-- Small, viewport-scaled SVG cats roam the bottom of the page for a calm, enchanting vibe
-- Cat density scales with screen width (2–5 cats); cats are 34–84px tall and never block content (`pointer-events: none` overlay)
-- Cats pause to rest, blink, leave fading paw prints, and float dust-motes drift upward
-- **Meeting choreography**: when two cats cross paths they stop, face each other, hop, share a `meow~` / `♥` bubble, then pass on (per-pair cooldown prevents repeat greetings)
-- **Cursor awareness**: a cat near your mouse sits and watches you, occasionally meowing
-- Shadow-DOM overlay isolates the animation from the host page's CSS (and vice versa)
-- Single `requestAnimationFrame` loop with delta-time; all movement via GPU-composited `transform: translate3d`; loop pauses when the tab is hidden
-- Respects `prefers-reduced-motion` (feature stays off); pure logic in `catwalk-utils.js` is unit-tested
-- Toggle synced via `chrome.storage.local` (`ff_zenPaws`)
+## 📄 License
 
-### AC Celebration
-- A calm, tasteful burst of light when a Codeforces submission is Accepted — a soft expanding ring, a gentle "Accepted" pill, and a few glowing sparks that drift outward and fade (plus a quiet chime)
-- Detects Accepted verdicts via DOM observation (covers live/AJAX updates) and an initial scan (covers the classic submit-then-reload flow)
-- Problem-scoped dedup persisted in `chrome.storage.local`, so a post-submit page reload never re-fires and old solved problems don't spam you on revisit
-- Shadow-DOM overlay, `pointer-events: none`, pure CSS transform/opacity animations; respects `prefers-reduced-motion`
-- Pure logic in `ac-utils.js` is unit-tested; toggle synced via `chrome.storage.local` (`ff_acCelebrate`)
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more details.
 
-### Scout (Tag Toggler)
-- Extracts problem tags and rating from DOM or Codeforces API
-- Two-step API strategy: fast `contest.standings` then fallback `problemset.problems`
-- Toggle visibility of topics and rating independently
-- Caches API response for performance
-- Handles gym, contest, problemset, and group URLs
-
-### Inline Submit (Submitify)
-- Replaces file upload with a textarea for direct code submission
-- Opens submissions in a new tab
-- PyPy performance notice for applicable languages
+Developed with ❤️ by [Ahsanul Haque](https://github.com/ahsanjust).
