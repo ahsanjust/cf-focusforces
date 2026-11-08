@@ -861,9 +861,10 @@ const TimerRecovery = (() => {
 
 const ViewModule = (() => {
     let current = 'focus';
+    const VIEWS = ['focus', 'contests', 'settings'];
 
     function set(view, { focus = false } = {}) {
-        if (view !== 'focus' && view !== 'contests') return;
+        if (!VIEWS.includes(view)) return;
         current = view;
         document.body.dataset.view = view;
 
@@ -875,6 +876,8 @@ const ViewModule = (() => {
             tab.tabIndex = on ? 0 : -1;
             if (on) activeTab = tab;
         });
+
+        $('open-settings')?.classList.toggle('is-active', view === 'settings');
 
         // Accent rule follows the active tab (measured, so it survives zoom).
         InkBar.place(document.querySelector('.nav-ink'), activeTab);
@@ -889,7 +892,10 @@ const ViewModule = (() => {
         faded.forEach(section => { section.scrollTop = 0; });
 
         if (focus) {
-            const target = view === 'focus' ? $('timer-action') : $('refresh-btn');
+            let target = null;
+            if (view === 'focus') target = $('timer-action');
+            else if (view === 'contests') target = $('refresh-btn');
+            else if (view === 'settings') target = $('test-sound-btn');
             target?.focus({ preventScroll: true });
         }
     }
@@ -900,9 +906,14 @@ const ViewModule = (() => {
             tab.addEventListener('keydown', e => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
-                set(tab.dataset.view === 'focus' ? 'contests' : 'focus', { focus: true });
+                const idx = VIEWS.indexOf(tab.dataset.view);
+                const nextIdx = e.key === 'ArrowRight'
+                    ? (idx + 1) % VIEWS.length
+                    : (idx - 1 + VIEWS.length) % VIEWS.length;
+                set(VIEWS[nextIdx], { focus: true });
             });
         });
+        $('open-settings')?.addEventListener('click', () => set('settings', { focus: true }));
         set('focus');
     }
 
@@ -910,45 +921,23 @@ const ViewModule = (() => {
 })();
 
 // ═════════════════════════════════════════════════════
-// MODULE: Settings sheet
+// MODULE: Settings sheet / view bridge
 // ═════════════════════════════════════════════════════
 
 const SettingsSheetModule = (() => {
-    let sheet = null;
-    let scrim = null;
-    let isOpen = false;
-
     function open() {
-        if (isOpen) return;
-        isOpen = true;
-        scrim.hidden = false;
-        sheet.classList.add('is-open');
-        sheet.setAttribute('aria-hidden', 'false');
-        requestAnimationFrame(() => scrim.classList.add('is-open'));
-        $('close-settings')?.focus({ preventScroll: true });
+        ViewModule.set('settings', { focus: true });
     }
 
     function close({ restoreFocus = true } = {}) {
-        if (!isOpen) return;
-        isOpen = false;
-        sheet.classList.remove('is-open');
-        sheet.setAttribute('aria-hidden', 'true');
-        scrim.classList.remove('is-open');
-        setTimeout(() => { if (!isOpen) scrim.hidden = true; }, 320);
-        if (restoreFocus) $('open-settings')?.focus({ preventScroll: true });
+        ViewModule.set('focus', { focus: restoreFocus });
     }
 
     function init() {
-        sheet = $('settings-sheet');
-        scrim = $('scrim');
-        if (!sheet || !scrim) return;
-
         $('open-settings')?.addEventListener('click', open);
-        $('close-settings')?.addEventListener('click', () => close());
-        scrim.addEventListener('click', () => close());
     }
 
-    return { init, open, close, get isOpen() { return isOpen; } };
+    return { init, open, close, get isOpen() { return ViewModule.get() === 'settings'; } };
 })();
 
 // ═════════════════════════════════════════════════════
@@ -970,15 +959,15 @@ const KeyboardModule = (() => {
                 return;
             }
 
-            if (e.key === 'Escape' && SettingsSheetModule.isOpen) {
+            if (e.key === 'Escape' && ViewModule.get() === 'settings') {
                 e.preventDefault();
-                SettingsSheetModule.close();
+                ViewModule.set('focus');
                 return;
             }
 
             if (e.metaKey || e.ctrlKey || e.altKey) return;
             if (isTypingTarget(e.target)) return;
-            if (SettingsSheetModule.isOpen || OnboardingModule.isOpen) return;
+            if (OnboardingModule.isOpen) return;
 
             // Buttons already handle Space/Enter themselves.
             if (e.target?.closest?.('button') && (e.key === ' ' || e.key === 'Enter')) return;
@@ -993,6 +982,8 @@ const KeyboardModule = (() => {
                 ViewModule.set('focus');
             } else if (e.key === '2') {
                 ViewModule.set('contests');
+            } else if (e.key === '3') {
+                ViewModule.set('settings');
             }
         });
     }

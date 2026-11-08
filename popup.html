@@ -32,10 +32,10 @@
         <span class="lamp" aria-hidden="true"></span>
         <span id="live-chip-time">00:00</span>
       </button>
-      <button type="button" class="icon-btn" id="open-settings" aria-label="Open settings" title="Settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 7h10M18 7h2M4 12h4M12 12h8M4 17h13M20 17h0"/>
-          <circle cx="16" cy="7" r="2.1"/><circle cx="10" cy="12" r="2.1"/><circle cx="19" cy="17" r="2.1"/>
+      <button type="button" class="icon-btn" id="open-settings" aria-label="Open settings" title="Settings (Shortcut: 3)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
         </svg>
       </button>
     </div>
@@ -52,6 +52,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9.5h16M8 4.5V7M16 4.5V7"/><rect x="4" y="6.2" width="16" height="13.3" rx="2.6"/></svg>
       <span>Radar</span>
       <span class="nav-badge" id="nav-contest-count" hidden>0</span>
+    </button>
+    <button type="button" class="nav-tab" id="tab-settings" data-view="settings" role="tab" aria-selected="false" aria-controls="view-settings" title="Settings & preferences (Shortcut: 3)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>Settings</span>
     </button>
   </nav>
 
@@ -154,20 +158,6 @@
         </div>
       </article>
 
-      <div class="row-card" id="zen-row">
-        <span class="row-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2.6 12S6.1 6.6 12 6.6 21.4 12 21.4 12 17.9 17.4 12 17.4 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
-        </span>
-        <span class="row-text">
-          <span class="row-title">Zen Mode</span>
-          <span class="row-sub">Declutter Codeforces for distraction-free solving</span>
-        </span>
-        <label class="switch" title="Toggle Zen Mode">
-          <input type="checkbox" id="zen-toggle" aria-label="Toggle Zen Mode">
-          <span class="switch-track"><span class="switch-thumb"></span></span>
-        </label>
-      </div>
-
       <div class="nextup-slot" id="next-up"></div>
     </section>
 
@@ -211,17 +201,10 @@
         <span id="tz-label">local time</span>
       </div>
     </section>
-  </main>  <!-- ══ Settings sheet ════════════════════════════════════════════ -->
-  <aside class="sheet" id="settings-sheet" role="dialog" aria-modal="true" aria-label="Settings" aria-hidden="true">
-    <header class="sheet-head">
-      <button type="button" class="icon-btn" id="close-settings" aria-label="Close settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.6 19 7.6 12l7-7"/></svg>
-      </button>
-      <span class="sheet-title">Settings</span>
-      <span class="sheet-version">v2.1</span>
-    </header>
 
-    <div class="sheet-body">
+    <!-- ── Settings ─────────────────────────────────────────────── -->
+    <section class="view" id="view-settings" role="tabpanel" aria-labelledby="tab-settings" aria-hidden="true">
+      <div class="sheet-body">
       <!-- ── Appearance ── -->
       <section class="sheet-sec">
         <div class="sec-head">
@@ -404,11 +387,25 @@
           </div>
           <p class="rem-note">One reminder always stays on — flip the switch above to silence them all.</p>
         </div>
-      </section>      <!-- ── On the page ── -->
+      </section>      <!-- ── Zen Mode & Page Tools ── -->
       <section class="sheet-sec">
         <div class="sec-head">
-          <h2 class="sec-title">On the page</h2>
-          <p class="sec-hint">Small delights while you solve.</p>
+          <h2 class="sec-title">Zen Mode & Page Tools</h2>
+          <p class="sec-hint">Distraction-free solving and delight on Codeforces.</p>
+        </div>
+
+        <div class="row-card" id="zen-row">
+          <span class="row-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><path d="M2.6 12S6.1 6.6 12 6.6 21.4 12 21.4 12 17.9 17.4 12 17.4 2.6 12 2.6 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+          </span>
+          <span class="row-text">
+            <span class="row-title">Zen Mode</span>
+            <span class="row-sub">Strips sidebars, banners, and stats on Codeforces</span>
+          </span>
+          <label class="switch" title="Toggle Zen Mode">
+            <input type="checkbox" id="zen-toggle" aria-label="Toggle Zen Mode">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
         </div>
 
         <div class="row-card">
@@ -448,8 +445,8 @@
         <div class="card keys-card">
           <div class="key-row"><span>Start / pause the session</span><kbd>space</kbd></div>
           <div class="key-row"><span>Reset the session</span><kbd>R</kbd></div>
-          <div class="key-row"><span>Switch deck</span><kbd>1</kbd><kbd>2</kbd></div>
-          <div class="key-row"><span>Close settings</span><kbd>Esc</kbd></div>
+          <div class="key-row"><span>Switch tabs</span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></div>
+          <div class="key-row"><span>Return to timer</span><kbd>Esc</kbd></div>
         </div>
       </section>
 
@@ -487,7 +484,8 @@
         </div>
       </section>
     </div>
-  </aside>
+  </section>
+</main>
 
   <div class="scrim" id="scrim" hidden></div><!-- ══ First-run intro ══════════════════════════════════════════ -->
   <section class="onboard" id="onboard" role="dialog" aria-modal="true" aria-label="Welcome to FocusForces" hidden aria-hidden="true">

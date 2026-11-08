@@ -208,15 +208,22 @@
   --p-cc: #ffadad;
 }
 
-html { background: var(--app); }
+html {
+  width: 400px;
+  height: 600px;
+  max-height: 600px;
+  overflow: hidden !important;
+  background: var(--app);
+}
 
 body {
   width: 400px;
   height: 600px;
+  max-height: 600px;
   margin: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden !important;
   position: relative;
   isolation: isolate;
   font-family: var(--font-ui);
@@ -466,6 +473,11 @@ kbd {
 .icon-btn:hover { color: var(--ink); background: var(--surface-3); border-color: var(--line-soft); }
 .icon-btn:active { transform: scale(0.94); }
 .icon-btn.is-spinning svg { animation: spin 0.9s linear infinite; }
+.icon-btn.is-active {
+  color: var(--accent);
+  background: var(--surface-3);
+  border-color: var(--accent-line);
+}
 .icon-btn-lg {
   width: 38px;
   height: 38px;
@@ -482,15 +494,15 @@ kbd {
   z-index: 3;
   flex: 0 0 auto;
   display: flex;
-  gap: 2px;
-  padding: 0 10px;
+  gap: 4px;
+  padding: 0 8px;
   background: var(--rail-bg);
   border-bottom: 1px solid var(--line-soft);
 }
 
 .nav-ink {
   position: absolute;
-  left: 10px;
+  left: 8px;
   bottom: -1px;
   width: 0;
   height: 2px;
@@ -501,12 +513,14 @@ kbd {
 }
 
 .nav-tab {
+  flex: 1 1 0;
+  justify-content: center;
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 38px;
-  padding: 0 12px;
+  padding: 0 6px;
   border: 0;
   background: transparent;
   color: var(--ink-3);
@@ -571,7 +585,7 @@ kbd {
 }/* ══════════════════════════════════════════════════════════════════════════
    VIEWS
    ═══════════════════════════════════════════════════════════════════════ */
-.views { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; }
+.views { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; overflow: hidden; }
 
 .view {
   position: absolute;
@@ -593,6 +607,25 @@ kbd {
   visibility: visible;
   transform: none;
   pointer-events: auto;
+}
+
+#view-focus {
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  gap: 8px;
+  padding: 8px 10px 10px;
+}
+
+#view-settings {
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#view-settings .sheet-body {
+  padding: 12px 12px 28px;
+  overflow: visible;
+  height: auto;
 }
 
 /* Staggered entrance — plays once per activation, never on idle re-renders. */
@@ -640,7 +673,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px 0;
+  padding: 10px 14px 0;
 }
 
 /* ── Segmented control (mode switch) ──────────────────────────────────── */
@@ -744,16 +777,16 @@ kbd {
 [data-ff-theme="contrast"] .switch input:checked + .switch-track .switch-thumb { background: #000000; box-shadow: none; }/* ══════════════════════════════════════════════════════════════════════════
    CHRONOMETER — the hero
    ═════════════════════════════════════════════════════════════════════════ */
-.chrono { --dial-size: 196px; padding: 0 0 2px; overflow: hidden; }
+.chrono { --dial-size: 176px; padding: 0 0 2px; overflow: hidden; }
 
 /* The well: a recessed, machined dish the dial sits inside. */
 .well {
   position: relative;
   display: grid;
   place-items: center;
-  width: calc(var(--dial-size) + 22px);
-  height: calc(var(--dial-size) + 22px);
-  margin: 8px auto 0;
+  width: calc(var(--dial-size) + 18px);
+  height: calc(var(--dial-size) + 18px);
+  margin: 4px auto 0;
   border-radius: 50%;
   background:
     radial-gradient(120% 120% at 50% 4%, var(--well-2) 0%, var(--well) 68%);
@@ -876,10 +909,10 @@ kbd {
 
 .readout-time {
   font-family: var(--font-mono);
-  font-size: 42px;
+  font-size: 38px;
   font-weight: 500;
   line-height: 1;
-  letter-spacing: -2.6px;
+  letter-spacing: -2px;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   transition: color 0.3s var(--e-io);
@@ -916,7 +949,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 14px 14px 0;
+  padding: 10px 14px 0;
 }
 .presets[hidden] { display: none !important; }
 
@@ -1021,7 +1054,7 @@ kbd {
   letter-spacing: 0.9px;
   color: var(--ink-3);
 }/* ── Actions ──────────────────────────────────────────────────────────── */
-.chrono-actions { display: flex; gap: 8px; padding: 12px 14px 0; }
+.chrono-actions { display: flex; gap: 8px; padding: 10px 14px 0; }
 
 .btn {
   position: relative;
@@ -1092,8 +1125,8 @@ kbd {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
-  padding: 10px 14px;
+  margin-top: 10px;
+  padding: 8px 14px;
   border-top: 1px solid var(--line-soft);
   background: var(--surface-2);
   border-radius: 0 0 calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px);
@@ -1609,8 +1642,7 @@ kbd {
    NEXT-UP STRIP (Focus view)
    ═════════════════════════════════════════════════════════════════════════ */
 /* The next contest is more useful than a page preference — it sits higher. */
-.nextup-slot { display: flex; flex-direction: column; order: 1; }
-#zen-row { order: 2; }
+.nextup-slot { display: flex; flex-direction: column; }
 
 .nextup {
   position: relative;
@@ -2236,31 +2268,27 @@ svg[hidden] { display: none; }
 }
 
 /* ── Scrollbars: thin, inked, out of the way ─────────────────────────── */
-.view::-webkit-scrollbar,
-.radar::-webkit-scrollbar,
-.sheet-body::-webkit-scrollbar,
-.onboard::-webkit-scrollbar { width: 8px; }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
 
-.view::-webkit-scrollbar-track,
-.radar::-webkit-scrollbar-track,
-.sheet-body::-webkit-scrollbar-track,
-.onboard::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
 
-.view::-webkit-scrollbar-thumb,
-.radar::-webkit-scrollbar-thumb,
-.sheet-body::-webkit-scrollbar-thumb,
-.onboard::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
   background: var(--line);
-  border: 2px solid transparent;
-  background-clip: content-box;
   border-radius: var(--r-full);
 }
-.view::-webkit-scrollbar-thumb:hover,
-.radar::-webkit-scrollbar-thumb:hover,
-.sheet-body::-webkit-scrollbar-thumb:hover,
-.onboard::-webkit-scrollbar-thumb:hover {
+
+::-webkit-scrollbar-thumb:hover {
   background: var(--line-strong);
-  background-clip: content-box;
 }
 
 /* ── Narrow popups (zoomed UI, small windows) ────────────────────────── */
