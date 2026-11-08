@@ -9,7 +9,7 @@
 An ultra-refined, distraction-free browser extension built for competitive programmers across **Codeforces**, **AtCoder**, **CodeChef**, and **LeetCode**.
 
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![Firefox MV3](https://img.shields.io/badge/Firefox-142%2B-ff7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/)
+[![Firefox Add-on](https://img.shields.io/badge/Firefox%20Add--on-Official%20Store-ff7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/focusforces/)
 [![Version](https://img.shields.io/badge/Version-2.1.0-emerald?style=for-the-badge)](package.json)
 [![Tests Passing](https://img.shields.io/badge/Tests-160%2F160%20Passed-success?style=for-the-badge&logo=jest&logoColor=white)](tests/)
 [![Code Quality](https://img.shields.io/badge/Linter-web--ext%200%20errors-blue?style=for-the-badge)](https://github.com/mozilla/web-ext)
@@ -122,10 +122,13 @@ FocusForces features four meticulously engineered palettes designed for long con
 4. Click **Load unpacked** and select the `cf-focusforces` project root folder.
 5. Pin the **FocusForces** icon to your toolbar for quick access.
 
-### Mozilla Firefox
-1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on...**
-3. Select the `manifest.json` file inside the `cf-focusforces` folder.
+### 🦊 Mozilla Firefox
+- **Official Store (Recommended):** Install directly from Mozilla with automatic updates:
+  👉 **[Add to Firefox (addons.mozilla.org)](https://addons.mozilla.org/en-US/firefox/addon/focusforces/)**
+- **From Source (Developer):**
+  1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+  2. Click **Load Temporary Add-on...**
+  3. Select the `manifest.json` file inside the cloned `cf-focusforces` folder.
 
 ---
 
