@@ -47,19 +47,19 @@
   "content_scripts": [
     {
       "matches": ["https://codeforces.com/*"],
-      "js": ["timer-utils.js", "content.js", "submitify.js", "catwalk-utils.js", "catwalk.js", "ac-utils.js", "accelebrate.js"],
+      "js": ["zen-utils.js", "timer-utils.js", "content.js", "submitify.js", "catwalk-utils.js", "catwalk.js", "ac-utils.js", "accelebrate.js"],
       "css": ["content.css", "cf-theme.css"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://atcoder.jp/*"],
-      "js": ["timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
+      "js": ["zen-utils.js", "timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
       "css": ["content.css", "atcoder-theme.css"],
       "run_at": "document_start"
     },
     {
       "matches": ["https://www.codechef.com/*"],
-      "js": ["timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
+      "js": ["zen-utils.js", "timer-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
       "css": ["content.css", "codechef-theme.css"],
       "run_at": "document_start"
     }

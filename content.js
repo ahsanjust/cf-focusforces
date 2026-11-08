@@ -26,12 +26,33 @@
 
     // ── Constants & Config ─────────────────────────────
     const IS_CF = window.location.hostname.includes('codeforces.com');
+    const IS_ATCODER = window.location.hostname.includes('atcoder.jp');
+    const IS_CODECHEF = window.location.hostname.includes('codechef.com');
+    const PLATFORM = (typeof ZenUtils !== 'undefined')
+        ? ZenUtils.detectPlatform(window.location.hostname)
+        : (IS_CF ? 'codeforces' : IS_ATCODER ? 'atcoder' : IS_CODECHEF ? 'codechef' : 'other');
+
     const CONFIG = {
-        ZEN_SELECTORS: IS_CF ? [
+        ZEN_SELECTORS: PLATFORM === 'codeforces' ? [
+            '#header',
+            '.roundbox.menu-box',
             '.community-stats-box',
-            '.roundbox.menu-box:not(:first-child)',
-            '#header > div:first-child',
             '.news-item',
+            '.footer',
+            '#sidebar'
+        ] : PLATFORM === 'atcoder' ? [
+            '.navbar',
+            '#header',
+            '#footer',
+            '.alert-info',
+            '.alert-warning',
+            '.btn-text-group'
+        ] : PLATFORM === 'codechef' ? [
+            '#top-bar',
+            '.top-bar',
+            '.sidebar-widget',
+            '#sidebar',
+            '.footer-container',
             '.footer'
         ] : [],
         PROBLEMS_FETCH_TIMEOUT_MS: 15000,
@@ -42,6 +63,21 @@
 
     // ── State ──────────────────────────────────────────
     let zenModeEnabled = false;
+    let zenWidthMode = 'comfortable';
+    let zenFontSize = 'normal';
+    let zenCompanionVisible = true;
+    let zenHudEl = null;
+    let zenWorkspaceEl = null;
+    let zenCanvasEl = null;
+    let zenRailEl = null;
+    let zenDrawerEl = null;
+    let zenTimerInterval = null;
+    let zenScrollListener = null;
+    let zenKeydownListener = null;
+    let zenTargetNode = null;
+    let zenTargetOrigParent = null;
+    let zenTargetOrigSibling = null;
+    let zenRelocated = [];
     let problemCachePromise = null;
     let cachedAudioCtx = null;
     let currentTheme = 'default';
@@ -50,11 +86,6 @@
     let ffAbortCtrl = null;
     let ffTimeout = null;
     let themeGuard = null;
-
-    // Zen relocation bookkeeping: [{ box, parent, next }] for the sideboxes
-    // moved into the Zen toolbar, and the toolbar element itself.
-    let zenRelocated = [];
-    let zenToolbarEl = null;
 
     // ── Audio (for notification sounds triggered by background) ──
     const notifySound = new Audio(chrome.runtime.getURL('assets/notify.wav'));
@@ -260,10 +291,8 @@
                 break;
 
             case 'TOGGLE_ZEN':
-                if (IS_CF) {
-                    zenModeEnabled = !!req.enabled;
-                    applyZenMode(zenModeEnabled);
-                }
+                zenModeEnabled = !!req.enabled;
+                applyZenMode(zenModeEnabled);
                 break;
 
             case 'PLAY_TIMER_SOUND':
@@ -273,10 +302,6 @@
     });
 
     // ── Storage Change Watcher (reliable theme sync) ─────
-    // chrome.storage.onChanged fires in ALL extension contexts whenever
-    // storage values change. This provides a more reliable path for theme
-    // sync compared to chrome.runtime messaging, which can fail silently
-    // (e.g., when tab queries return no results).
     chrome.storage.onChanged.addListener((changes, area) => {
         if (area === 'local' && changes.ff_theme) {
             applyThemeFromSource(changes.ff_theme.newValue);
@@ -284,6 +309,33 @@
         if (area === 'local' && changes.ff_zenMode) {
             zenModeEnabled = !!changes.ff_zenMode.newValue;
             applyZenMode(zenModeEnabled);
+        }
+        if (area === 'local' && changes.ff_zen_width) {
+            zenWidthMode = changes.ff_zen_width.newValue || 'comfortable';
+            if (zenModeEnabled) {
+                document.body.setAttribute('data-ff-zen-width', zenWidthMode);
+                updateWidthButtonLabel();
+            }
+        }
+        if (area === 'local' && changes.ff_zen_font_size) {
+            zenFontSize = changes.ff_zen_font_size.newValue || 'normal';
+            if (zenModeEnabled) {
+                document.body.setAttribute('data-ff-zen-size', zenFontSize);
+                updateFontButtonLabel();
+            }
+        }
+        if (area === 'local' && changes.ff_zen_companion) {
+            zenCompanionVisible = changes.ff_zen_companion.newValue !== false;
+            if (zenModeEnabled && zenWorkspaceEl) {
+                const isWide = window.innerWidth >= 1360;
+                zenWorkspaceEl.classList.toggle('has-companion', isWide && zenCompanionVisible);
+                zenWorkspaceEl.classList.toggle('rail-hidden', !isWide || !zenCompanionVisible);
+            }
+        }
+        if (area === 'local' && changes.ff_timer_state) {
+            if (zenModeEnabled) {
+                updateZenTimerDisplay(changes.ff_timer_state.newValue);
+            }
         }
     });
 
@@ -434,96 +486,613 @@
         return boxes;
     }
 
-    function ensureZenToolbar() {
-        if (zenToolbarEl && zenToolbarEl.isConnected) return zenToolbarEl;
-        zenToolbarEl = document.createElement('div');
-        zenToolbarEl.id = 'ff-zen-toolbar';
-        zenToolbarEl.className = 'ff-zen-toolbar';
+    // ── FocusForces Zen Mode 2.0: Distraction-Free Problem Workspace ──
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
 
-        // Add a sleek HUD bar with mode indicator and one-click exit
-        const bar = document.createElement('div');
-        bar.className = 'ff-zen-bar';
+    const WIDTH_MODES = ['compact', 'comfortable', 'expansive'];
+    function cycleWidthMode() {
+        const nextIdx = (WIDTH_MODES.indexOf(zenWidthMode) + 1) % WIDTH_MODES.length;
+        zenWidthMode = WIDTH_MODES[nextIdx];
+        document.body.setAttribute('data-ff-zen-width', zenWidthMode);
+        updateWidthButtonLabel();
+        try { chrome.storage.local.set({ ff_zen_width: zenWidthMode }); } catch (_) {}
+    }
 
-        const badge = document.createElement('div');
-        badge.className = 'ff-zen-badge';
-        badge.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" aria-hidden="true">
-                <path d="M2.6 12S6.1 6.6 12 6.6 21.4 12 21.4 12 17.9 17.4 12 17.4 2.6 12 2.6 12Z"/>
-                <circle cx="12" cy="12" r="2.5"/>
-            </svg>
-            <span>Zen Mode Active</span>
+    const FONT_MODES = ['normal', 'large', 'xlarge'];
+    function cycleFontSize() {
+        const nextIdx = (FONT_MODES.indexOf(zenFontSize) + 1) % FONT_MODES.length;
+        zenFontSize = FONT_MODES[nextIdx];
+        document.body.setAttribute('data-ff-zen-size', zenFontSize);
+        updateFontButtonLabel();
+        try { chrome.storage.local.set({ ff_zen_font_size: zenFontSize }); } catch (_) {}
+    }
+
+    const THEME_CYCLE = ['default', 'dark', 'amoled', 'contrast'];
+    function cycleTheme() {
+        const nextIdx = (THEME_CYCLE.indexOf(currentTheme) + 1) % THEME_CYCLE.length;
+        const nextTheme = THEME_CYCLE[nextIdx];
+        applyThemeFromSource(nextTheme);
+        try { chrome.storage.local.set({ ff_theme: nextTheme }); } catch (_) {}
+    }
+
+    function updateWidthButtonLabel() {
+        const labelEl = document.getElementById('ff-zen-width-label');
+        if (labelEl) {
+            const map = { compact: '780px', comfortable: '920px', expansive: '1080px' };
+            labelEl.textContent = map[zenWidthMode] || '920px';
+        }
+    }
+
+    function updateFontButtonLabel() {
+        const labelEl = document.getElementById('ff-zen-font-label');
+        if (labelEl) {
+            const map = { normal: '100%', large: '110%', xlarge: '120%' };
+            labelEl.textContent = map[zenFontSize] || '100%';
+        }
+    }
+
+    function toggleCompanionRail() {
+        if (window.innerWidth >= 1360) {
+            zenCompanionVisible = !zenCompanionVisible;
+            if (zenWorkspaceEl) {
+                zenWorkspaceEl.classList.toggle('has-companion', zenCompanionVisible);
+                zenWorkspaceEl.classList.toggle('rail-hidden', !zenCompanionVisible);
+            }
+            try { chrome.storage.local.set({ ff_zen_companion: zenCompanionVisible }); } catch (_) {}
+        } else {
+            toggleZenDrawer();
+        }
+    }
+
+    function toggleZenDrawer() {
+        if (zenDrawerEl && zenDrawerEl.isConnected) {
+            zenDrawerEl.remove();
+            zenDrawerEl = null;
+            return;
+        }
+        zenDrawerEl = document.createElement('div');
+        zenDrawerEl.id = 'ff-zen-drawer';
+        zenDrawerEl.className = 'ff-zen-drawer';
+
+        const head = document.createElement('div');
+        head.className = 'ff-zen-rail-head';
+        head.innerHTML = `
+            <span class="ff-zen-rail-title">Problem Overview</span>
+            <button type="button" class="ff-zen-btn" style="padding:2px 8px; font-weight:bold;">✕</button>
+        `;
+        head.querySelector('button')?.addEventListener('click', () => {
+            zenDrawerEl?.remove();
+            zenDrawerEl = null;
+        });
+
+        zenDrawerEl.appendChild(head);
+
+        const keepers = getZenKeepBoxes();
+        keepers.forEach(box => {
+            zenDrawerEl.appendChild(box);
+        });
+
+        document.body.appendChild(zenDrawerEl);
+    }
+
+    function onQuickSubmitClick() {
+        const submitForm = document.querySelector('form.submit-form, form[action$="/submit"]');
+        if (submitForm) {
+            submitForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const area = submitForm.querySelector('textarea, input[type="file"]');
+            if (area) area.focus();
+            return;
+        }
+
+        if (PLATFORM === 'codeforces') {
+            const m = window.location.pathname.match(/\/contest\/(\d+)\/problem\/([A-Za-z0-9]+)/);
+            if (m) {
+                window.location.href = `/contest/${m[1]}/submit/${m[2]}`;
+                return;
+            }
+            const p = window.location.pathname.match(/\/problemset\/problem\/(\d+)\/([A-Za-z0-9]+)/);
+            if (p) {
+                window.location.href = `/problemset/submit`;
+                return;
+            }
+        }
+    }
+
+    async function updateZenTimerDisplay(stateOverride) {
+        const timerVal = document.getElementById('ff-zen-timer-val');
+        const timerDot = document.getElementById('ff-zen-timer-dot');
+        if (!timerVal || !timerDot) return;
+
+        let state = stateOverride;
+        if (!state) {
+            try {
+                const res = await chrome.storage.local.get('ff_timer_state');
+                state = res.ff_timer_state;
+            } catch (_) {}
+        }
+
+        const formatted = (typeof ZenUtils !== 'undefined')
+            ? ZenUtils.formatZenTimerBadge(state, Date.now())
+            : { text: '25:00', isDanger: false, isRunning: false };
+
+        timerVal.textContent = formatted.text;
+        timerDot.classList.toggle('danger', formatted.isDanger);
+        timerDot.style.opacity = formatted.isRunning ? '1' : '0.5';
+    }
+
+    function onZenScroll() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+
+        const progressBar = document.getElementById('ff-zen-progress-bar');
+        if (progressBar) {
+            const pct = (typeof ZenUtils !== 'undefined')
+                ? ZenUtils.computeScrollProgress(scrollTop, scrollHeight, clientHeight)
+                : Math.min(100, Math.round((scrollTop / (scrollHeight - clientHeight)) * 100));
+            progressBar.style.width = `${pct}%`;
+        }
+
+        if (zenHudEl) {
+            zenHudEl.classList.toggle('is-condensed', scrollTop > 48);
+        }
+    }
+
+    function onZenKeyDown(e) {
+        if (!zenModeEnabled) return;
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (activeTag === 'input' || activeTag === 'textarea' || document.activeElement?.isContentEditable) {
+            return;
+        }
+
+        if (e.key === 'Escape' || e.key === 'z' || e.key === 'Z') {
+            e.preventDefault();
+            zenModeEnabled = false;
+            applyZenMode(false);
+            try { chrome.storage.local.set({ ff_zenMode: false }); } catch (_) {}
+            return;
+        }
+
+        if (e.key === 'p' || e.key === 'P') {
+            e.preventDefault();
+            toggleCompanionRail();
+            return;
+        }
+
+        if (e.key === '[' || e.key === ']') {
+            e.preventDefault();
+            cycleWidthMode();
+        }
+    }
+
+    function attachSampleCopyButtons() {
+        const inputs = document.querySelectorAll('.sample-test .input, .sample-tests .input');
+        const outputs = document.querySelectorAll('.sample-test .output, .sample-tests .output');
+
+        const attach = (container, type) => {
+            if (container.querySelector('.ff-zen-copy-btn')) return;
+            const titleEl = container.querySelector('.title');
+            const preEl = container.querySelector('pre');
+            if (!preEl) return;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ff-zen-copy-btn';
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                <span>Copy</span>
+            `;
+            btn.title = `Copy ${type} to clipboard`;
+
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const text = (typeof ZenUtils !== 'undefined')
+                    ? ZenUtils.cleanSampleText(preEl.textContent)
+                    : preEl.textContent.trim();
+                try {
+                    await navigator.clipboard.writeText(text);
+                    btn.classList.add('copied');
+                    btn.querySelector('span').textContent = '✓ Copied!';
+                    setTimeout(() => {
+                        btn.classList.remove('copied');
+                        btn.querySelector('span').textContent = 'Copy';
+                    }, 1800);
+                } catch (err) {
+                    console.debug('Failed to copy sample test', err);
+                }
+            });
+
+            if (titleEl) {
+                titleEl.appendChild(btn);
+            } else {
+                container.insertBefore(btn, container.firstChild);
+            }
+        };
+
+        inputs.forEach(el => attach(el, 'input'));
+        outputs.forEach(el => attach(el, 'output'));
+
+        // AtCoder pre blocks
+        if (PLATFORM === 'atcoder') {
+            document.querySelectorAll('div.part').forEach(part => {
+                const h3 = part.querySelector('h3');
+                const pre = part.querySelector('pre');
+                if (h3 && pre && h3.textContent.toLowerCase().includes('sample')) {
+                    if (part.querySelector('.ff-zen-copy-btn')) return;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'ff-zen-copy-btn';
+                    btn.style.marginLeft = 'auto';
+                    btn.innerHTML = `<span>Copy</span>`;
+                    btn.addEventListener('click', async () => {
+                        await navigator.clipboard.writeText(pre.textContent.trim());
+                        btn.classList.add('copied');
+                        btn.textContent = '✓ Copied!';
+                        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Copy'; }, 1800);
+                    });
+                    h3.style.display = 'flex';
+                    h3.style.alignItems = 'center';
+                    h3.appendChild(btn);
+                }
+            });
+        }
+    }
+
+    function enhanceProblemHeader() {
+        if (document.querySelector('.ff-zen-header-card')) return;
+        const origHeader = document.querySelector('.problem-statement .header');
+        if (!origHeader) return;
+
+        const titleEl = origHeader.querySelector('.title');
+        const timeEl = origHeader.querySelector('.time-limit');
+        const memEl = origHeader.querySelector('.memory-limit');
+        const inEl = origHeader.querySelector('.input-file');
+        const outEl = origHeader.querySelector('.output-file');
+
+        const titleText = titleEl ? titleEl.textContent.trim() : '';
+        const probSnippetEl = document.getElementById('ff-zen-prob-title');
+        if (probSnippetEl && titleText) probSnippetEl.textContent = titleText;
+
+        const meta = (typeof ZenUtils !== 'undefined')
+            ? ZenUtils.extractCodeforcesProblemMeta(origHeader)
+            : {
+                timeLimit: timeEl ? timeEl.textContent.replace(/.*test:\s*/i, '').trim() : '1.0 s',
+                memoryLimit: memEl ? memEl.textContent.replace(/.*test:\s*/i, '').trim() : '256 MB',
+                inputType: inEl ? inEl.textContent.replace(/.*input:\s*/i, '').trim() : 'standard input',
+                outputType: outEl ? outEl.textContent.replace(/.*output:\s*/i, '').trim() : 'standard output'
+            };
+
+        let contestName = '';
+        const contestLink = document.querySelector('a[href*="/contest/"]');
+        if (contestLink && contestLink.textContent) contestName = contestLink.textContent.trim();
+
+        const card = document.createElement('div');
+        card.className = 'ff-zen-header-card';
+
+        if (contestName) {
+            const metaRow = document.createElement('div');
+            metaRow.className = 'ff-zen-meta-row';
+            const badge = document.createElement('span');
+            badge.className = 'ff-zen-contest-badge';
+            badge.textContent = contestName;
+            metaRow.appendChild(badge);
+            card.appendChild(metaRow);
+        }
+
+        const h1 = document.createElement('h1');
+        h1.className = 'ff-zen-title';
+        h1.textContent = titleText || 'Problem';
+        card.appendChild(h1);
+
+        const limitsRow = document.createElement('div');
+        limitsRow.className = 'ff-zen-limits-row';
+
+        if (meta.timeLimit) {
+            const timePill = document.createElement('span');
+            timePill.className = 'ff-zen-limit-pill';
+            timePill.title = 'Time limit per test';
+            timePill.textContent = `⏱️ ${meta.timeLimit}`;
+            limitsRow.appendChild(timePill);
+        }
+
+        if (meta.memoryLimit) {
+            const memPill = document.createElement('span');
+            memPill.className = 'ff-zen-limit-pill';
+            memPill.title = 'Memory limit per test';
+            memPill.textContent = `💾 ${meta.memoryLimit}`;
+            limitsRow.appendChild(memPill);
+        }
+
+        const ioPill = document.createElement('span');
+        ioPill.className = 'ff-zen-limit-pill';
+        ioPill.title = 'Input / Output stream';
+        ioPill.textContent = `📥 ${meta.inputType} · ${meta.outputType}`;
+        limitsRow.appendChild(ioPill);
+
+        card.appendChild(limitsRow);
+
+        origHeader.parentNode.insertBefore(card, origHeader);
+        origHeader.style.display = 'none';
+    }
+
+    function buildTableOfContents() {
+        const tocEl = document.getElementById('ff-zen-toc');
+        if (!tocEl) return;
+        tocEl.replaceChildren();
+
+        const sections = [
+            { id: 'ff-sec-statement', label: 'Statement', selector: '.legend, div.part:first-of-type' },
+            { id: 'ff-sec-input', label: 'Input Spec', selector: '.input-specification, div.part:has(h3)' },
+            { id: 'ff-sec-output', label: 'Output Spec', selector: '.output-specification' },
+            { id: 'ff-sec-samples', label: 'Examples', selector: '.sample-test, .sample-tests, div.part:has(pre)' },
+            { id: 'ff-sec-note', label: 'Notes', selector: '.note' }
+        ];
+
+        let foundAny = false;
+        sections.forEach(({ id, label, selector }) => {
+            const el = document.querySelector(selector);
+            if (el) {
+                el.id = id;
+                const link = document.createElement('a');
+                link.href = `#${id}`;
+                link.className = 'ff-zen-toc-link';
+                link.textContent = label;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+                tocEl.appendChild(link);
+                foundAny = true;
+            }
+        });
+
+        const tocCard = tocEl.closest('.ff-zen-rail-card');
+        if (tocCard) tocCard.style.display = foundAny ? '' : 'none';
+    }
+
+    function buildZenRail() {
+        if (zenRailEl && zenRailEl.isConnected) return zenRailEl;
+        zenRailEl = document.createElement('aside');
+        zenRailEl.id = 'ff-zen-rail';
+        zenRailEl.className = 'ff-zen-rail';
+        zenRailEl.setAttribute('aria-label', 'Problem Companion');
+
+        // 1. Table of Contents / Section Jump
+        const tocCard = document.createElement('div');
+        tocCard.className = 'ff-zen-rail-card';
+        tocCard.innerHTML = `
+            <div class="ff-zen-rail-head">
+                <span class="ff-zen-rail-title">Jump to Section</span>
+            </div>
+            <nav class="ff-zen-toc" id="ff-zen-toc"></nav>
         `;
 
-        const exitBtn = document.createElement('button');
-        exitBtn.type = 'button';
-        exitBtn.className = 'ff-zen-exit-btn';
-        exitBtn.title = 'Exit Zen Mode';
-        exitBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12"/>
-            </svg>
-            <span>Exit Zen</span>
+        // 2. Scout Card Dock
+        const scoutDock = document.createElement('div');
+        scoutDock.className = 'ff-zen-rail-card';
+        scoutDock.id = 'ff-zen-rail-scout';
+        scoutDock.style.display = 'none';
+
+        // 3. Problem Tags Dock
+        const tagsDock = document.createElement('div');
+        tagsDock.className = 'ff-zen-rail-card';
+        tagsDock.id = 'ff-zen-rail-tags';
+        tagsDock.style.display = 'none';
+
+        // 4. Quick Submit Button
+        const submitCard = document.createElement('div');
+        submitCard.className = 'ff-zen-rail-card ff-zen-rail-submit';
+        submitCard.innerHTML = `
+            <button type="button" class="ff-zen-submit-btn" id="ff-zen-quick-submit" title="Jump to Submission">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <span>Submit Solution</span>
+            </button>
         `;
-        exitBtn.addEventListener('click', () => {
+        submitCard.querySelector('#ff-zen-quick-submit')?.addEventListener('click', onQuickSubmitClick);
+
+        zenRailEl.append(tocCard, scoutDock, tagsDock, submitCard);
+        return zenRailEl;
+    }
+
+    function ensureZenHud() {
+        if (zenHudEl && zenHudEl.isConnected) return zenHudEl;
+        zenHudEl = document.createElement('header');
+        zenHudEl.id = 'ff-zen-hud';
+        zenHudEl.className = 'ff-zen-hud';
+        zenHudEl.setAttribute('role', 'banner');
+        zenHudEl.setAttribute('aria-label', 'Zen Mode Toolbar');
+
+        const inner = document.createElement('div');
+        inner.className = 'ff-zen-hud-inner';
+
+        // Left: Zen badge + Focus timer pill
+        const left = document.createElement('div');
+        left.className = 'ff-zen-hud-left';
+        left.innerHTML = `
+            <div class="ff-zen-pill" title="Zen Mode Active: Distraction-free problem solving">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2Z"/>
+                    <circle cx="12" cy="12" r="2.5"/>
+                </svg>
+                <span>Zen Mode</span>
+            </div>
+            <div class="ff-zen-timer-pill" id="ff-zen-timer-pill" title="Focus Chronometer">
+                <span class="ff-zen-timer-dot" id="ff-zen-timer-dot" aria-hidden="true"></span>
+                <span class="ff-zen-timer-val" id="ff-zen-timer-val">25:00</span>
+            </div>
+        `;
+
+        // Center: Problem title snippet
+        const center = document.createElement('div');
+        center.className = 'ff-zen-hud-center';
+        center.innerHTML = `<span class="ff-zen-prob-title" id="ff-zen-prob-title"></span>`;
+
+        // Right: Width, Font, Companion toggle, Theme cycle, Exit button
+        const right = document.createElement('div');
+        right.className = 'ff-zen-hud-right';
+        right.innerHTML = `
+            <button type="button" class="ff-zen-btn" id="ff-zen-width-btn" title="Reading Canvas Width (Shortcut: [ or ])">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3m0 0 4-4m-4 4 4 4m14-4-4-4m4 4-4 4"/></svg>
+                <span id="ff-zen-width-label">Comfortable</span>
+            </button>
+            <button type="button" class="ff-zen-btn" id="ff-zen-font-btn" title="Font Size Scaling">
+                <span style="font-weight:700; font-size:12px;">Aa</span>
+                <span id="ff-zen-font-label">100%</span>
+            </button>
+            <button type="button" class="ff-zen-btn" id="ff-zen-rail-btn" title="Toggle Problem Overview Rail (Shortcut: P)">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+                <span>Overview</span>
+            </button>
+            <button type="button" class="ff-zen-btn" id="ff-zen-theme-btn" title="Cycle Theme (Paper · Midnight · Ink · Studio)">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+            </button>
+            <button type="button" class="ff-zen-btn ff-zen-btn-exit" id="ff-zen-exit-btn" title="Exit Zen Mode (Shortcut: Esc or Z)">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                <span>Exit</span>
+                <kbd class="ff-zen-kbd">Esc</kbd>
+            </button>
+        `;
+
+        const progressBar = document.createElement('div');
+        progressBar.id = 'ff-zen-progress-bar';
+        progressBar.className = 'ff-zen-progress-bar';
+        progressBar.style.width = '0%';
+
+        inner.append(left, center, right);
+        zenHudEl.append(inner, progressBar);
+
+        inner.querySelector('#ff-zen-width-btn')?.addEventListener('click', cycleWidthMode);
+        inner.querySelector('#ff-zen-font-btn')?.addEventListener('click', cycleFontSize);
+        inner.querySelector('#ff-zen-rail-btn')?.addEventListener('click', toggleCompanionRail);
+        inner.querySelector('#ff-zen-theme-btn')?.addEventListener('click', cycleTheme);
+        inner.querySelector('#ff-zen-exit-btn')?.addEventListener('click', () => {
             zenModeEnabled = false;
             applyZenMode(false);
             try { chrome.storage.local.set({ ff_zenMode: false }); } catch (_) {}
         });
 
-        bar.append(badge, exitBtn);
-        zenToolbarEl.appendChild(bar);
+        document.body.appendChild(zenHudEl);
+        updateWidthButtonLabel();
+        updateFontButtonLabel();
+        return zenHudEl;
+    }
 
-        const pageContent = document.getElementById('pageContent')
-            || document.querySelector('.content-with-sidebar')
-            || document.getElementById('content');
-        if (pageContent) {
-            pageContent.insertBefore(zenToolbarEl, pageContent.firstChild);
+    function setupZenWorkspace(enabled) {
+        if (enabled) {
+            if (zenWorkspaceEl && zenWorkspaceEl.isConnected) return;
+
+            zenTargetNode = document.querySelector('.problem-statement')
+                || document.getElementById('task-statement')
+                || document.querySelector('.problem-description')
+                || document.getElementById('content');
+
+            if (!zenTargetNode) return;
+
+            zenTargetOrigParent = zenTargetNode.parentNode;
+            zenTargetOrigSibling = zenTargetNode.nextSibling;
+
+            zenWorkspaceEl = document.createElement('div');
+            zenWorkspaceEl.id = 'ff-zen-workspace';
+            zenWorkspaceEl.className = 'ff-zen-workspace';
+
+            zenCanvasEl = document.createElement('main');
+            zenCanvasEl.id = 'ff-zen-canvas';
+            zenCanvasEl.className = 'ff-zen-canvas';
+            zenCanvasEl.setAttribute('role', 'main');
+
+            zenTargetOrigParent.insertBefore(zenWorkspaceEl, zenTargetOrigSibling);
+            zenCanvasEl.appendChild(zenTargetNode);
+            zenWorkspaceEl.appendChild(zenCanvasEl);
+
+            zenRailEl = buildZenRail();
+            zenWorkspaceEl.appendChild(zenRailEl);
+
+            const isWide = window.innerWidth >= 1360;
+            zenWorkspaceEl.classList.toggle('has-companion', isWide && zenCompanionVisible);
+            zenWorkspaceEl.classList.toggle('rail-hidden', !isWide || !zenCompanionVisible);
+
+            buildTableOfContents();
+            relocateZenBoxes(true);
+            enhanceProblemHeader();
+            attachSampleCopyButtons();
         } else {
-            document.body.appendChild(zenToolbarEl);
+            if (zenTargetNode && zenTargetOrigParent && zenTargetOrigParent.isConnected) {
+                zenTargetOrigParent.insertBefore(zenTargetNode, zenWorkspaceEl);
+            }
+            if (zenWorkspaceEl) {
+                zenWorkspaceEl.remove();
+                zenWorkspaceEl = null;
+                zenCanvasEl = null;
+                zenRailEl = null;
+            }
+            zenTargetNode = null;
+            zenTargetOrigParent = null;
+            zenTargetOrigSibling = null;
+
+            const headerCard = document.querySelector('.ff-zen-header-card');
+            if (headerCard) headerCard.remove();
+            const origHeader = document.querySelector('.problem-statement .header');
+            if (origHeader) origHeader.style.display = '';
+
+            document.querySelectorAll('.ff-zen-copy-btn').forEach(btn => btn.remove());
         }
-        return zenToolbarEl;
     }
 
     function relocateZenBoxes(enabled) {
-        if (!IS_CF) return;
+        if (PLATFORM !== 'codeforces') return;
         if (enabled) {
-            // Only relocate boxes not already moved (idempotent; also lets the
-            // Scout card, created later by initTagToggler, be picked up).
-            const keepers = getZenKeepBoxes().filter(box =>
-                !zenRelocated.some(r => r.box === box)
-            );
-            if (!keepers.length) return;
-            const toolbar = ensureZenToolbar();
+            const keepers = getZenKeepBoxes();
             keepers.forEach(box => {
-                zenRelocated.push({ box, parent: box.parentNode, next: box.nextSibling });
-                toolbar.appendChild(box);
+                if (!zenRelocated.some(r => r.box === box)) {
+                    zenRelocated.push({ box, parent: box.parentNode, next: box.nextSibling });
+                }
+                if (zenRailEl && zenRailEl.isConnected) {
+                    if (box.id === 'ff-scout-card') {
+                        const dock = document.getElementById('ff-zen-rail-scout');
+                        if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                    } else {
+                        const dock = document.getElementById('ff-zen-rail-tags');
+                        if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                    }
+                }
             });
         } else if (zenRelocated.length) {
             zenRelocated.forEach(({ box, parent, next }) => {
                 if (parent && parent.isConnected) {
                     parent.insertBefore(box, next);
                 } else {
-                    // The original container vanished (SPA navigation); return
-                    // the box to the current sidebar so it isn't lost.
                     const sidebar = document.getElementById('sidebar');
                     (sidebar || document.body).appendChild(box);
                 }
             });
             zenRelocated = [];
-            if (zenToolbarEl) {
-                zenToolbarEl.remove();
-                zenToolbarEl = null;
+            if (zenDrawerEl) {
+                zenDrawerEl.remove();
+                zenDrawerEl = null;
             }
         }
     }
 
     function applyZenMode(enabled) {
-        // document.body may not exist yet at document_start (storage resolves
-        // before <body> parses on slow loads) — the DOMContentLoaded handler
-        // re-applies Zen as soon as the DOM is ready.
         if (!document.body) return;
 
         document.body.classList.toggle('ff-zen-mode-active', enabled);
+
+        if (enabled) {
+            document.body.setAttribute('data-ff-zen-width', zenWidthMode);
+            document.body.setAttribute('data-ff-zen-size', zenFontSize);
+        } else {
+            document.body.removeAttribute('data-ff-zen-width');
+            document.body.removeAttribute('data-ff-zen-size');
+        }
 
         CONFIG.ZEN_SELECTORS.forEach(sel => {
             document.querySelectorAll(sel).forEach(el => {
@@ -531,13 +1100,68 @@
             });
         });
 
-        relocateZenBoxes(enabled);
+        if (enabled) {
+            ensureZenHud();
+            setupZenWorkspace(true);
+
+            if (!zenScrollListener) {
+                zenScrollListener = onZenScroll;
+                window.addEventListener('scroll', zenScrollListener, { passive: true });
+            }
+            if (!zenKeydownListener) {
+                zenKeydownListener = onZenKeyDown;
+                window.addEventListener('keydown', zenKeydownListener);
+            }
+            if (!zenTimerInterval) {
+                updateZenTimerDisplay();
+                zenTimerInterval = setInterval(() => updateZenTimerDisplay(), 1000);
+            }
+
+            const titleEl = document.querySelector('.ff-zen-title') || document.querySelector('.title') || document.querySelector('h2');
+            const snippet = document.getElementById('ff-zen-prob-title');
+            if (snippet && titleEl) {
+                snippet.textContent = titleEl.textContent.trim();
+            }
+        } else {
+            setupZenWorkspace(false);
+            relocateZenBoxes(false);
+
+            if (zenHudEl) {
+                zenHudEl.remove();
+                zenHudEl = null;
+            }
+            if (zenDrawerEl) {
+                zenDrawerEl.remove();
+                zenDrawerEl = null;
+            }
+            if (zenScrollListener) {
+                window.removeEventListener('scroll', zenScrollListener);
+                zenScrollListener = null;
+            }
+            if (zenKeydownListener) {
+                window.removeEventListener('keydown', zenKeydownListener);
+                zenKeydownListener = null;
+            }
+            if (zenTimerInterval) {
+                clearInterval(zenTimerInterval);
+                zenTimerInterval = null;
+            }
+        }
     }
 
     (async () => {
         try {
-            const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
-            zenModeEnabled = !!ff_zenMode;
+            const stored = await chrome.storage.local.get({
+                ff_zenMode: false,
+                ff_zen_width: 'comfortable',
+                ff_zen_font_size: 'normal',
+                ff_zen_companion: true
+            });
+            zenModeEnabled = !!stored.ff_zenMode;
+            zenWidthMode = stored.ff_zen_width || 'comfortable';
+            zenFontSize = stored.ff_zen_font_size || 'normal';
+            zenCompanionVisible = stored.ff_zen_companion !== false;
+
             if (zenModeEnabled) applyZenMode(true);
         } catch (e) {
             console.debug('FocusForces: failed to load zen mode state', e);

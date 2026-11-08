@@ -400,12 +400,38 @@
           </span>
           <span class="row-text">
             <span class="row-title">Zen Mode</span>
-            <span class="row-sub">Strips sidebars, banners, and stats on Codeforces</span>
+            <span class="row-sub">Distraction-free workspace on Codeforces, AtCoder & CodeChef</span>
           </span>
           <label class="switch" title="Toggle Zen Mode">
             <input type="checkbox" id="zen-toggle" aria-label="Toggle Zen Mode">
             <span class="switch-track"><span class="switch-thumb"></span></span>
           </label>
+        </div>
+
+        <div class="fx-options" id="zen-options" hidden>
+          <div class="rem-group">
+            <span class="rem-label">Canvas Width</span>
+            <div class="chips" id="zen-width-chips" role="radiogroup" aria-label="Reading canvas width">
+              <label class="chip"><input type="radio" name="zen_width" value="compact"><span>780px Compact</span></label>
+              <label class="chip"><input type="radio" name="zen_width" value="comfortable" checked><span>920px Comfortable</span></label>
+              <label class="chip"><input type="radio" name="zen_width" value="expansive"><span>1080px Expansive</span></label>
+            </div>
+          </div>
+          <div class="rem-group">
+            <span class="rem-label">Text Size</span>
+            <div class="chips" id="zen-size-chips" role="radiogroup" aria-label="Reading text size">
+              <label class="chip"><input type="radio" name="zen_font_size" value="normal" checked><span>Normal (100%)</span></label>
+              <label class="chip"><input type="radio" name="zen_font_size" value="large"><span>Large (110%)</span></label>
+              <label class="chip"><input type="radio" name="zen_font_size" value="xlarge"><span>XL (120%)</span></label>
+            </div>
+          </div>
+          <div class="rem-group">
+            <span class="rem-label">Companion Rail</span>
+            <div class="chips" role="group" aria-label="Overview rail preference">
+              <label class="chip"><input type="checkbox" id="zen-companion-toggle" checked><span>Overview rail on wide displays</span></label>
+            </div>
+          </div>
+          <div class="fx-hint">Centered reading canvas, HUD toolbar, live timer & instant sample copy</div>
         </div>
 
         <div class="row-card">

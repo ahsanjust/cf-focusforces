@@ -1983,22 +1983,68 @@ const ContestListModule = (() => {
 const SettingsModule = (() => {
     async function init() {
         const zenToggle = $('zen-toggle');
+        const zenOptions = $('zen-options');
         if (!zenToggle) return;
 
         try {
-            const { ff_zenMode } = await chrome.storage.local.get('ff_zenMode');
-            zenToggle.checked = !!ff_zenMode;
+            const stored = await chrome.storage.local.get({
+                ff_zenMode: false,
+                ff_zen_width: 'comfortable',
+                ff_zen_font_size: 'normal',
+                ff_zen_companion: true
+            });
+            zenToggle.checked = !!stored.ff_zenMode;
+            if (zenOptions) zenOptions.hidden = !zenToggle.checked;
+
+            // Width radios
+            document.querySelectorAll('input[name="zen_width"]').forEach(radio => {
+                radio.checked = radio.value === stored.ff_zen_width;
+                radio.addEventListener('change', () => {
+                    chrome.storage.local.set({ ff_zen_width: radio.value }).catch(() => {});
+                });
+            });
+
+            // Font size radios
+            document.querySelectorAll('input[name="zen_font_size"]').forEach(radio => {
+                radio.checked = radio.value === stored.ff_zen_font_size;
+                radio.addEventListener('change', () => {
+                    chrome.storage.local.set({ ff_zen_font_size: radio.value }).catch(() => {});
+                });
+            });
+
+            // Companion rail checkbox
+            const companionToggle = $('zen-companion-toggle');
+            if (companionToggle) {
+                companionToggle.checked = stored.ff_zen_companion !== false;
+                companionToggle.addEventListener('change', () => {
+                    chrome.storage.local.set({ ff_zen_companion: companionToggle.checked }).catch(() => {});
+                });
+            }
         } catch (_) {}
 
         zenToggle.addEventListener('change', async e => {
             const enabled = e.target.checked;
             try { await chrome.storage.local.set({ ff_zenMode: enabled }); } catch (_) {}
-            chrome.tabs.query({ url: 'https://codeforces.com/*' }, tabs => {
+            if (zenOptions) {
+                zenOptions.hidden = !enabled;
+                if (enabled) zenOptions.classList.add('is-animating');
+            }
+
+            // Broadcast to all supported competitive programming tabs
+            try {
+                const tabs = await chrome.tabs.query({});
                 tabs.forEach(tab => {
-                    if (tab.id) chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
+                    if (tab.id && tab.url && (
+                        tab.url.includes('codeforces.com') ||
+                        tab.url.includes('atcoder.jp') ||
+                        tab.url.includes('codechef.com')
+                    )) {
+                        chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
+                    }
                 });
-            });
-            ToastModule.show(enabled ? 'Zen Mode on · Codeforces pages decluttered' : 'Zen Mode off', {
+            } catch (_) {}
+
+            ToastModule.show(enabled ? 'Zen Mode on · Distraction-free workspace active' : 'Zen Mode off', {
                 tone: enabled ? 'good' : 'info'
             });
         });
