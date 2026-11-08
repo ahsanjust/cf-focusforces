@@ -26,6 +26,13 @@ const GYM_CACHE_KEY = 'ff_gym_cache';
 const THEMES = ['default', 'dark', 'amoled', 'contrast'];
 const THEME_KEY = 'ff_theme';
 const THEME_BOOT_KEY = 'ff_theme_boot';
+const SYSTEM_THEME_KEY = 'ff_system_theme';
+const ONBOARDED_KEY = 'ff_onboarded_v2';
+const TIMER_ALERTS_KEY = 'ff_timer_notifications_enabled';
+const TIMER_MILESTONES_KEY = 'ff_timer_notify_milestones';
+const DEFAULT_TIMER_MILESTONES = ['10min', '5min', '1min', 'finish'];
+const PAWS_KEY = 'ff_zenPaws';
+const AC_KEY = 'ff_acCelebrate';
 const TIMER_STORAGE_KEY = 'ff_timer_state';
 const REMINDER_INTERVALS_KEY = 'ff_reminder_intervals';
 const SESSIONS_KEY = 'ff_sessions';
@@ -33,13 +40,13 @@ const SESSIONS_KEY = 'ff_sessions';
 const SESSION_RETENTION_DAYS = 30;
 const MIN_LOGGED_SESSION_MS = 60 * 1000;
 
-const DIAL_RADIUS = 88;
-const DIAL_CENTER = 110;
+const DIAL_RADIUS = 84;   // must match the r="" of the track/progress circles
+const DIAL_CENTER = 100;
 const DIAL_CIRCUMFERENCE = 2 * Math.PI * DIAL_RADIUS;
 const TICK_COUNT = 60;
-const TICK_OUTER = 101;
-const TICK_INNER_MINOR = 96.5;
-const TICK_INNER_MAJOR = 94;
+const TICK_OUTER = 92;
+const TICK_INNER_MINOR = 88;
+const TICK_INNER_MAJOR = 85;
 
 const DANGER_THRESHOLD_MS = 5 * 60 * 1000;
 const DANGER_MIN_DURATION_MS = 10 * 60 * 1000;
@@ -95,38 +102,83 @@ function countdownLabel(iso) {
 // ══════════════════════════════════════════════════════
 
 const ThemeModule = (() => {
-    let currentTheme = 'default';
+    let currentTheme = 'default';     // the user's explicit pick
+    let effectiveTheme = 'default';   // what is actually painted (system mode wins)
+    let followSystem = false;
 
-    function applyTheme(theme, { persist = true } = {}) {
-        currentTheme = THEMES.includes(theme) ? theme : 'default';
-        document.documentElement.setAttribute('data-ff-theme', currentTheme);
+    const darkQuery = typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+
+    const systemPrefersDark = () => !!darkQuery && darkQuery.matches;
+    const resolve = theme => (followSystem ? (systemPrefersDark() ? 'dark' : 'default') : theme);
+
+    /** Paint the popup + reflect the selection on every picker (sheet + intro). */
+    function paint(theme) {
+        effectiveTheme = resolve(theme);
+        document.documentElement.setAttribute('data-ff-theme', effectiveTheme);
 
         document.querySelectorAll('.theme-card').forEach(card => {
-            const isActive = card.dataset.ffTheme === currentTheme;
+            const isActive = card.dataset.ffTheme === effectiveTheme;
             card.setAttribute('aria-checked', String(isActive));
             card.tabIndex = isActive ? 0 : -1;
         });
 
-        // Keep the boot cache in sync so the next popup open paints instantly.
-        try { localStorage.setItem(THEME_BOOT_KEY, currentTheme); } catch (_) {}
+        const toggle = $('system-theme-toggle');
+        if (toggle) toggle.checked = followSystem;
 
+        // Keep the boot cache in sync so the next popup open paints instantly.
+        try { localStorage.setItem(THEME_BOOT_KEY, effectiveTheme); } catch (_) {}
+    }
+
+    function applyTheme(theme, { persist = true } = {}) {
+        currentTheme = THEMES.includes(theme) ? theme : 'default';
+        paint(currentTheme);
         if (persist) {
-            saveTheme(currentTheme);
-            syncThemeToContentScript(currentTheme);
+            saveTheme();
+            syncThemeToContentScript(effectiveTheme);
         }
     }
 
-    async function saveTheme(theme) {
-        try { await chrome.storage.local.set({ [THEME_KEY]: theme }); } catch (_) {}
+    async function saveTheme() {
+        try {
+            await chrome.storage.local.set({
+                [THEME_KEY]: currentTheme,
+                [SYSTEM_THEME_KEY]: followSystem
+            });
+        } catch (_) {}
     }
 
     async function loadTheme() {
         let theme = 'default';
+        let system = false;
         try {
-            const { [THEME_KEY]: saved } = await chrome.storage.local.get(THEME_KEY);
-            if (saved && THEMES.includes(saved)) theme = saved;
+            const stored = await chrome.storage.local.get({
+                [THEME_KEY]: 'default',
+                [SYSTEM_THEME_KEY]: false
+            });
+            if (THEMES.includes(stored[THEME_KEY])) theme = stored[THEME_KEY];
+            system = !!stored[SYSTEM_THEME_KEY];
         } catch (_) {}
-        applyTheme(theme, { persist: false });
+        currentTheme = theme;
+        followSystem = system;
+        paint(theme);
+    }
+
+    /** "Match system" — follow the OS light/dark setting until switched off. */
+    function setFollowSystem(on) {
+        followSystem = !!on;
+        paint(currentTheme);
+        saveTheme();
+        syncThemeToContentScript(effectiveTheme);
+    }
+
+    if (darkQuery?.addEventListener) {
+        darkQuery.addEventListener('change', () => {
+            if (!followSystem) return;
+            paint(currentTheme);
+            syncThemeToContentScript(effectiveTheme);
+        });
     }
 
     function syncThemeToContentScript(theme) {
@@ -141,9 +193,15 @@ const ThemeModule = (() => {
         });
     }
 
-    const getCurrentTheme = () => currentTheme;
-
-    return { applyTheme, loadTheme, getCurrentTheme };
+    return {
+        applyTheme,
+        loadTheme,
+        setFollowSystem,
+        systemPrefersDark,
+        getCurrentTheme: () => currentTheme,
+        getEffectiveTheme: () => effectiveTheme,
+        isFollowingSystem: () => followSystem
+    };
 })();
 // ══════════════════════════════════════════════════════
 // MODULE: Timer — state & formatting
@@ -251,7 +309,100 @@ const SessionModule = (() => {
         };
     }
 
-    return { read, log, summary };
+    /**
+     * Seven-day focus ledger, oldest → today. Powers the spark strip; the data
+     * was already being stored (SESSION_RETENTION_DAYS), it simply had no face.
+     * @returns {Array<{key:string, ms:number, label:string, isToday:boolean}>}
+     */
+    async function weekly() {
+        const list = await read();
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const key = localDayKey(date);
+            const ms = list.filter(s => s.d === key).reduce((sum, s) => sum + (s.ms || 0), 0);
+            days.push({
+                key,
+                ms,
+                label: date.toLocaleDateString([], { weekday: 'short' }),
+                isToday: i === 0
+            });
+        }
+        return days;
+    }
+
+    return { read, log, summary, weekly };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Feedback — transient toasts
+// ══════════════════════════════════════════════════════
+
+const ToastModule = (() => {
+    const MAX = 2;
+    let wrap = null;
+
+    function show(message, { tone = 'info', ttl = 2600 } = {}) {
+        wrap = wrap || $('toast-wrap');
+        if (!wrap || !message) return;
+
+        while (wrap.children.length >= MAX) wrap.firstElementChild?.remove();
+
+        const toast = document.createElement('div');
+        toast.className = `toast${tone !== 'info' ? ` is-${tone}` : ''}`;
+        toast.setAttribute('role', 'status');
+
+        const lamp = document.createElement('span');
+        lamp.className = 'lamp';
+        lamp.setAttribute('aria-hidden', 'true');
+
+        const text = document.createElement('span');
+        text.textContent = message;
+
+        toast.append(lamp, text);
+        wrap.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('is-out');
+            setTimeout(() => toast.remove(), 300);
+        }, ttl);
+    }
+
+    return { show };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: InkBar — keeps a 2px accent rule under the active tab
+// ══════════════════════════════════════════════════════
+
+const InkBar = (() => {
+    /**
+     * @param {HTMLElement} ink   the sliding rule
+     * @param {HTMLElement} active the tab it should underline
+     */
+    function place(ink, active) {
+        if (!ink || !active) return;
+        const box = active.getBoundingClientRect();
+        const parent = ink.parentElement?.getBoundingClientRect();
+        if (!box.width || !parent) return;
+        ink.style.width = `${box.width}px`;
+        ink.style.transform = `translateX(${box.left - parent.left}px)`;
+    }
+
+    /** Wire a group of tabs (nav or radar filters) to its ink rule. */
+    function track(container, inkSelector, tabSelector) {
+        if (!container) return;
+        const ink = container.querySelector(inkSelector);
+        const tabs = Array.from(container.querySelectorAll(tabSelector));
+        const sync = () => place(ink, tabs.find(t => t.classList.contains('is-active')));
+        tabs.forEach(t => t.addEventListener('click', () => requestAnimationFrame(sync)));
+        window.addEventListener('resize', sync);
+        requestAnimationFrame(sync);
+        return sync;
+    }
+
+    return { place, track };
 })();
 
 // ══════════════════════════════════════════════════════
@@ -342,6 +493,8 @@ const TimerUIModule = (() => {
             inputsRow: $('timer-inputs'),
             mm: $('timer-mm'),
             ss: $('timer-ss'),
+            presetsWrap: $('presets'),
+            stopwatchInfo: $('stopwatch-info'),
             presets: Array.from(document.querySelectorAll('.preset[data-min]')),
             customBtn: $('preset-custom'),
             liveChip: $('live-chip'),
@@ -349,7 +502,9 @@ const TimerUIModule = (() => {
             statSessions: $('stat-sessions'),
             statFocus: $('stat-focus'),
             aboutSessions: $('about-sessions'),
-            modeBtns: Array.from(document.querySelectorAll('.mode-btn'))
+            spark: $('week-spark'),
+            weekLabel: $('week-label'),
+            modeBtns: Array.from(document.querySelectorAll('.seg-btn'))
         };
     }
 
@@ -444,6 +599,9 @@ const TimerUIModule = (() => {
             ? el.presets.find(p => Number(p.dataset.min) * 60000 === configured)
             : null;
 
+        if (el.presetsWrap) el.presetsWrap.hidden = !isCountdown;
+        if (el.stopwatchInfo) el.stopwatchInfo.hidden = isCountdown;
+
         el.presets.forEach(p => {
             p.classList.toggle('is-active', p === matched);
             p.disabled = active || !isCountdown;
@@ -482,12 +640,14 @@ const TimerUIModule = (() => {
         el.card?.classList.toggle('is-running', running);
         el.card?.classList.toggle('is-paused', paused);
         el.card?.classList.toggle('is-danger', danger);
+        el.action?.classList.toggle('is-danger', danger);
+        el.liveChip?.classList.toggle('is-danger', danger);
         el.card?.classList.toggle('is-stopwatch', !isCountdown);
         el.card?.classList.toggle('is-sweep', !isCountdown && running);
 
         if (!isCountdown) {
             el.status.textContent = running ? 'Tracking' : (paused ? 'Paused' : 'Ready');
-            el.sub.textContent = running ? 'Tracking' : (paused ? 'Paused' : 'No target');
+            el.sub.textContent = running ? 'Elapsed' : (paused ? 'Held' : 'No target');
         } else if (danger) {
             el.status.textContent = 'Ending soon';
             el.sub.textContent = 'Wrap it up';
@@ -496,7 +656,7 @@ const TimerUIModule = (() => {
             el.sub.textContent = 'Focus session';
         } else if (paused) {
             el.status.textContent = 'Paused';
-            el.sub.textContent = 'Paused';
+            el.sub.textContent = 'Held';
         } else {
             el.status.textContent = 'Ready';
             el.sub.textContent = `${Math.round(shownMs / 60000)} min session`;
@@ -521,13 +681,36 @@ const TimerUIModule = (() => {
         }
     }
 
+    /** Seven-day spark strip — bars scale to the best day in the window. */
+    function renderWeek(days) {
+        if (!el.spark) return;
+        const best = Math.max(...days.map(d => d.ms), 0);
+        const frag = document.createDocumentFragment();
+        days.forEach(day => {
+            const bar = document.createElement('i');
+            const ratio = best > 0 ? day.ms / best : 0;
+            bar.style.height = `${day.ms > 0 ? 4 + Math.round(ratio * 12) : 3}px`;
+            bar.classList.toggle('today', day.isToday);
+            if (day.ms > 0) bar.classList.add('has');
+            bar.title = `${day.label} — ${day.ms > 0 ? formatFocusSpan(day.ms) : 'no sessions'}`;
+            frag.appendChild(bar);
+        });
+        el.spark.replaceChildren(frag);
+
+        if (el.weekLabel) {
+            const total = days.reduce((sum, d) => sum + d.ms, 0);
+            el.weekLabel.textContent = total > 0 ? `${formatFocusSpan(total)} this week` : 'last 7 days';
+        }
+    }
+
     async function refreshStats() {
-        const stats = await SessionModule.summary();
+        const [stats, days] = await Promise.all([SessionModule.summary(), SessionModule.weekly()]);
         if (el.statSessions) el.statSessions.textContent = String(stats.count);
         if (el.statFocus) el.statFocus.textContent = formatFocusSpan(stats.ms);
         if (el.aboutSessions) {
             el.aboutSessions.textContent = stats.total === 1 ? '1 session' : `${stats.total} sessions`;
         }
+        renderWeek(days);
     }
 
     function flashComplete() {
@@ -611,6 +794,7 @@ const TimerActions = (() => {
             await SessionModule.log(completedMs);
             await TimerUIModule.refreshStats();
             TimerUIModule.flashComplete();
+            ToastModule.show(`Session logged · ${formatFocusSpan(completedMs)}`, { tone: 'good', ttl: 3400 });
         }
     }
 
@@ -683,18 +867,26 @@ const ViewModule = (() => {
         current = view;
         document.body.dataset.view = view;
 
+        let activeTab = null;
         document.querySelectorAll('.nav-tab').forEach(tab => {
             const on = tab.dataset.view === view;
             tab.classList.toggle('is-active', on);
             tab.setAttribute('aria-selected', String(on));
             tab.tabIndex = on ? 0 : -1;
+            if (on) activeTab = tab;
         });
 
+        // Accent rule follows the active tab (measured, so it survives zoom).
+        InkBar.place(document.querySelector('.nav-ink'), activeTab);
+
+        const faded = [];
         document.querySelectorAll('.view').forEach(section => {
             const on = section.id === `view-${view}`;
             section.classList.toggle('is-active', on);
             section.setAttribute('aria-hidden', String(!on));
+            if (!on) faded.push(section);
         });
+        faded.forEach(section => { section.scrollTop = 0; });
 
         if (focus) {
             const target = view === 'focus' ? $('timer-action') : $('refresh-btn');
@@ -772,6 +964,12 @@ const KeyboardModule = (() => {
 
     function init() {
         document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && OnboardingModule.isOpen) {
+                e.preventDefault();
+                OnboardingModule.close();
+                return;
+            }
+
             if (e.key === 'Escape' && SettingsSheetModule.isOpen) {
                 e.preventDefault();
                 SettingsSheetModule.close();
@@ -780,7 +978,7 @@ const KeyboardModule = (() => {
 
             if (e.metaKey || e.ctrlKey || e.altKey) return;
             if (isTypingTarget(e.target)) return;
-            if (SettingsSheetModule.isOpen) return;
+            if (SettingsSheetModule.isOpen || OnboardingModule.isOpen) return;
 
             // Buttons already handle Space/Enter themselves.
             if (e.target?.closest?.('button') && (e.key === ' ' || e.key === 'Enter')) return;
@@ -791,6 +989,10 @@ const KeyboardModule = (() => {
                 else TimerActions.start();
             } else if (e.key === 'r' || e.key === 'R') {
                 TimerActions.reset();
+            } else if (e.key === '1') {
+                ViewModule.set('focus');
+            } else if (e.key === '2') {
+                ViewModule.set('contests');
             }
         });
     }
@@ -1033,6 +1235,8 @@ const ContestFetch = (() => {
 
 const ContestRenderer = (() => {
     let activeTab = 'near';
+    let selectedPlatform = 'all';
+    let searchQuery = '';
     let cachedNear = [];
     let cachedLater = [];
     let visible = [];
@@ -1075,11 +1279,38 @@ const ContestRenderer = (() => {
         return `var(--p-${platformClass(contest.site)})`;
     }
 
-    function createBadge(text, className) {
+    /** Halo behind the row lamp — derived from the same signal as the spine. */
+    function haloValue(status, urgency) {
+        if (status === 'ongoing') return 'var(--good-soft)';
+        if (urgency?.cls === 'urgency-critical') return 'var(--bad-soft)';
+        if (urgency?.cls === 'urgency-high') return 'var(--warn-soft)';
+        return 'transparent';
+    }
+
+    function createTag(text, className) {
         const span = document.createElement('span');
         span.className = className;
         span.textContent = text;
         return span;
+    }
+
+    function metaDot() {
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.textContent = '·';
+        return dot;
+    }
+
+    function filterList(items) {
+        let result = items;
+        if (selectedPlatform !== 'all') {
+            result = result.filter(c => c.site === selectedPlatform);
+        }
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.site && c.site.toLowerCase().includes(q)));
+        }
+        return result;
     }
 
     function createCard(contest) {
@@ -1090,52 +1321,108 @@ const ContestRenderer = (() => {
         const urgency = isOngoing ? null : urgencyFor(contest.start_time);
 
         const card = document.createElement('div');
-        card.className = ['contest-card', isOngoing ? 'is-ongoing' : '', urgency?.cls || ''].filter(Boolean).join(' ');
+        card.className = ['contest-card', 'radar-row', isOngoing ? 'is-ongoing' : '', urgency?.cls || ''].filter(Boolean).join(' ');
         card.style.setProperty('--spine', spineValue(contest, status, urgency));
+        card.style.setProperty('--lamp-halo', haloValue(status, urgency));
         card.dataset.start = contest.start_time || '';
         card.dataset.dur = String(contest.duration || 0);
         card.tabIndex = 0;
 
-        // ── top row: platform · name · status badges ──
+        // ── Top Bar: Badges + Countdown ──
         const top = document.createElement('div');
-        top.className = 'contest-top';
-        top.appendChild(createBadge(platformBadgeText(contest.site), `platform-badge ${platformClass(contest.site)}`));
+        top.className = 'rc-top';
 
-        const name = document.createElement('div');
-        name.className = 'contest-name';
+        const badges = document.createElement('div');
+        badges.className = 'rc-badges';
+
+        const lamp = document.createElement('span');
+        lamp.className = 'radar-lamp';
+        lamp.setAttribute('aria-hidden', 'true');
+
+        badges.appendChild(lamp);
+        badges.appendChild(createTag(platformBadgeText(contest.site), `ptag ${platformClass(contest.site)}`));
+        if (isOngoing) badges.appendChild(createTag('LIVE', 'tag-live'));
+        if (contest.isGym) badges.appendChild(createTag('GYM', 'tag-gym'));
+
+        const count = document.createElement('span');
+        count.className = 'contest-duration radar-count';
+        count.textContent = timingLabel(contest.start_time, contest.duration);
+
+        top.append(badges, count);
+
+        // ── Title ──
+        const title = document.createElement('div');
+        title.className = 'rc-title';
         if (contest.url) {
             const a = document.createElement('a');
             a.href = contest.url;
             a.target = '_blank';
             a.rel = 'noopener';
             a.textContent = contest.name || 'Untitled';
-            name.appendChild(a);
+            title.appendChild(a);
         } else {
-            name.textContent = contest.name || 'Untitled';
-        }
-        top.appendChild(name);
-
-        if (isOngoing) top.appendChild(createBadge('LIVE', 'chip-badge live-badge'));
-        if (contest.isGym) top.appendChild(createBadge('GYM', 'chip-badge gym-badge'));
-
-        // ── bottom row: local start time · countdown ──
-        const meta = document.createElement('div');
-        meta.className = 'contest-meta';
-
-        const when = document.createElement('span');
-        when.className = 'contest-time';
-        when.textContent = fmtDateTime(contest.start_time);
-        if (contest.duration) {
-            when.textContent += ` · ${ContestHelpers.formatDuration(contest.duration)}`;
-            when.title = `${ContestHelpers.formatDuration(contest.duration)} long`;
+            title.textContent = contest.name || 'Untitled';
         }
 
-        const count = document.createElement('span');
-        count.className = 'contest-duration';
-        count.textContent = timingLabel(contest.start_time, contest.duration);
+        // ── Bottom Meta Row: Date/Time + Duration ──
+        const bot = document.createElement('div');
+        bot.className = 'rc-bot';
 
-        meta.append(when, count);
-        card.append(top, meta);
+        const timeItem = document.createElement('span');
+        timeItem.className = 'rc-meta-item';
+        const start = new Date(contest.start_time);
+        const dateStr = isNaN(start.getTime()) ? 'Unknown' : fmtDateTime(contest.start_time);
+        const timeIco = document.createElementNS(SVG_NS, 'svg');
+        timeIco.setAttribute('class', 'rc-ico');
+        timeIco.setAttribute('viewBox', '0 0 24 24');
+        timeIco.setAttribute('fill', 'none');
+        timeIco.setAttribute('stroke', 'currentColor');
+        timeIco.setAttribute('stroke-width', '2');
+        timeIco.setAttribute('stroke-linecap', 'round');
+        timeIco.setAttribute('stroke-linejoin', 'round');
+        timeIco.setAttribute('aria-hidden', 'true');
+        const r1 = document.createElementNS(SVG_NS, 'rect');
+        r1.setAttribute('x', '3');
+        r1.setAttribute('y', '4');
+        r1.setAttribute('width', '18');
+        r1.setAttribute('height', '18');
+        r1.setAttribute('rx', '2');
+        const p1 = document.createElementNS(SVG_NS, 'path');
+        p1.setAttribute('d', 'M16 2v4M8 2v4M3 10h18');
+        timeIco.append(r1, p1);
+        const timeSpan = document.createElement('span');
+        timeSpan.textContent = dateStr;
+        timeItem.append(timeIco, timeSpan);
+
+        const durItem = document.createElement('span');
+        durItem.className = 'rc-meta-item';
+        const durStr = contest.duration ? ContestHelpers.formatDuration(contest.duration) : '';
+        if (durStr) {
+            const durIco = document.createElementNS(SVG_NS, 'svg');
+            durIco.setAttribute('class', 'rc-ico');
+            durIco.setAttribute('viewBox', '0 0 24 24');
+            durIco.setAttribute('fill', 'none');
+            durIco.setAttribute('stroke', 'currentColor');
+            durIco.setAttribute('stroke-width', '2');
+            durIco.setAttribute('stroke-linecap', 'round');
+            durIco.setAttribute('stroke-linejoin', 'round');
+            durIco.setAttribute('aria-hidden', 'true');
+            const c1 = document.createElementNS(SVG_NS, 'circle');
+            c1.setAttribute('cx', '12');
+            c1.setAttribute('cy', '12');
+            c1.setAttribute('r', '10');
+            const p2 = document.createElementNS(SVG_NS, 'path');
+            p2.setAttribute('d', 'M12 6v6l4 2');
+            durIco.append(c1, p2);
+            const durSpan = document.createElement('span');
+            durSpan.textContent = durStr;
+            durItem.append(durIco, durSpan);
+            bot.append(timeItem, durItem);
+        } else {
+            bot.append(timeItem);
+        }
+
+        card.append(top, title, bot);
 
         const open = () => { if (contest.url) chrome.tabs.create({ url: contest.url, active: false }); };
         card.addEventListener('click', e => { if (!e.target.closest('a')) open(); });
@@ -1147,13 +1434,27 @@ const ContestRenderer = (() => {
 
         return card;
     }
-    function stateBlock({ icon, title, sub, actionLabel, onAction, isError = false }) {
+
+    /**
+     * Empty / error / loading state.
+     * @param {{icon:string,title:string,sub?:string,actionLabel?:string,onAction?:Function,
+     *          secondaryLabel?:string,onSecondary?:Function,isError?:boolean}} opts
+     */
+    function stateBlock({ icon, title, sub, actionLabel, onAction, secondaryLabel, onSecondary, isError = false }) {
         const wrap = document.createElement('div');
         wrap.className = `state-block${isError ? ' is-error' : ''}`;
 
         const ico = document.createElement('div');
         ico.className = 'state-ico';
-        ico.innerHTML = icon;
+        try {
+            const svgDoc = new DOMParser().parseFromString(icon, 'image/svg+xml');
+            if (svgDoc.documentElement && svgDoc.documentElement.nodeName === 'svg') {
+                ico.appendChild(svgDoc.documentElement);
+            }
+        } catch (_) {}
+        const dot = document.createElement('i');
+        dot.setAttribute('aria-hidden', 'true');
+        ico.appendChild(dot);
 
         const h = document.createElement('div');
         h.className = 'state-title';
@@ -1168,39 +1469,67 @@ const ContestRenderer = (() => {
             wrap.appendChild(p);
         }
 
-        if (actionLabel && onAction) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'state-action';
-            btn.textContent = actionLabel;
-            btn.addEventListener('click', () => onAction(btn));
-            wrap.appendChild(btn);
+        const actions = [];
+        if (actionLabel && onAction) actions.push({ label: actionLabel, run: onAction, ghost: false });
+        if (secondaryLabel && onSecondary) actions.push({ label: secondaryLabel, run: onSecondary, ghost: true });
+
+        if (actions.length) {
+            const row = document.createElement('div');
+            row.className = 'state-actions';
+            actions.forEach(({ label, run, ghost }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `state-action${ghost ? ' ghost' : ''}`;
+                btn.textContent = label;
+                btn.addEventListener('click', () => run(btn));
+                row.appendChild(btn);
+            });
+            wrap.appendChild(row);
         }
 
         return wrap;
     }
 
     function syncTabs() {
-        document.querySelectorAll('.tabs').forEach(bar => { bar.dataset.tab = activeTab; });
-        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+        let active = null;
+        document.querySelectorAll('.filter[data-tab]').forEach(tab => {
             const on = tab.dataset.tab === activeTab;
             tab.classList.toggle('is-active', on);
             tab.setAttribute('aria-selected', String(on));
+            tab.tabIndex = on ? 0 : -1;
+            if (on) active = tab;
         });
+        InkBar.place(document.querySelector('.filters-ink'), active);
+
         const nearCount = $('tab-near-count');
         const laterCount = $('tab-later-count');
         if (nearCount) nearCount.textContent = String(cachedNear.length);
         if (laterCount) laterCount.textContent = String(cachedLater.length);
     }
 
+    /**
+     * The nav badge is a *different* signal from the radar tab counts: it only
+     * appears when something is imminent (live, or starting within the hour),
+     * so it never just repeats "6 contests in the next 24h".
+     */
     function syncNavBadge() {
         const badge = $('nav-contest-count');
         if (!badge) return;
-        badge.textContent = String(cachedNear.length);
-        const soonest = cachedNear.find(c => ContestHelpers.getContestStatus(c) !== 'ongoing');
-        const urgent = !!soonest && (new Date(soonest.start_time).getTime() - Date.now()) <= 60 * 60 * 1000;
-        badge.classList.toggle('is-hot', urgent);
-        badge.classList.toggle('is-armed', !urgent && cachedNear.length > 0);
+
+        const live = cachedNear.filter(c => ContestHelpers.getContestStatus(c) === 'ongoing').length;
+        const soon = cachedNear.filter(c => {
+            const ms = new Date(c.start_time).getTime() - Date.now();
+            return ms > 0 && ms <= 60 * 60 * 1000;
+        }).length;
+
+        const count = live + soon;
+        badge.classList.toggle('is-hot', soon > 0);
+        badge.classList.toggle('is-live', soon === 0 && live > 0);
+        badge.hidden = count === 0;
+        badge.textContent = String(count);
+        badge.title = live > 0
+            ? `${live} contest${live === 1 ? '' : 's'} live now`
+            : `${soon} contest${soon === 1 ? '' : 's'} starting within the hour`;
     }
 
     function setTab(tab) {
@@ -1210,29 +1539,67 @@ const ContestRenderer = (() => {
         renderCurrentTab();
     }
 
-    function buildItems(items, emptyTitle, emptySub) {
+    function buildItems(items, empty) {
         const frag = document.createDocumentFragment();
         const cards = ContestSortFilter.sortByTime(items).map(createCard).filter(Boolean);
 
         if (!cards.length) {
-            frag.appendChild(stateBlock({ icon: ICON_CALENDAR, title: emptyTitle, sub: emptySub }));
+            frag.appendChild(stateBlock(empty));
             return frag;
         }
         cards.forEach(card => frag.appendChild(card));
         return frag;
     }
 
+    /** The radar's own "go be productive instead" escape hatch. */
+    const focusInstead = () => ViewModule.set('focus', { focus: true });
+
     function renderCurrentTab() {
         const list = $('contest-list');
         if (!list) return;
         const isNear = activeTab === 'near';
-        list.replaceChildren(buildItems(
-            isNear ? cachedNear : cachedLater,
-            isNear ? 'Nothing in the next 24 hours' : 'No upcoming contests',
-            isNear
-                ? 'Your next contest shows up here with a live countdown.'
-                : 'Contests from all four platforms land here as soon as they are announced.'
-        ));
+        const baseItems = isNear ? cachedNear : cachedLater;
+        const filtered = filterList(baseItems);
+
+        if (filtered.length === 0 && (selectedPlatform !== 'all' || searchQuery)) {
+            list.replaceChildren(stateBlock({
+                icon: ICON_CALENDAR,
+                title: 'No matching contests',
+                sub: 'No rounds match the current platform or search filters.',
+                actionLabel: 'Reset filters',
+                onAction: () => {
+                    selectedPlatform = 'all';
+                    searchQuery = '';
+                    const searchInput = $('radar-search');
+                    if (searchInput) searchInput.value = '';
+                    const searchClear = $('search-clear');
+                    if (searchClear) searchClear.hidden = true;
+                    document.querySelectorAll('.pfilter').forEach(btn => {
+                        btn.classList.toggle('is-active', btn.dataset.platform === 'all');
+                    });
+                    renderCurrentTab();
+                }
+            }));
+            return;
+        }
+
+        list.replaceChildren(buildItems(filtered, isNear
+            ? {
+                icon: ICON_CALENDAR,
+                title: 'Clear for 24 hours',
+                sub: 'No contest starts in the next day. A good window for a practice session.',
+                actionLabel: 'Start a session',
+                onAction: focusInstead,
+                secondaryLabel: 'Refresh',
+                onSecondary: btn => ContestListModule.refresh(btn)
+            }
+            : {
+                icon: ICON_CALENDAR,
+                title: 'No contests scheduled',
+                sub: 'Rounds from all four platforms land here the moment they are announced.',
+                actionLabel: 'Refresh',
+                onAction: btn => ContestListModule.refresh(btn)
+            }));
     }
     function render(contests) {
         const list = $('contest-list');
@@ -1247,10 +1614,12 @@ const ContestRenderer = (() => {
             syncNavBadge();
             list.replaceChildren(stateBlock({
                 icon: ICON_CALENDAR,
-                title: 'No active contests',
-                sub: 'Nothing on the radar right now — a good moment for a practice session.',
-                actionLabel: 'Refresh',
-                onAction: btn => ContestListModule.refresh(btn)
+                title: 'Radar is clear',
+                sub: 'Nothing scheduled right now — a good moment for a practice session.',
+                actionLabel: 'Start a session',
+                onAction: focusInstead,
+                secondaryLabel: 'Refresh',
+                onSecondary: btn => ContestListModule.refresh(btn)
             }));
             NextUpModule.update([]);
             return;
@@ -1284,6 +1653,8 @@ const ContestRenderer = (() => {
             sub: msg,
             actionLabel: 'Try again',
             onAction: btn => ContestListModule.refresh(btn),
+            secondaryLabel: 'Start a session',
+            onSecondary: focusInstead,
             isError: true
         }));
     }
@@ -1292,13 +1663,13 @@ const ContestRenderer = (() => {
         const list = $('contest-list');
         if (!list) return;
         const frag = document.createDocumentFragment();
-        for (let i = 0; i < 3; i++) {
-            const card = document.createElement('div');
-            card.className = 'skeleton-card';
-            if (i > 0) card.setAttribute('aria-hidden', 'true');
-            else card.setAttribute('aria-label', 'Loading contests');
-            card.append(document.createElement('span'), document.createElement('span'), document.createElement('span'));
-            frag.appendChild(card);
+        for (let i = 0; i < 4; i++) {
+            const row = document.createElement('div');
+            row.className = 'skeleton-row';
+            if (i > 0) row.setAttribute('aria-hidden', 'true');
+            else row.setAttribute('aria-label', 'Scanning for contests');
+            row.append(document.createElement('span'), document.createElement('span'));
+            frag.appendChild(row);
         }
         list.replaceChildren(frag);
     }
@@ -1314,15 +1685,47 @@ const ContestRenderer = (() => {
     }
 
     function init() {
-        document.querySelectorAll('.tab[data-tab]').forEach(tab => {
+        document.querySelectorAll('.filter[data-tab]').forEach(tab => {
             tab.addEventListener('click', () => setTab(tab.dataset.tab));
             tab.addEventListener('keydown', e => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
                 setTab(tab.dataset.tab === 'near' ? 'later' : 'near');
-                document.querySelector(`.tab[data-tab="${activeTab}"]`)?.focus({ preventScroll: true });
+                const active = document.querySelector(`.filter[data-tab="${activeTab}"]`);
+                active?.focus({ preventScroll: true });
             });
         });
+
+        document.querySelectorAll('.pfilter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pfilter').forEach(b => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
+                selectedPlatform = btn.dataset.platform;
+                renderCurrentTab();
+            });
+        });
+
+        const searchInput = $('radar-search');
+        const searchClear = $('search-clear');
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                searchQuery = searchInput.value.trim();
+                if (searchClear) searchClear.hidden = !searchQuery;
+                renderCurrentTab();
+            });
+        }
+        if (searchClear) {
+            searchClear.addEventListener('click', () => {
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                }
+                searchQuery = '';
+                searchClear.hidden = true;
+                renderCurrentTab();
+            });
+        }
+
         syncTabs();
     }
 
@@ -1342,8 +1745,10 @@ const NextUpModule = (() => {
 
     function applyHeat(btn, startIso) {
         const msUntil = new Date(startIso).getTime() - Date.now();
-        btn.classList.toggle('is-hot', msUntil > 0 && msUntil <= 60 * 60 * 1000);
-        btn.classList.toggle('is-warm', msUntil > 60 * 60 * 1000 && msUntil <= 4 * 60 * 60 * 1000);
+        const live = ContestHelpers.getContestStatus({ start_time: startIso, duration: contest?.duration }) === 'ongoing';
+        btn.classList.toggle('is-live', live);
+        btn.classList.toggle('is-hot', !live && msUntil > 0 && msUntil <= 60 * 60 * 1000);
+        btn.classList.toggle('is-warm', !live && msUntil > 60 * 60 * 1000 && msUntil <= 4 * 60 * 60 * 1000);
     }
 
     function renderCard() {
@@ -1359,19 +1764,24 @@ const NextUpModule = (() => {
         btn.type = 'button';
         btn.className = 'nextup';
         btn.style.setProperty('--spine', isOngoing ? 'var(--good)' : `var(--p-${cls})`);
+        btn.style.setProperty('--lamp-halo', isOngoing ? 'var(--good-soft)' : 'transparent');
 
         const top = document.createElement('span');
         top.className = 'nextup-top';
 
-        const badge = document.createElement('span');
-        badge.className = `platform-badge ${cls}`;
-        badge.textContent = PLATFORM_CONFIG[contest.site]?.badge || '—';
+        const lamp = document.createElement('span');
+        lamp.className = 'lamp';
+        lamp.setAttribute('aria-hidden', 'true');
 
         const eyebrow = document.createElement('span');
         eyebrow.className = 'nextup-eyebrow';
         eyebrow.textContent = isOngoing ? 'Live now' : 'Next up';
 
-        top.append(badge, eyebrow);
+        const badge = document.createElement('span');
+        badge.className = `ptag ${cls}`;
+        badge.textContent = PLATFORM_CONFIG[contest.site]?.badge || '—';
+
+        top.append(lamp, eyebrow, badge);
 
         const name = document.createElement('span');
         name.className = 'nextup-name';
@@ -1417,7 +1827,7 @@ const NextUpModule = (() => {
     }
 
     /**
-     * The rail subtitle doubles as a live contest signal. It deliberately shows
+     * The deck ticker doubles as a live contest signal. It deliberately shows
      * *timing* rather than the contest title — titles are long enough to be
      * ellipsised on a 400px popup, and the countdown is the thing that matters.
      */
@@ -1425,9 +1835,10 @@ const NextUpModule = (() => {
         const sub = $('brand-sub');
         if (!sub) return;
 
+        sub.classList.remove('is-hot', 'is-warm', 'is-live');
+
         if (!contest) {
-            sub.textContent = 'Contest radar ready';
-            sub.classList.remove('is-hot');
+            sub.textContent = 'Radar standing by';
             return;
         }
 
@@ -1436,15 +1847,14 @@ const NextUpModule = (() => {
 
         if (isOngoing) {
             sub.textContent = 'A contest is live right now';
-            sub.classList.add('is-hot');
+            sub.classList.add('is-live');
             return;
         }
 
         const left = ContestHelpers.timeUntil(contest.start_time);
-        sub.textContent = msUntil > 0 && left
-            ? `Next contest in ${left}`
-            : 'Next contest starting soon';
-        sub.classList.toggle('is-hot', msUntil > 0 && msUntil <= 60 * 60 * 1000);
+        sub.textContent = msUntil > 0 && left ? `next contest in ${left}` : 'next contest starting soon';
+        if (msUntil > 0 && msUntil <= 60 * 60 * 1000) sub.classList.add('is-hot');
+        else if (msUntil > 0 && msUntil <= 4 * 60 * 60 * 1000) sub.classList.add('is-warm');
     }
 
     return { update, refresh, updateBrandSub };
@@ -1597,7 +2007,136 @@ const SettingsModule = (() => {
                     if (tab.id) chrome.tabs.sendMessage(tab.id, { type: 'TOGGLE_ZEN', enabled }).catch(() => {});
                 });
             });
+            ToastModule.show(enabled ? 'Zen Mode on · Codeforces pages decluttered' : 'Zen Mode off', {
+                tone: enabled ? 'good' : 'info'
+            });
         });
+    }
+
+    return { init };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Settings — focus alerts (timer milestones)
+// The background worker has always supported these; until now the popup
+// offered no way to reach them.
+// ══════════════════════════════════════════════════════
+
+const FocusAlertsModule = (() => {
+    async function init() {
+        const toggle = $('timer-alerts-toggle');
+        const section = $('alert-section');
+        if (!toggle || !section) return;
+
+        const stored = await chrome.storage.local.get({
+            [TIMER_ALERTS_KEY]: true,
+            [TIMER_MILESTONES_KEY]: DEFAULT_TIMER_MILESTONES
+        });
+
+        const enabled = stored[TIMER_ALERTS_KEY] !== false;
+        toggle.checked = enabled;
+        section.hidden = !enabled;
+
+        toggle.addEventListener('change', async e => {
+            const on = e.target.checked;
+            try { await chrome.storage.local.set({ [TIMER_ALERTS_KEY]: on }); } catch (_) {}
+            section.hidden = !on;
+            chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_TOGGLED', enabled: on }).catch(() => {});
+        });
+
+        const options = Array.from(document.querySelectorAll('.alert-item'));
+        const storedMilestones = Array.isArray(stored[TIMER_MILESTONES_KEY])
+            ? stored[TIMER_MILESTONES_KEY]
+            : DEFAULT_TIMER_MILESTONES;
+
+        options.forEach(opt => {
+            opt.checked = storedMilestones.includes(opt.value);
+
+            opt.addEventListener('change', async () => {
+                // The "session end" ping is the payoff of a focus session — keep
+                // at least one alert lit rather than silently muting everything.
+                if (!opt.checked && options.filter(o => o.checked).length === 0) {
+                    opt.checked = true;
+                    return;
+                }
+                const milestones = options.filter(o => o.checked).map(o => o.value);
+                try { await chrome.storage.local.set({ [TIMER_MILESTONES_KEY]: milestones }); } catch (_) {}
+                chrome.runtime.sendMessage({ type: 'TIMER_NOTIFY_MILESTONES_CHANGED', milestones }).catch(() => {});
+            });
+        });
+
+        const testSoundBtn = $('test-sound-btn');
+        if (testSoundBtn) {
+            testSoundBtn.addEventListener('click', () => {
+                playAlertSound();
+                ToastModule.show('Playing test alert sound', { tone: 'good' });
+            });
+        }
+    }
+
+    function playAlertSound() {
+        try {
+            const url = (typeof chrome !== 'undefined' && chrome.runtime?.getURL)
+                ? chrome.runtime.getURL('assets/notify.wav')
+                : 'assets/notify.wav';
+            const audio = new Audio(url);
+            audio.volume = 0.7;
+            const p = audio.play();
+            if (p && p.catch) p.catch(() => playSynthBeep());
+        } catch (_) {
+            playSynthBeep();
+        }
+    }
+
+    function playSynthBeep() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.25);
+        } catch (_) {}
+    }
+
+    return { init };
+})();
+
+// ══════════════════════════════════════════════════════
+// MODULE: Settings — on-the-page extras (Zen Paws, AC celebration)
+// Both features shipped without a control surface; these switches are the
+// only way a user could ever discover or turn them off.
+// ══════════════════════════════════════════════════════
+
+const PageFXModule = (() => {
+    function wire(id, key, onLabel, offLabel) {
+        const toggle = $(id);
+        if (!toggle) return;
+
+        chrome.storage.local.get({ [key]: false }).then(stored => {
+            toggle.checked = !!stored[key];
+        }).catch(() => {});
+
+        toggle.addEventListener('change', async e => {
+            const on = e.target.checked;
+            try { await chrome.storage.local.set({ [key]: on }); } catch (_) {}
+            // Content scripts watch ff_zenPaws / ff_acCelebrate directly, so the
+            // storage write is enough — no message round-trip required.
+            ToastModule.show(on ? onLabel : offLabel, { tone: on ? 'good' : 'info' });
+        });
+    }
+
+    function init() {
+        wire('paws-toggle', PAWS_KEY, 'Zen Paws on · they are on their way', 'Zen Paws off');
+        wire('ac-toggle', AC_KEY, 'AC celebration on · good luck out there', 'AC celebration off');
     }
 
     return { init };
@@ -1658,6 +2197,61 @@ const ReminderSettingsModule = (() => {
 
     return { init };
 })();
+// ═════════════════════════════════════════════════════
+// MODULE: Onboarding — the first-open moment
+// Shown once (until ff_onboarded_v2 is set). Replayable from Settings.
+// ══════════════════════════════════════════════════════
+
+const OnboardingModule = (() => {
+    let el = null;
+    let isOpen = false;
+
+    /** @param {{ force?: boolean }} opts force = "Replay the intro" */
+    async function maybeShow({ force = false } = {}) {
+        if (!el) el = $('onboard');
+        if (!el) return;
+
+        if (!force) {
+            try {
+                const { [ONBOARDED_KEY]: seen } = await chrome.storage.local.get(ONBOARDED_KEY);
+                if (seen) return;
+            } catch (_) {}
+        }
+        open();
+    }
+
+    function open() {
+        if (isOpen) return;
+        isOpen = true;
+        el.hidden = false;
+        el.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(() => el.classList.add('is-open'));
+        setTimeout(() => $('ob-start')?.focus({ preventScroll: true }), 340);
+    }
+
+    async function close() {
+        if (!isOpen) return;
+        isOpen = false;
+        el.classList.remove('is-open');
+        el.setAttribute('aria-hidden', 'true');
+        setTimeout(() => { if (!isOpen) el.hidden = true; }, 340);
+        try { await chrome.storage.local.set({ [ONBOARDED_KEY]: true }); } catch (_) {}
+        $('timer-action')?.focus({ preventScroll: true });
+    }
+
+    function init() {
+        el = $('onboard');
+        if (!el) return;
+        $('ob-start')?.addEventListener('click', close);
+        $('ob-skip')?.addEventListener('click', close);
+        $('replay-intro')?.addEventListener('click', () => {
+            SettingsSheetModule.close({ restoreFocus: false });
+            maybeShow({ force: true });
+        });
+    }
+
+    return { init, open, close, maybeShow, get isOpen() { return isOpen; } };
+})();
 
 // ══════════════════════════════════════════════════════
 // MODULE: Storage bridge — keep the popup honest when the
@@ -1665,10 +2259,32 @@ const ReminderSettingsModule = (() => {
 // ═════════════════════════════════════════════════════
 
 const StorageBridge = (() => {
+    /** Reflects changes made in another popup/context back onto our switches. */
+    const TOGGLE_KEYS = {
+        ff_zenMode: 'zen-toggle',
+        [PAWS_KEY]: 'paws-toggle',
+        [AC_KEY]: 'ac-toggle',
+        [TIMER_ALERTS_KEY]: 'timer-alerts-toggle',
+        ff_reminders_enabled: 'reminder-toggle'
+    };
+
+    function syncToggles(changes) {
+        Object.entries(TOGGLE_KEYS).forEach(([key, id]) => {
+            if (!changes[key]) return;
+            const node = $(id);
+            if (node) node.checked = changes[key].newValue !== false;
+        });
+        if (changes.ff_zenMode) ToastModule.show('Zen Mode updated');
+    }
+
     function init() {
         try {
             chrome.storage.onChanged.addListener((changes, area) => {
-                if (area !== 'local' || !changes[TIMER_STORAGE_KEY]) return;
+                if (area !== 'local') return;
+
+                syncToggles(changes);
+
+                if (!changes[TIMER_STORAGE_KEY]) return;
                 if (TimerModule.wroteRecently()) return;
 
                 const next = changes[TIMER_STORAGE_KEY].newValue;
@@ -1701,29 +2317,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Theme first — every other surface inherits its palette.
     await ThemeModule.loadTheme();
 
+    // Every theme picker (settings grid + intro swatches) drives one module.
     document.querySelectorAll('.theme-card').forEach(card => {
         card.addEventListener('click', () => ThemeModule.applyTheme(card.dataset.ffTheme));
+        card.addEventListener('keydown', e => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            ThemeModule.applyTheme(card.dataset.ffTheme);
+        });
     });
+
+    $('system-theme-toggle')?.addEventListener('change', e => ThemeModule.setFollowSystem(e.target.checked));
 
     DialModule.init();
     ViewModule.init();
     SettingsSheetModule.init();
+    OnboardingModule.init();
     KeyboardModule.init();
     TimerUIModule.init();
     SettingsModule.init();
+    FocusAlertsModule.init();
     ReminderSettingsModule.init();
+    PageFXModule.init();
     ContestRenderer.init();
     StorageBridge.init();
     ContestListModule.showTimezone();
+    InkBar.track(document.querySelector('.nav'), '.nav-ink', '.nav-tab');
+    InkBar.track(document.querySelector('.filters'), '.filters-ink', '.filter[data-tab]');
 
     $('refresh-btn')?.addEventListener('click', e => ContestListModule.refresh(e.currentTarget));
+    $('timer-reset')?.addEventListener('click', () => TimerActions.reset());
 
     await TimerRecovery.recover();
     await TimerUIModule.refreshStats();
 
-    await ContestListModule.load();
+    ContestListModule.load();
     ContestListModule.startAutoRefresh();
 
+    await OnboardingModule.maybeShow();
     document.body.classList.add('is-ready');
 });
 

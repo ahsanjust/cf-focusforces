@@ -140,14 +140,24 @@
                 }
             });
 
-            // Strip sliding-door sprite backgrounds from active/back tabs in profile nav.
+            // Strip and eliminate jQuery LavaLamp sliding background artifacts
             document.querySelectorAll(
-                '.second-level-menu-list li.back, .second-level-menu-list li.selectedLava, ' +
-                '.menu-list li.back, .menu-list li.selectedLava'
+                '.second-level-menu-list li.back, .second-level-menu-list .back, .second-level-menu-list .left, ' +
+                '.menu-list li.back, .menu-list .back, .menu-list .left'
+            ).forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+                el.style.setProperty('background', 'none', 'important');
+                el.style.setProperty('background-image', 'none', 'important');
+                el.style.setProperty('opacity', '0', 'important');
+            });
+
+            document.querySelectorAll(
+                '.second-level-menu-list li.selectedLava, .menu-list li.selectedLava'
             ).forEach(li => {
                 [li, ...li.querySelectorAll('*')].forEach(el => {
                     el.style.setProperty('background-image', 'none', 'important');
-                    if (el.tagName === 'A' || el.tagName === 'LI') {
+                    if (el.tagName !== 'A') {
+                        el.style.setProperty('background', 'transparent', 'important');
                         el.style.setProperty('background-color', 'transparent', 'important');
                     }
                 });
@@ -391,8 +401,37 @@
     // a small toolbar above the statement while Zen is active, and moved back
     // to the sidebar when it is turned off.
 
+    function findTagBox() {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            const nativeBox = [...sidebar.querySelectorAll('.sidebox')]
+                .find(box => {
+                    const caption = box.querySelector('.caption');
+                    if (!caption) return false;
+                    const text = caption.textContent || caption.innerText || '';
+                    return /problem\s*tags/i.test(text);
+                });
+            if (nativeBox) return nativeBox;
+
+            const tagBoxBySpans = [...sidebar.querySelectorAll('.sidebox')]
+                .find(box => box.querySelectorAll('span.tag-box').length > 0);
+            if (tagBoxBySpans) return tagBoxBySpans;
+        }
+
+        const firstTag = document.querySelector('span.tag-box');
+        if (firstTag) {
+            return firstTag.closest('.roundbox') || firstTag.parentElement;
+        }
+        return null;
+    }
+
     function getZenKeepBoxes() {
-        return []; // Everything stays in the sidebar and is hidden by Zen Mode CSS.
+        const boxes = [];
+        const scoutCard = document.getElementById('ff-scout-card');
+        if (scoutCard) boxes.push(scoutCard);
+        const tagBox = findTagBox();
+        if (tagBox && !boxes.includes(tagBox)) boxes.push(tagBox);
+        return boxes;
     }
 
     function ensureZenToolbar() {
@@ -400,6 +439,40 @@
         zenToolbarEl = document.createElement('div');
         zenToolbarEl.id = 'ff-zen-toolbar';
         zenToolbarEl.className = 'ff-zen-toolbar';
+
+        // Add a sleek HUD bar with mode indicator and one-click exit
+        const bar = document.createElement('div');
+        bar.className = 'ff-zen-bar';
+
+        const badge = document.createElement('div');
+        badge.className = 'ff-zen-badge';
+        badge.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13" aria-hidden="true">
+                <path d="M2.6 12S6.1 6.6 12 6.6 21.4 12 21.4 12 17.9 17.4 12 17.4 2.6 12 2.6 12Z"/>
+                <circle cx="12" cy="12" r="2.5"/>
+            </svg>
+            <span>Zen Mode Active</span>
+        `;
+
+        const exitBtn = document.createElement('button');
+        exitBtn.type = 'button';
+        exitBtn.className = 'ff-zen-exit-btn';
+        exitBtn.title = 'Exit Zen Mode';
+        exitBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12"/>
+            </svg>
+            <span>Exit Zen</span>
+        `;
+        exitBtn.addEventListener('click', () => {
+            zenModeEnabled = false;
+            applyZenMode(false);
+            try { chrome.storage.local.set({ ff_zenMode: false }); } catch (_) {}
+        });
+
+        bar.append(badge, exitBtn);
+        zenToolbarEl.appendChild(bar);
+
         const pageContent = document.getElementById('pageContent')
             || document.querySelector('.content-with-sidebar')
             || document.getElementById('content');
@@ -482,22 +555,57 @@
             card.className = 'roundbox sidebox';
             card.id = 'ff-scout-card';
             card.setAttribute('data-ff-theme', currentTheme);
-            card.innerHTML = `
-                <div class="roundbox-lt">&nbsp;</div>
-                <div class="roundbox-rt">&nbsp;</div>
-                <div class="caption titled">&rarr; Scout
-                    <div class="top-links"></div>
-                </div>
-                <div style="padding:1em; text-align:center;">
-                    <div id="ff-scout-topics" class="ff-scout-tag-container ff-hidden"></div>
-                    <div id="ff-scout-rating" class="ff-scout-tag-container ff-hidden"></div>
-                    <div id="ff-scout-no-tags" style="color:#777; font-size:12px; margin-bottom:8px;">Analyzing problem...</div>
-                    <div class="ff-scout-buttons">
-                        <button type="button" class="ff-scout-btn" id="ff-scout-btn-rating" disabled>Get Rating</button>
-                        <button type="button" class="ff-scout-btn" id="ff-scout-btn-topics" disabled>Get Tags</button>
-                    </div>
-                </div>
-            `;
+
+            const lt = document.createElement('div');
+            lt.className = 'roundbox-lt';
+            lt.textContent = '\u00A0';
+            const rt = document.createElement('div');
+            rt.className = 'roundbox-rt';
+            rt.textContent = '\u00A0';
+
+            const caption = document.createElement('div');
+            caption.className = 'caption titled';
+            caption.append(document.createTextNode('\u2192 Scout'));
+            const topLinks = document.createElement('div');
+            topLinks.className = 'top-links';
+            caption.appendChild(topLinks);
+
+            const body = document.createElement('div');
+            body.style.cssText = 'padding:1em; text-align:center;';
+
+            const topicsDiv = document.createElement('div');
+            topicsDiv.id = 'ff-scout-topics';
+            topicsDiv.className = 'ff-scout-tag-container ff-hidden';
+
+            const ratingDiv = document.createElement('div');
+            ratingDiv.id = 'ff-scout-rating';
+            ratingDiv.className = 'ff-scout-tag-container ff-hidden';
+
+            const noTags = document.createElement('div');
+            noTags.id = 'ff-scout-no-tags';
+            noTags.className = 'ff-scout-no-tags';
+            noTags.textContent = 'Analyzing problem...';
+
+            const btns = document.createElement('div');
+            btns.className = 'ff-scout-buttons';
+
+            const btnR = document.createElement('button');
+            btnR.type = 'button';
+            btnR.className = 'ff-scout-btn';
+            btnR.id = 'ff-scout-btn-rating';
+            btnR.disabled = true;
+            btnR.textContent = 'Get Rating';
+
+            const btnT = document.createElement('button');
+            btnT.type = 'button';
+            btnT.className = 'ff-scout-btn';
+            btnT.id = 'ff-scout-btn-topics';
+            btnT.disabled = true;
+            btnT.textContent = 'Get Tags';
+
+            btns.append(btnR, btnT);
+            body.append(topicsDiv, ratingDiv, noTags, btns);
+            card.append(lt, rt, caption, body);
             sidebar.appendChild(card);
         }
 
@@ -524,8 +632,8 @@
         };
 
         const clearContainers = () => {
-            topicsContainer.innerHTML = '';
-            ratingContainer.innerHTML = '';
+            topicsContainer.replaceChildren();
+            ratingContainer.replaceChildren();
             topicsVisible = ratingVisible = false;
             btnTopics.disabled = btnRating.disabled = true;
             btnTopics.textContent = 'Get Tags';
@@ -541,29 +649,6 @@
         };
 
         let apiFailed = false;
-
-        const findTagBox = () => {
-            if (sidebar) {
-                const nativeBox = [...sidebar.querySelectorAll('.sidebox')]
-                    .find(box => {
-                        const caption = box.querySelector('.caption');
-                        if (!caption) return false;
-                        const text = caption.textContent || caption.innerText || '';
-                        return /problem\s*tags/i.test(text);
-                    });
-                if (nativeBox) return nativeBox;
-
-                const tagBoxBySpans = [...sidebar.querySelectorAll('.sidebox')]
-                    .find(box => box.querySelectorAll('span.tag-box').length > 0);
-                if (tagBoxBySpans) return tagBoxBySpans;
-            }
-
-            const firstTag = document.querySelector('span.tag-box');
-            if (firstTag) {
-                return firstTag.closest('.roundbox') || firstTag.parentElement;
-            }
-            return null;
-        };
 
         const processTagsFromDOM = () => {
             if (tagsProcessed) return true;
@@ -670,38 +755,38 @@
     };
 
     const handleTopicsClick = () => {
-        if (apiFailed && !topicsContainer.innerHTML) {
+        if (apiFailed && !topicsContainer.childElementCount) {
             tagsProcessed = false;
             problemCachePromise = null;
             loadTagsFromApi();
             return;
         }
-        if (topicsContainer.innerHTML) {
+        if (topicsContainer.childElementCount) {
             topicsVisible = !topicsVisible;
             topicsContainer.classList.toggle('ff-hidden', !topicsVisible);
             btnTopics.textContent = topicsVisible ? 'Hide Tags' : 'Get Tags';
             return;
         }
-        if (tagsProcessed && !topicsContainer.innerHTML) {
+        if (tagsProcessed && !topicsContainer.childElementCount) {
             btnTopics.disabled = true;
             btnTopics.textContent = 'No Tags';
         }
     };
 
     const handleRatingClick = () => {
-        if (apiFailed && !ratingContainer.innerHTML) {
+        if (apiFailed && !ratingContainer.childElementCount) {
             tagsProcessed = false;
             problemCachePromise = null;
             loadTagsFromApi();
             return;
         }
-        if (ratingContainer.innerHTML) {
+        if (ratingContainer.childElementCount) {
             ratingVisible = !ratingVisible;
             ratingContainer.classList.toggle('ff-hidden', !ratingVisible);
             btnRating.textContent = ratingVisible ? 'Hide Rating' : 'Get Rating';
             return;
         }
-        if (tagsProcessed && !ratingContainer.innerHTML) {
+        if (tagsProcessed && !ratingContainer.childElementCount) {
             btnRating.disabled = true;
             btnRating.textContent = 'No Rating';
         }

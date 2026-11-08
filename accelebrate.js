@@ -168,8 +168,11 @@
         host = document.createElement('div');
         host.id = 'ff-ac-burst';
         shadow = host.attachShadow({ mode: 'closed' });
-        shadow.innerHTML = `<style>${OVERLAY_CSS}</style><div class="ff-ac-layer"></div>`;
-        layer = shadow.querySelector('.ff-ac-layer');
+        const style = document.createElement('style');
+        style.textContent = OVERLAY_CSS;
+        layer = document.createElement('div');
+        layer.className = 'ff-ac-layer';
+        shadow.append(style, layer);
         applyTheme();
         (document.documentElement || document.body).appendChild(host);
     }

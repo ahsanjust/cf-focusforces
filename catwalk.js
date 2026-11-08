@@ -312,27 +312,46 @@
         return Math.max(0, viewH - size * 0.93 - 8);
     }
 
+    function parseSvg(svgStr) {
+        const doc = new DOMParser().parseFromString(svgStr.trim(), "image/svg+xml");
+        return doc.documentElement;
+    }
+    let catSvgTemplate = null;
+    let printSvgTemplate = null;
+    function getCatSvgNode() {
+        if (!catSvgTemplate) catSvgTemplate = parseSvg(CAT_SVG);
+        return catSvgTemplate.cloneNode(true);
+    }
+    function getPrintSvgNode() {
+        if (!printSvgTemplate) printSvgTemplate = parseSvg(PRINT_SVG);
+        return printSvgTemplate.cloneNode(true);
+    }
+
     // ── Overlay lifecycle ───────────────────────────────
     function ensureOverlay() {
         if (host) return;
         host = document.createElement('div');
         host.id = 'ff-zen-paws';
         shadow = host.attachShadow({ mode: 'closed' });
-        shadow.innerHTML = `<style>${OVERLAY_CSS}</style>
-            <div class="ff-paws">
-              <div class="ff-motes"></div>
-              <div class="ff-prints"></div>
-              <div class="ff-cats"></div>
-            </div>`;
-        motesEl = shadow.querySelector('.ff-motes');
-        printsEl = shadow.querySelector('.ff-prints');
+        const style = document.createElement('style');
+        style.textContent = OVERLAY_CSS;
+        const paws = document.createElement('div');
+        paws.className = 'ff-paws';
+        motesEl = document.createElement('div');
+        motesEl.className = 'ff-motes';
+        printsEl = document.createElement('div');
+        printsEl.className = 'ff-prints';
+        const catsLayer = document.createElement('div');
+        catsLayer.className = 'ff-cats';
+        paws.append(motesEl, printsEl, catsLayer);
+        shadow.append(style, paws);
         buildMotes();
         (document.documentElement || document.body).appendChild(host);
     }
 
     function buildMotes() {
         if (!motesEl) return;
-        motesEl.innerHTML = '';
+        motesEl.replaceChildren();
         for (let i = 0; i < MOTE_COUNT; i++) {
             const mote = document.createElement('div');
             mote.className = 'ff-mote';
@@ -348,14 +367,14 @@
 
     function buildCats() {
         const catsLayer = shadow.querySelector('.ff-cats');
-        catsLayer.innerHTML = '';
+        catsLayer.replaceChildren();
         catEls = cats.map(cat => {
             const root = document.createElement('div');
             root.className = 'ff-cat';
 
             const figure = document.createElement('div');
             figure.className = 'ff-cat-figure';
-            figure.innerHTML = CAT_SVG;
+            figure.appendChild(getCatSvgNode());
             figure.style.setProperty('--facing', cat.dir === 1 ? '1' : '-1');
 
             const shadowEl = document.createElement('div');
@@ -390,7 +409,7 @@
         print.style.setProperty('--print-size', `${Math.max(10, Math.round(cat.size * 0.32))}px`);
         print.style.setProperty('--print-opacity', '0.3');
         print.style.setProperty('--print-color', cat.palette.dark);
-        print.innerHTML = PRINT_SVG;
+        print.appendChild(getPrintSvgNode());
         print.addEventListener('animationend', () => {
             print.remove();
             printCount = Math.max(0, printCount - 1);

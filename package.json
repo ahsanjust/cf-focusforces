@@ -1,13 +1,16 @@
 {
   "name": "focusforces",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
-  "description": "FocusForces Chrome Extension",
+  "description": "FocusForces Extension",
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "npx web-ext lint",
+    "build": "npx web-ext build --overwrite-dest"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "puppeteer-core": "^25.16.0"
   }
 }

@@ -46,50 +46,48 @@
 }
 
 #ff-scout-card[data-ff-theme="dark"] {
-  --ff-accent: #a78bfa;
+  --ff-accent: #a99bff;
   --ff-accent-dark: #8b5cf6;
-  --ff-text: #e8e8f0;
-  --ff-text-secondary: #a0a3b8;
-  --ff-text-tertiary: #8a8da2;
-  --ff-bg: #171728;
-  --ff-bg-hover: #1c1c30;
-  --ff-bg-input: #1c1c30;
-  --ff-border: #282842;
-  --ff-border-focus: #a78bfa;
-  --ff-shadow: rgba(0, 0, 0, 0.3);
-  --ff-btn-bg: #1c1c30;
-  --ff-btn-border: #2e2e4a;
-  --ff-btn-hover: #282842;
-  --ff-btn-primary-bg: #7c3aed;
-  --ff-btn-primary-text: #fff;
-  --ff-btn-primary-border: #7c3aed;
-  --ff-danger: #f87171;
-  --ff-danger-glow: rgba(248, 113, 113, 0.25);
+  --ff-text: #e8eaf2;
+  --ff-text-secondary: #a4aabf;
+  --ff-text-tertiary: #7d8397;
+  --ff-bg: #12141d;
+  --ff-bg-hover: #171a25;
+  --ff-bg-input: #141724;
+  --ff-border: #252a3a;
+  --ff-border-focus: #a99bff;
+  --ff-shadow: rgba(0, 0, 0, 0.4);
+  --ff-btn-bg: rgba(169, 155, 255, 0.14);
+  --ff-btn-border: rgba(169, 155, 255, 0.35);
+  --ff-btn-hover: rgba(169, 155, 255, 0.25);
+  --ff-btn-primary-bg: #a99bff;
+  --ff-btn-primary-text: #0a0b10;
+  --ff-btn-primary-border: #a99bff;
+  --ff-danger: #ff8080;
+  --ff-danger-glow: rgba(255, 128, 128, 0.25);
 }
 
 #ff-scout-card[data-ff-theme="amoled"] {
-  --ff-accent: #c9a0ff;
-  --ff-accent-dark: #a855f7;
-  --ff-text: #e8e8f0;
-  --ff-text-secondary: #a0a3b8;
-  --ff-text-tertiary: #7a7d92;
-  --ff-bg: #111111;
-  --ff-bg-hover: #161616;
-  --ff-bg-input: #161616;
-  --ff-border: #222222;
-  --ff-border-focus: #c9a0ff;
-  --ff-shadow: rgba(0, 0, 0, 0.5);
-  --ff-btn-bg: #161616;
-  --ff-btn-border: #222222;
-  --ff-btn-hover: #222222;
-  --ff-btn-primary-bg: #c9a0ff;
-  --ff-btn-primary-text: #1a1a1a;
-  --ff-btn-primary-border: #a855f7;
-  --ff-danger: #f87171;
-  --ff-danger-glow: rgba(248, 113, 113, 0.3);
+  --ff-accent: #2fd6e8;
+  --ff-accent-dark: #06b6d4;
+  --ff-text: #e9edee;
+  --ff-text-secondary: #9fabae;
+  --ff-text-tertiary: #78868a;
+  --ff-bg: #0a0b0c;
+  --ff-bg-hover: #101213;
+  --ff-bg-input: #0d0f10;
+  --ff-border: #212426;
+  --ff-border-focus: #2fd6e8;
+  --ff-shadow: rgba(0, 0, 0, 0.6);
+  --ff-btn-bg: rgba(47, 214, 232, 0.13);
+  --ff-btn-border: rgba(47, 214, 232, 0.32);
+  --ff-btn-hover: rgba(47, 214, 232, 0.25);
+  --ff-btn-primary-bg: #2fd6e8;
+  --ff-btn-primary-text: #001417;
+  --ff-btn-primary-border: #2fd6e8;
+  --ff-danger: #ff7b7b;
+  --ff-danger-glow: rgba(255, 123, 123, 0.3);
 }
-
-
 
 #ff-scout-card[data-ff-theme="contrast"] {
   --ff-accent: #facc15;
@@ -97,20 +95,26 @@
   --ff-text: #ffffff;
   --ff-text-secondary: #d4d4d4;
   --ff-text-tertiary: #a0a0a0;
-  --ff-bg: #141414;
-  --ff-bg-hover: #1e1e1e;
-  --ff-bg-input: #1e1e1e;
-  --ff-border: #888888;
+  --ff-bg: #000000;
+  --ff-bg-hover: #141414;
+  --ff-bg-input: #101010;
+  --ff-border: #555555;
   --ff-border-focus: #facc15;
   --ff-shadow: rgba(250, 204, 21, 0.18);
-  --ff-btn-bg: #1e1e1e;
-  --ff-btn-border: #888888;
-  --ff-btn-hover: #333333;
+  --ff-btn-bg: rgba(250, 204, 21, 0.14);
+  --ff-btn-border: rgba(250, 204, 21, 0.4);
+  --ff-btn-hover: rgba(250, 204, 21, 0.25);
   --ff-btn-primary-bg: #facc15;
   --ff-btn-primary-text: #000000;
-  --ff-btn-primary-border: #eab308;
+  --ff-btn-primary-border: #facc15;
   --ff-danger: #f87171;
   --ff-danger-glow: rgba(248, 113, 113, 0.3);
+}
+
+.ff-scout-no-tags {
+  color: var(--ff-text-secondary);
+  font-size: 12px;
+  margin-bottom: 8px;
 }
 
 @container ff-card (max-width: 300px) {
@@ -269,12 +273,60 @@ body.ff-zen-mode-active .problem-statement {
    they remain accessible without eating into the full-width layout. */
 body.ff-zen-mode-active .ff-zen-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  align-items: flex-start;
-  max-width: 1050px;
-  margin: 0 auto 10px;
-  padding: 0 1.2em;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 1100px;
+  margin: 12px auto 16px;
+  padding: 0 1.5em;
+  animation: ff-zen-in 0.3s ease-out;
+}
+
+@keyframes ff-zen-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.ff-zen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--ff-card-bg, #ffffff);
+  border: 1px solid var(--ff-border, #e2e5ea);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.ff-zen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ff-accent, #6c5ce7);
+  letter-spacing: -0.1px;
+}
+
+.ff-zen-exit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--ff-text-secondary, #6b7280);
+  border: 1px solid var(--ff-border, #d1d5db);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ff-zen-exit-btn:hover {
+  background: var(--ff-bg-hover, #f3f4f6);
+  color: var(--ff-text, #111827);
+  border-color: var(--ff-text-secondary, #9ca3af);
 }
 
 body.ff-zen-mode-active .ff-zen-toolbar .sidebox {
@@ -282,5 +334,30 @@ body.ff-zen-mode-active .ff-zen-toolbar .sidebox {
   width: auto !important;
   min-width: 220px;
   margin: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Submitify (Inline direct submission textarea) ── */
+.ff-submitify-textarea {
+  width: 100% !important;
+  min-height: 220px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  tab-size: 4 !important;
+  padding: 10px 12px !important;
+  border: 1px solid var(--ff-border, #d1d5db) !important;
+  border-radius: 6px !important;
+  background: var(--ff-bg-input, #fcfcfd) !important;
+  color: var(--ff-text, #111827) !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.ff-submitify-textarea:focus {
+  outline: none !important;
+  border-color: var(--ff-accent, #6c5ce7) !important;
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15) !important;
 }
 

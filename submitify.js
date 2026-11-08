@@ -19,8 +19,10 @@
 
         // ── Replace file input with textarea ──────────────
         const textarea = document.createElement('textarea');
+        textarea.className = 'ff-submitify-textarea';
+        textarea.placeholder = '// Paste or write your solution here (Ctrl+Enter to submit)';
         input.getAttributeNames().forEach(name => {
-            if (!name.startsWith('on')) {
+            if (!name.startsWith('on') && name !== 'type') {
                 textarea.setAttribute(name, input.getAttribute(name));
             }
         });
@@ -39,6 +41,21 @@
         if (submitBtn) {
             submitBtn.addEventListener('click', () => textarea.select());
         }
+
+        // ── Keyboard shortcuts: Tab to indent, Ctrl+Enter to submit ──
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                textarea.value = textarea.value.substring(0, start) + '    ' + textarea.value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 4;
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (submitBtn) submitBtn.click();
+                else if (form) form.submit();
+            }
+        });
 
         // ── Language-specific notices ─────────────────────
         const noticeEl = document.querySelector('.programTypeNotice');

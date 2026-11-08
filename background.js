@@ -739,12 +739,13 @@ function stopBadgeRefresh() {
 let offscreenReadyPromise = null;
 
 async function ensureOffscreenDocument() {
-    if (typeof chrome.offscreen === 'undefined') return;
+    const offscreenApi = chrome && chrome['offscreen'];
+    if (!offscreenApi || typeof offscreenApi.hasDocument !== 'function') return;
     if (!offscreenReadyPromise) {
         offscreenReadyPromise = (async () => {
-            const hasDoc = await chrome.offscreen.hasDocument();
+            const hasDoc = await offscreenApi.hasDocument();
             if (!hasDoc) {
-                await chrome.offscreen.createDocument({
+                await offscreenApi.createDocument({
                     url: 'offscreen.html',
                     reasons: ['AUDIO_PLAYBACK'],
                     justification: 'Play FocusForces timer notification sounds on any page'
