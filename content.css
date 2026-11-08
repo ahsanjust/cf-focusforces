@@ -1004,6 +1004,44 @@ body.ff-zen-mode-active div.part section pre {
   margin-bottom: 8px !important;
 }
 
+/* ── Zen Mode Submit Dock (Integrated Problem Submission) ── */
+.ff-zen-submit-dock {
+  width: 100% !important;
+  margin-top: 36px !important;
+  padding: 28px clamp(20px, 4vw, 40px) !important;
+  background: var(--ff-card, #ffffff) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px -2px var(--ff-shadow, rgba(0, 0, 0, 0.05)), 0 0 0 1px var(--ff-border-soft, rgba(0,0,0,0.02)) !important;
+  box-sizing: border-box !important;
+  transition: max-width 0.22s ease !important;
+}
+
+.ff-zen-submit-dock .caption {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--ff-text, #111827) !important;
+  margin-bottom: 14px !important;
+  border-bottom: 1px solid var(--ff-border-soft, #edf2f7) !important;
+  padding-bottom: 8px !important;
+}
+
+.ff-zen-submit-dock .sidebox,
+.ff-zen-submit-dock .roundbox {
+  float: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.ff-zen-submit-dock form.submit-form {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* ── Submitify (Production-Quality Inline Code Editor & Draft Safety) ── */
 .ff-submitify-container {
   width: 100% !important;

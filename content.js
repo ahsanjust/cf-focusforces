@@ -477,12 +477,21 @@
         return null;
     }
 
+    function findSubmitBox() {
+        if (PLATFORM !== 'codeforces') return null;
+        const form = document.querySelector('form.submit-form, form[action$="/submit"]');
+        if (!form) return null;
+        return form.closest('.roundbox') || form;
+    }
+
     function getZenKeepBoxes() {
         const boxes = [];
         const scoutCard = document.getElementById('ff-scout-card');
         if (scoutCard) boxes.push(scoutCard);
         const tagBox = findTagBox();
         if (tagBox && !boxes.includes(tagBox)) boxes.push(tagBox);
+        const submitBox = findSubmitBox();
+        if (submitBox && !boxes.includes(submitBox)) boxes.push(submitBox);
         return boxes;
     }
 
@@ -586,8 +595,10 @@
         const submitForm = document.querySelector('form.submit-form, form[action$="/submit"]');
         if (submitForm) {
             submitForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const area = submitForm.querySelector('textarea, input[type="file"]');
-            if (area) area.focus();
+            const area = submitForm.querySelector('textarea.ff-submitify-textarea, textarea, input[type="file"]');
+            if (area) {
+                setTimeout(() => area.focus(), 250);
+            }
             return;
         }
 
@@ -1019,6 +1030,12 @@
             zenWorkspaceEl.classList.toggle('has-companion', isWide && zenCompanionVisible);
             zenWorkspaceEl.classList.toggle('rail-hidden', !isWide || !zenCompanionVisible);
 
+            const submitDock = document.createElement('section');
+            submitDock.id = 'ff-zen-submit-dock';
+            submitDock.className = 'ff-zen-submit-dock';
+            submitDock.style.display = 'none';
+            zenCanvasEl.appendChild(submitDock);
+
             buildTableOfContents();
             relocateZenBoxes(true);
             enhanceProblemHeader();
@@ -1054,11 +1071,17 @@
                 if (!zenRelocated.some(r => r.box === box)) {
                     zenRelocated.push({ box, parent: box.parentNode, next: box.nextSibling });
                 }
-                if (zenRailEl && zenRailEl.isConnected) {
-                    if (box.id === 'ff-scout-card') {
+                const isSubmit = box.querySelector && (box.querySelector('form.submit-form, form[action$="/submit"]') || box.matches('form.submit-form, form[action$="/submit"]'));
+                if (box.id === 'ff-scout-card') {
+                    if (zenRailEl && zenRailEl.isConnected) {
                         const dock = document.getElementById('ff-zen-rail-scout');
                         if (dock) { dock.style.display = ''; dock.appendChild(box); }
-                    } else {
+                    }
+                } else if (isSubmit) {
+                    const dock = document.getElementById('ff-zen-submit-dock');
+                    if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                } else {
+                    if (zenRailEl && zenRailEl.isConnected) {
                         const dock = document.getElementById('ff-zen-rail-tags');
                         if (dock) { dock.style.display = ''; dock.appendChild(box); }
                     }
@@ -1074,6 +1097,8 @@
                 }
             });
             zenRelocated = [];
+            const submitDock = document.getElementById('ff-zen-submit-dock');
+            if (submitDock) submitDock.remove();
             if (zenDrawerEl) {
                 zenDrawerEl.remove();
                 zenDrawerEl = null;

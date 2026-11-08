@@ -488,6 +488,21 @@ const PracticeQueueModule = (() => {
         }
 
         const list = await getQueue();
+        if (list.length >= 100) {
+            ToastModule.show('Practice queue limit (100) reached', { tone: 'warn' });
+            return;
+        }
+
+        const isDuplicate = list.some(item =>
+            (url && item.url && item.url.toLowerCase() === url.toLowerCase()) ||
+            (title && item.title && item.title.toLowerCase() === title.toLowerCase())
+        );
+
+        if (isDuplicate) {
+            ToastModule.show('Problem already in practice queue', { tone: 'neutral' });
+            return;
+        }
+
         const id = 'pq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
         list.unshift({
             id,

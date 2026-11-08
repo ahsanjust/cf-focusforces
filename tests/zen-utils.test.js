@@ -51,6 +51,8 @@ describe('detectPlatform', () => {
     test('detects Codeforces', () => {
         expect(detectPlatform('codeforces.com')).toBe('codeforces');
         expect(detectPlatform('m1.codeforces.com')).toBe('codeforces');
+        expect(detectPlatform('127.0.0.1')).toBe('codeforces');
+        expect(detectPlatform('localhost')).toBe('codeforces');
     });
 
     test('detects AtCoder', () => {

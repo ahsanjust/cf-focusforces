@@ -54,7 +54,7 @@
     function detectPlatform(hostname) {
         if (!hostname || typeof hostname !== 'string') return 'other';
         const h = hostname.toLowerCase();
-        if (h.includes('codeforces.com')) return 'codeforces';
+        if (h.includes('codeforces.com') || h === '127.0.0.1' || h === 'localhost') return 'codeforces';
         if (h.includes('atcoder.jp')) return 'atcoder';
         if (h.includes('codechef.com')) return 'codechef';
         return 'other';
