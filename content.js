@@ -556,39 +556,10 @@
             }
             try { chrome.storage.local.set({ ff_zen_companion: zenCompanionVisible }); } catch (_) {}
         } else {
-            toggleZenDrawer();
+            if (zenWorkspaceEl) {
+                zenWorkspaceEl.classList.toggle('drawer-open');
+            }
         }
-    }
-
-    function toggleZenDrawer() {
-        if (zenDrawerEl && zenDrawerEl.isConnected) {
-            zenDrawerEl.remove();
-            zenDrawerEl = null;
-            return;
-        }
-        zenDrawerEl = document.createElement('div');
-        zenDrawerEl.id = 'ff-zen-drawer';
-        zenDrawerEl.className = 'ff-zen-drawer';
-
-        const head = document.createElement('div');
-        head.className = 'ff-zen-rail-head';
-        head.innerHTML = `
-            <span class="ff-zen-rail-title">Problem Overview</span>
-            <button type="button" class="ff-zen-btn" style="padding:2px 8px; font-weight:bold;">✕</button>
-        `;
-        head.querySelector('button')?.addEventListener('click', () => {
-            zenDrawerEl?.remove();
-            zenDrawerEl = null;
-        });
-
-        zenDrawerEl.appendChild(head);
-
-        const keepers = getZenKeepBoxes();
-        keepers.forEach(box => {
-            zenDrawerEl.appendChild(box);
-        });
-
-        document.body.appendChild(zenDrawerEl);
     }
 
     function onQuickSubmitClick() {
@@ -654,6 +625,25 @@
         if (zenHudEl) {
             zenHudEl.classList.toggle('is-condensed', scrollTop > 48);
         }
+
+        updateActiveTocSection();
+    }
+
+    function updateActiveTocSection() {
+        const links = document.querySelectorAll('.ff-zen-toc-link');
+        if (!links.length) return;
+        const scrollPos = (window.scrollY || document.documentElement.scrollTop) + 140;
+        let activeLink = null;
+        links.forEach(link => {
+            const targetId = link.getAttribute('href')?.replace('#', '');
+            const target = targetId ? document.getElementById(targetId) : null;
+            if (target && target.offsetTop <= scrollPos) {
+                activeLink = link;
+            }
+        });
+        links.forEach(link => {
+            link.classList.toggle('is-active', link === activeLink);
+        });
     }
 
     function onZenKeyDown(e) {
@@ -663,7 +653,19 @@
             return;
         }
 
-        if (e.key === 'Escape' || e.key === 'z' || e.key === 'Z') {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (zenWorkspaceEl?.classList.contains('drawer-open')) {
+                zenWorkspaceEl.classList.remove('drawer-open');
+                return;
+            }
+            zenModeEnabled = false;
+            applyZenMode(false);
+            try { chrome.storage.local.set({ ff_zenMode: false }); } catch (_) {}
+            return;
+        }
+
+        if (e.key === 'z' || e.key === 'Z') {
             e.preventDefault();
             zenModeEnabled = false;
             applyZenMode(false);
@@ -806,27 +808,64 @@
         const limitsRow = document.createElement('div');
         limitsRow.className = 'ff-zen-limits-row';
 
+        const createSvgIcon = (type) => {
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('viewBox', '0 0 24 24');
+            svg.setAttribute('width', '13');
+            svg.setAttribute('height', '13');
+            svg.setAttribute('fill', 'none');
+            svg.setAttribute('stroke', 'currentColor');
+            svg.setAttribute('stroke-width', '2.2');
+            svg.setAttribute('stroke-linecap', 'round');
+            svg.setAttribute('stroke-linejoin', 'round');
+            svg.setAttribute('aria-hidden', 'true');
+
+            if (type === 'time') {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', '12');
+                circle.setAttribute('cy', '12');
+                circle.setAttribute('r', '10');
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                poly.setAttribute('points', '12 6 12 12 16 14');
+                svg.append(circle, poly);
+            } else if (type === 'memory') {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('width', '18');
+                rect.setAttribute('height', '18');
+                rect.setAttribute('x', '3');
+                rect.setAttribute('y', '3');
+                rect.setAttribute('rx', '2');
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M7 7h.01M12 7h.01M17 7h.01M7 12h.01M12 12h.01M17 12h.01M7 17h.01M12 17h.01M17 17h.01');
+                svg.append(rect, path);
+            } else if (type === 'io') {
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M4 17l6-6-6-6M12 19h8');
+                svg.append(path);
+            }
+            return svg;
+        };
+
+        const createLimitPill = (iconType, text, title) => {
+            const pill = document.createElement('span');
+            pill.className = 'ff-zen-limit-pill';
+            pill.title = title;
+            const svg = createSvgIcon(iconType);
+            const span = document.createElement('span');
+            span.textContent = text;
+            pill.append(svg, span);
+            return pill;
+        };
+
         if (meta.timeLimit) {
-            const timePill = document.createElement('span');
-            timePill.className = 'ff-zen-limit-pill';
-            timePill.title = 'Time limit per test';
-            timePill.textContent = `⏱️ ${meta.timeLimit}`;
-            limitsRow.appendChild(timePill);
+            limitsRow.appendChild(createLimitPill('time', meta.timeLimit, 'Time limit per test'));
         }
 
         if (meta.memoryLimit) {
-            const memPill = document.createElement('span');
-            memPill.className = 'ff-zen-limit-pill';
-            memPill.title = 'Memory limit per test';
-            memPill.textContent = `💾 ${meta.memoryLimit}`;
-            limitsRow.appendChild(memPill);
+            limitsRow.appendChild(createLimitPill('memory', meta.memoryLimit, 'Memory limit per test'));
         }
 
-        const ioPill = document.createElement('span');
-        ioPill.className = 'ff-zen-limit-pill';
-        ioPill.title = 'Input / Output stream';
-        ioPill.textContent = `📥 ${meta.inputType} · ${meta.outputType}`;
-        limitsRow.appendChild(ioPill);
+        limitsRow.appendChild(createLimitPill('io', `${meta.inputType} · ${meta.outputType}`, 'Input / Output stream'));
 
         card.appendChild(limitsRow);
 
@@ -844,16 +883,18 @@
             { id: 'ff-sec-input', label: 'Input Spec', selector: '.input-specification, div.part:has(h3)' },
             { id: 'ff-sec-output', label: 'Output Spec', selector: '.output-specification' },
             { id: 'ff-sec-samples', label: 'Examples', selector: '.sample-test, .sample-tests, div.part:has(pre)' },
-            { id: 'ff-sec-note', label: 'Notes', selector: '.note' }
+            { id: 'ff-sec-note', label: 'Notes', selector: '.note' },
+            { id: 'ff-zen-submit-dock', label: 'Submit Solution', selector: '#ff-zen-submit-dock' }
         ];
 
         let foundAny = false;
         sections.forEach(({ id, label, selector }) => {
             const el = document.querySelector(selector);
             if (el) {
-                el.id = id;
+                if (!el.id) el.id = id;
+                const targetId = el.id;
                 const link = document.createElement('a');
-                link.href = `#${id}`;
+                link.href = `#${targetId}`;
                 link.className = 'ff-zen-toc-link';
                 link.textContent = label;
                 link.addEventListener('click', (e) => {
@@ -875,6 +916,21 @@
         zenRailEl.id = 'ff-zen-rail';
         zenRailEl.className = 'ff-zen-rail';
         zenRailEl.setAttribute('aria-label', 'Problem Companion');
+
+        // 0. Drawer Header (shown on viewports < 1360px when opened as drawer)
+        const drawerHead = document.createElement('div');
+        drawerHead.className = 'ff-zen-rail-drawer-header';
+        drawerHead.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+                <span class="ff-zen-rail-title" style="margin-bottom:0;">Problem Overview</span>
+            </div>
+            <button type="button" class="ff-zen-btn" id="ff-zen-drawer-close-btn" title="Close Overview (Esc)" style="padding:2px 8px; font-weight:700;">✕</button>
+        `;
+        drawerHead.querySelector('#ff-zen-drawer-close-btn')?.addEventListener('click', () => {
+            zenWorkspaceEl?.classList.remove('drawer-open');
+        });
+        zenRailEl.appendChild(drawerHead);
 
         // 1. Table of Contents / Section Jump
         const tocCard = document.createElement('div');
@@ -1075,20 +1131,64 @@
                 if (box.id === 'ff-scout-card') {
                     if (zenRailEl && zenRailEl.isConnected) {
                         const dock = document.getElementById('ff-zen-rail-scout');
-                        if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                        if (dock) {
+                            dock.style.display = '';
+                            dock.appendChild(box);
+                            const cap = box.querySelector('.caption');
+                            if (cap && !cap.dataset.ffZen) {
+                                cap.dataset.ffZen = 'true';
+                                cap.dataset.origText = cap.textContent;
+                                cap.textContent = 'STEALTH SCOUT';
+                            }
+                        }
                     }
                 } else if (isSubmit) {
                     const dock = document.getElementById('ff-zen-submit-dock');
-                    if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                    if (dock) {
+                        dock.style.display = '';
+                        dock.appendChild(box);
+                        const cap = box.querySelector('.caption');
+                        if (cap && !cap.dataset.ffZen) {
+                            cap.dataset.ffZen = 'true';
+                            cap.dataset.origText = cap.textContent;
+                            cap.replaceChildren();
+                            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                            svg.setAttribute('viewBox', '0 0 24 24');
+                            svg.setAttribute('width', '16');
+                            svg.setAttribute('height', '16');
+                            svg.setAttribute('fill', 'none');
+                            svg.setAttribute('stroke', 'currentColor');
+                            svg.setAttribute('stroke-width', '2.2');
+                            svg.setAttribute('aria-hidden', 'true');
+                            const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            path1.setAttribute('d', 'm22 2-7 20-4-9-9-4Z');
+                            const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            path2.setAttribute('d', 'M22 2 11 13');
+                            svg.append(path1, path2);
+                            const labelSpan = document.createElement('span');
+                            labelSpan.textContent = 'Submit Solution';
+                            cap.append(svg, labelSpan);
+                        }
+                    }
                 } else {
                     if (zenRailEl && zenRailEl.isConnected) {
                         const dock = document.getElementById('ff-zen-rail-tags');
-                        if (dock) { dock.style.display = ''; dock.appendChild(box); }
+                        if (dock) {
+                            dock.appendChild(box);
+                            const isHidden = box.style.display === 'none' || box.classList.contains('ff-hidden');
+                            dock.style.display = isHidden ? 'none' : '';
+                        }
                     }
                 }
             });
         } else if (zenRelocated.length) {
             zenRelocated.forEach(({ box, parent, next }) => {
+                const cap = box.querySelector?.('.caption');
+                if (cap && cap.dataset.ffZen) {
+                    if (cap.dataset.origText) cap.textContent = cap.dataset.origText;
+                    delete cap.dataset.ffZen;
+                    delete cap.dataset.origText;
+                }
                 if (parent && parent.isConnected) {
                     parent.insertBefore(box, next);
                 } else {
@@ -1099,9 +1199,8 @@
             zenRelocated = [];
             const submitDock = document.getElementById('ff-zen-submit-dock');
             if (submitDock) submitDock.remove();
-            if (zenDrawerEl) {
-                zenDrawerEl.remove();
-                zenDrawerEl = null;
+            if (zenWorkspaceEl) {
+                zenWorkspaceEl.classList.remove('drawer-open');
             }
         }
     }

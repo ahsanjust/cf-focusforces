@@ -30,6 +30,7 @@
   --ff-danger-glow: rgba(220, 38, 38, 0.2);
   --ff-code-bg: #f3f4f6;
   --ff-code-border: #e5e7eb;
+  --ff-code-text: #0f172a;
   --ff-toolbar-bg: rgba(255, 255, 255, 0.90);
   --ff-toolbar-border: rgba(226, 232, 240, 0.95);
   --ff-kbd-bg: #f1f5f9;
@@ -72,6 +73,7 @@ body[data-ff-theme="dark"] {
   --ff-danger-glow: rgba(255, 128, 128, 0.25);
   --ff-code-bg: #12141d;
   --ff-code-border: #252a3a;
+  --ff-code-text: #e8eaf2;
   --ff-toolbar-bg: rgba(24, 26, 36, 0.90);
   --ff-toolbar-border: rgba(40, 44, 60, 0.95);
   --ff-kbd-bg: #202432;
@@ -109,6 +111,7 @@ body[data-ff-theme="amoled"] {
   --ff-danger-glow: rgba(255, 123, 123, 0.3);
   --ff-code-bg: #050607;
   --ff-code-border: #1a1c20;
+  --ff-code-text: #e9edee;
   --ff-toolbar-bg: rgba(10, 11, 13, 0.94);
   --ff-toolbar-border: rgba(34, 37, 42, 0.95);
   --ff-kbd-bg: #15181c;
@@ -146,6 +149,7 @@ body[data-ff-theme="contrast"] {
   --ff-danger-glow: rgba(248, 113, 113, 0.35);
   --ff-code-bg: #000000;
   --ff-code-border: #555555;
+  --ff-code-text: #ffffff;
   --ff-toolbar-bg: rgba(0, 0, 0, 0.96);
   --ff-toolbar-border: #555555;
   --ff-kbd-bg: #111111;
@@ -805,6 +809,18 @@ body.ff-zen-mode-active div.part section pre {
   white-space: nowrap !important;
 }
 
+@media (max-width: 1100px) {
+  .ff-zen-prob-title {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .ff-zen-btn span:not(#ff-zen-font-label) {
+    display: none !important;
+  }
+}
+
 .ff-zen-btn {
   display: inline-flex !important;
   align-items: center !important;
@@ -875,12 +891,59 @@ body.ff-zen-mode-active div.part section pre {
 
 @media (max-width: 1359px) {
   .ff-zen-rail {
+    position: fixed !important;
+    top: 64px !important;
+    right: 16px !important;
+    width: 320px !important;
+    max-height: calc(100vh - 84px) !important;
+    overflow-y: auto !important;
+    background: var(--ff-card, #ffffff) !important;
+    border: 1px solid var(--ff-border, #e2e8f0) !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+    box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--ff-border) !important;
+    z-index: 2147483645 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    transform: translateY(-8px) scale(0.98) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .ff-zen-workspace.drawer-open .ff-zen-rail {
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (min-width: 1360px) {
+  .ff-zen-rail {
+    display: flex !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none !important;
+  }
+  .ff-zen-workspace.rail-hidden .ff-zen-rail {
     display: none !important;
   }
 }
 
-.ff-zen-workspace.rail-hidden .ff-zen-rail {
+.ff-zen-rail-drawer-header {
   display: none !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 12px !important;
+  margin-bottom: 8px !important;
+  border-bottom: 1px solid var(--ff-border-soft, #edf2f7) !important;
+}
+
+@media (max-width: 1359px) {
+  .ff-zen-rail-drawer-header {
+    display: flex !important;
+  }
 }
 
 .ff-zen-rail-card {
@@ -889,6 +952,29 @@ body.ff-zen-mode-active div.part section pre {
   border-radius: 12px !important;
   padding: 16px !important;
   box-shadow: 0 2px 8px var(--ff-shadow, rgba(0,0,0,0.05)) !important;
+}
+
+/* Eliminate empty or fully hidden cards in the rail */
+.ff-zen-rail-card:empty,
+.ff-zen-rail-card:has(> .sidebox[style*="display: none"]):not(:has(> :not([style*="display: none"]))) {
+  display: none !important;
+}
+
+.ff-zen-rail .ff-scout-btn {
+  border-radius: 8px !important;
+  padding: 7px 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  background: var(--ff-btn-bg) !important;
+  color: var(--ff-text) !important;
+  border: 1px solid var(--ff-btn-border) !important;
+  transition: all 0.15s ease !important;
+}
+
+.ff-zen-rail .ff-scout-btn:hover:not(:disabled) {
+  background: var(--ff-accent-soft, rgba(99, 102, 241, 0.15)) !important;
+  border-color: var(--ff-accent) !important;
+  color: var(--ff-accent) !important;
 }
 
 .ff-zen-rail-head {
@@ -995,13 +1081,17 @@ body.ff-zen-mode-active div.part section pre {
 }
 
 .ff-zen-rail #problem-tags-box .caption,
-.ff-zen-drawer #problem-tags-box .caption {
-  font-size: 12px !important;
+.ff-zen-drawer #problem-tags-box .caption,
+.ff-zen-rail .caption,
+.ff-zen-drawer .caption {
+  font-size: 11.5px !important;
   font-weight: 700 !important;
-  color: var(--ff-text-secondary, #4b5563) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--ff-text-secondary, #64748b) !important;
   border-bottom: 1px solid var(--ff-border-soft, #edf2f7) !important;
   padding-bottom: 6px !important;
-  margin-bottom: 8px !important;
+  margin-bottom: 10px !important;
 }
 
 /* ── Zen Mode Submit Dock (Integrated Problem Submission) ── */
@@ -1021,9 +1111,12 @@ body.ff-zen-mode-active div.part section pre {
   font-size: 14px !important;
   font-weight: 700 !important;
   color: var(--ff-text, #111827) !important;
-  margin-bottom: 14px !important;
+  margin-bottom: 16px !important;
   border-bottom: 1px solid var(--ff-border-soft, #edf2f7) !important;
-  padding-bottom: 8px !important;
+  padding-bottom: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
 }
 
 .ff-zen-submit-dock .sidebox,
@@ -1040,6 +1133,77 @@ body.ff-zen-mode-active div.part section pre {
 .ff-zen-submit-dock form.submit-form {
   margin: 0 !important;
   padding: 0 !important;
+}
+
+.ff-zen-submit-dock label {
+  display: block !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  color: var(--ff-text-secondary, #64748b) !important;
+  margin-bottom: 4px !important;
+}
+
+.ff-zen-submit-dock select[name="programTypeId"] {
+  width: 100% !important;
+  max-width: 440px !important;
+  padding: 9px 14px !important;
+  border-radius: 9px !important;
+  border: 1px solid var(--ff-border, #d1d5db) !important;
+  background-color: var(--ff-bg-input, #ffffff) !important;
+  color: var(--ff-text, #111827) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  margin-top: 4px !important;
+  margin-bottom: 14px !important;
+  display: block !important;
+}
+
+.ff-zen-submit-dock select[name="programTypeId"]:focus {
+  border-color: var(--ff-accent, #6366f1) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+}
+
+.ff-zen-submit-dock input[type="submit"],
+.ff-zen-submit-dock button[type="submit"],
+.ff-zen-submit-dock .submit {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px 28px !important;
+  background: var(--ff-btn-primary-bg, #6c5ce7) !important;
+  color: var(--ff-btn-primary-text, #ffffff) !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  border: 1px solid var(--ff-btn-primary-border, #5a48d6) !important;
+  border-radius: 9px !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px var(--ff-shadow, rgba(108, 92, 231, 0.28)) !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin-top: 14px !important;
+}
+
+.ff-zen-submit-dock input[type="submit"]:hover,
+.ff-zen-submit-dock button[type="submit"]:hover,
+.ff-zen-submit-dock .submit:hover {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px var(--ff-shadow, rgba(108, 92, 231, 0.38)) !important;
+}
+
+.ff-zen-submit-dock input[type="submit"]:active,
+.ff-zen-submit-dock button[type="submit"]:active,
+.ff-zen-submit-dock .submit:active {
+  transform: translateY(0) !important;
 }
 
 /* ── Submitify (Production-Quality Inline Code Editor & Draft Safety) ── */
