@@ -183,14 +183,24 @@ const ThemeModule = (() => {
 
     function syncThemeToContentScript(theme) {
         // Path 1: background service worker → every contest-site tab.
-        chrome.runtime.sendMessage({ type: 'THEME_CHANGED', theme }).catch(() => {});
+        try {
+            chrome.runtime.sendMessage({ type: 'THEME_CHANGED', theme }, () => {
+                void chrome.runtime.lastError;
+            });
+        } catch (_) {}
 
         // Path 2: direct message to the visible tab for an instant repaint.
-        chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-            if (tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, { type: 'THEME_CHANGED', theme }).catch(() => {});
-            }
-        });
+        if (chrome.tabs?.query) {
+            try {
+                chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+                    if (tabs && tabs[0]?.id && chrome.tabs?.sendMessage) {
+                        chrome.tabs.sendMessage(tabs[0].id, { type: 'THEME_CHANGED', theme }, () => {
+                            void chrome.runtime.lastError;
+                        });
+                    }
+                });
+            } catch (_) {}
+        }
     }
 
     return {
@@ -541,7 +551,18 @@ const PracticeQueueModule = (() => {
         if (!listEl) return;
 
         const list = await getQueue();
-        if (badgeEl) badgeEl.textContent = String(list.filter(x => !x.completed).length);
+        const pendingCount = list.filter(x => !x.completed).length;
+        if (badgeEl) badgeEl.textContent = String(pendingCount);
+
+        const navBadge = $('nav-queue-count');
+        if (navBadge) {
+            navBadge.textContent = String(pendingCount);
+            navBadge.hidden = pendingCount === 0;
+        }
+        const statsEl = $('queue-header-stats');
+        if (statsEl) {
+            statsEl.textContent = `${pendingCount} problem${pendingCount === 1 ? '' : 's'} to solve · ${list.length - pendingCount} solved`;
+        }
 
         if (!list.length) {
             listEl.replaceChildren();
@@ -614,14 +635,14 @@ const PracticeQueueModule = (() => {
                 add(input.value);
                 input.value = '';
             });
-            input.addEventListener('keydown', (e) => {
+            input.addEventListener('keydown', e => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     add(input.value);
                     input.value = '';
                 }
             });
         }
-
         render();
     }
 
@@ -1176,7 +1197,7 @@ const TimerRecovery = (() => {
 
 const ViewModule = (() => {
     let current = 'focus';
-    const VIEWS = ['focus', 'contests', 'settings'];
+    const VIEWS = ['focus', 'queue', 'contests', 'settings'];
 
     function set(view, { focus = false } = {}) {
         if (!VIEWS.includes(view)) return;
@@ -1209,6 +1230,7 @@ const ViewModule = (() => {
         if (focus) {
             let target = null;
             if (view === 'focus') target = $('timer-action');
+            else if (view === 'queue') target = $('queue-input');
             else if (view === 'contests') target = $('refresh-btn');
             else if (view === 'settings') target = $('test-sound-btn');
             target?.focus({ preventScroll: true });
@@ -1296,8 +1318,10 @@ const KeyboardModule = (() => {
             } else if (e.key === '1') {
                 ViewModule.set('focus');
             } else if (e.key === '2') {
-                ViewModule.set('contests');
+                ViewModule.set('queue');
             } else if (e.key === '3') {
+                ViewModule.set('contests');
+            } else if (e.key === '4') {
                 ViewModule.set('settings');
             }
         });

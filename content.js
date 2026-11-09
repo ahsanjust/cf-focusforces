@@ -969,6 +969,26 @@
         return zenRailEl;
     }
 
+    function syncZenRailVisibility() {
+        if (!zenRailEl || !zenRailEl.isConnected) return;
+        const scoutDock = document.getElementById('ff-zen-rail-scout');
+        if (scoutDock) {
+            const scoutCard = scoutDock.querySelector('#ff-scout-card');
+            const hasVisibleScout = Boolean(scoutCard && scoutCard.style.display !== 'none' && !scoutCard.classList.contains('ff-hidden'));
+            scoutDock.style.display = hasVisibleScout ? '' : 'none';
+        }
+        const tagsDock = document.getElementById('ff-zen-rail-tags');
+        if (tagsDock) {
+            const hasVisibleTags = [...tagsDock.children].some(child => {
+                if (child.style.display === 'none' || child.classList.contains('ff-hidden')) return false;
+                const text = (child.textContent || '').trim();
+                const tags = child.querySelectorAll ? child.querySelectorAll('span.tag-box') : [];
+                return text.length > 0 || tags.length > 0;
+            });
+            tagsDock.style.display = hasVisibleTags ? '' : 'none';
+        }
+    }
+
     function ensureZenHud() {
         if (zenHudEl && zenHudEl.isConnected) return zenHudEl;
         zenHudEl = document.createElement('header');
@@ -1181,6 +1201,7 @@
                     }
                 }
             });
+            syncZenRailVisibility();
         } else if (zenRelocated.length) {
             zenRelocated.forEach(({ box, parent, next }) => {
                 const cap = box.querySelector?.('.caption');
@@ -1355,6 +1376,22 @@
             body.append(topicsDiv, ratingDiv, noTags, btns);
             card.append(lt, rt, caption, body);
             sidebar.appendChild(card);
+            if (isZenActive && zenRailEl && zenRailEl.isConnected) {
+                const dock = document.getElementById('ff-zen-rail-scout');
+                if (dock) {
+                    dock.appendChild(card);
+                    if (!zenRelocated.some(r => r.box === card)) {
+                        zenRelocated.push({ box: card, parent: sidebar, next: null });
+                    }
+                    const cap = card.querySelector('.caption');
+                    if (cap && !cap.dataset.ffZen) {
+                        cap.dataset.ffZen = 'true';
+                        cap.dataset.origText = cap.textContent;
+                        cap.textContent = 'STEALTH SCOUT';
+                    }
+                }
+                syncZenRailVisibility();
+            }
         }
 
         const topicsContainer = card.querySelector('#ff-scout-topics');
@@ -1433,6 +1470,7 @@
 
             if (tagBox.classList.contains('sidebox')) {
                 tagBox.style.display = 'none';
+                syncZenRailVisibility();
             }
 
             clearContainers();

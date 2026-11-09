@@ -48,12 +48,17 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3 1.8"/></svg>
       <span>Focus</span>
     </button>
-    <button type="button" class="nav-tab" id="tab-contests" data-view="contests" role="tab" aria-selected="false" aria-controls="view-contests" title="Contest radar (Shortcut: 2)">
+    <button type="button" class="nav-tab" id="tab-queue" data-view="queue" role="tab" aria-selected="false" aria-controls="view-queue" title="Practice Queue & History (Shortcut: 2)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span>Queue</span>
+      <span class="nav-badge" id="nav-queue-count" hidden>0</span>
+    </button>
+    <button type="button" class="nav-tab" id="tab-contests" data-view="contests" role="tab" aria-selected="false" aria-controls="view-contests" title="Contest radar (Shortcut: 3)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 9.5h16M8 4.5V7M16 4.5V7"/><rect x="4" y="6.2" width="16" height="13.3" rx="2.6"/></svg>
       <span>Radar</span>
       <span class="nav-badge" id="nav-contest-count" hidden>0</span>
     </button>
-    <button type="button" class="nav-tab" id="tab-settings" data-view="settings" role="tab" aria-selected="false" aria-controls="view-settings" title="Settings & preferences (Shortcut: 3)">
+    <button type="button" class="nav-tab" id="tab-settings" data-view="settings" role="tab" aria-selected="false" aria-controls="view-settings" title="Settings & preferences (Shortcut: 4)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       <span>Settings</span>
     </button>
@@ -61,13 +66,8 @@
 
   <main class="views">
     <!-- ── Focus ────────────────────────────────────────────────── -->
-    <section class="view" id="view-focus" role="tabpanel" aria-labelledby="tab-focus">
+    <section class="view is-active" id="view-focus" role="tabpanel" aria-labelledby="tab-focus">
       <article class="panel chrono" id="timer-card">
-        <span class="bracket tl" aria-hidden="true"></span>
-        <span class="bracket tr" aria-hidden="true"></span>
-        <span class="bracket bl" aria-hidden="true"></span>
-        <span class="bracket br" aria-hidden="true"></span>
-
         <header class="panel-head">
           <span class="micro">
             <span class="status-dot" id="status-dot" aria-hidden="true"></span>
@@ -159,27 +159,30 @@
       </article>
 
       <div class="nextup-slot" id="next-up"></div>
+    </section>
 
-      <!-- ── Practice Ledger (Session History) ── -->
-      <article class="panel ledger-card" id="ledger-card">
-        <header class="panel-head ledger-head" id="ledger-toggle-head">
-          <span class="micro">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="ledger-ico" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h8M8 18h5"/></svg>
-            <span>Today's Sessions</span>
-            <span class="ledger-count-badge" id="ledger-count-badge">0</span>
-          </span>
-          <button type="button" class="btn btn-ghost btn-sm ledger-exp-btn" id="ledger-exp-btn" aria-expanded="false" title="Toggle session history">
-            <span id="ledger-exp-arrow">▾</span>
-          </button>
-        </header>
-        <div class="ledger-body" id="ledger-body" hidden>
-          <div class="ledger-list" id="ledger-list">
-            <div class="ledger-empty">No focus sessions completed today yet.</div>
-          </div>
+    <!-- ── Queue & Practice Hub ─────────────────────────────────── -->
+    <section class="view" id="view-queue" role="tabpanel" aria-labelledby="tab-queue" aria-hidden="true">
+      <div class="queue-toolbar">
+        <div class="queue-header-copy">
+          <h2 class="queue-header-title">Practice Hub</h2>
+          <span class="queue-header-sub" id="queue-header-stats">Practice queue & session history</span>
         </div>
-      </article>
+        <button type="button" class="btn btn-primary btn-sm queue-add-trigger" id="queue-add-toggle">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <span>Add Problem</span>
+        </button>
+      </div>
 
-      <!-- ── Practice Queue (Upsolve Bookmarks) ── -->
+      <div class="queue-add-box" id="queue-add-box" hidden>
+        <div class="queue-add-row">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="queue-input-icon"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <input type="text" id="queue-input" class="queue-input" placeholder="e.g. CF 2024A or problem URL" aria-label="Add problem">
+          <button type="button" class="btn btn-primary btn-sm" id="queue-add-btn">Save</button>
+        </div>
+      </div>
+
+      <!-- Practice Queue (Upsolve Bookmarks) -->
       <article class="panel queue-card" id="queue-card">
         <header class="panel-head queue-head">
           <span class="micro">
@@ -187,15 +190,29 @@
             <span>Practice Queue</span>
             <span class="queue-count-badge" id="queue-count-badge">0</span>
           </span>
-          <button type="button" class="btn btn-ghost btn-sm queue-add-toggle" id="queue-add-toggle" title="Add problem to queue">+</button>
         </header>
-        <div class="queue-add-box" id="queue-add-box" hidden>
-          <input type="text" id="queue-input" class="queue-input" placeholder="e.g. CF 2024A or problem URL" aria-label="Add problem">
-          <button type="button" class="btn btn-primary btn-sm" id="queue-add-btn">Add</button>
-        </div>
         <div class="queue-body" id="queue-body">
           <div class="queue-list" id="queue-list">
             <div class="queue-empty">Practice queue is empty. Bookmark problems to solve later.</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Practice Ledger (Session History) -->
+      <article class="panel ledger-card" id="ledger-card">
+        <header class="panel-head ledger-head" id="ledger-toggle-head">
+          <span class="micro">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" class="ledger-ico" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h8M8 18h5"/></svg>
+            <span>Today's Sessions</span>
+            <span class="ledger-count-badge" id="ledger-count-badge">0</span>
+          </span>
+          <button type="button" class="btn btn-ghost btn-sm ledger-exp-btn" id="ledger-exp-btn" aria-expanded="true" title="Toggle session history">
+            <span id="ledger-exp-arrow">▴</span>
+          </button>
+        </header>
+        <div class="ledger-body" id="ledger-body">
+          <div class="ledger-list" id="ledger-list">
+            <div class="ledger-empty">No focus sessions completed today yet.</div>
           </div>
         </div>
       </article>
@@ -403,23 +420,13 @@
 
         <div class="reminder-section" id="reminder-section">
           <div class="rem-group">
-            <span class="rem-label">Day before</span>
+            <span class="rem-label">Notify in advance</span>
             <div class="chips">
               <label class="chip"><input type="checkbox" class="reminder-item" value="86400" aria-label="Notify 1 day before"><span>1 day</span></label>
               <label class="chip"><input type="checkbox" class="reminder-item" value="43200" aria-label="Notify 12 hours before"><span>12 h</span></label>
-            </div>
-          </div>
-          <div class="rem-group">
-            <span class="rem-label">Hours before</span>
-            <div class="chips">
               <label class="chip"><input type="checkbox" class="reminder-item" value="18000" aria-label="Notify 5 hours before"><span>5 h</span></label>
               <label class="chip"><input type="checkbox" class="reminder-item" value="7200" aria-label="Notify 2 hours before"><span>2 h</span></label>
               <label class="chip"><input type="checkbox" class="reminder-item" value="3600" aria-label="Notify 1 hour before"><span>1 h</span></label>
-            </div>
-          </div>
-          <div class="rem-group">
-            <span class="rem-label">Minutes before</span>
-            <div class="chips">
               <label class="chip"><input type="checkbox" class="reminder-item" value="1800" aria-label="Notify 30 minutes before"><span>30 m</span></label>
               <label class="chip"><input type="checkbox" class="reminder-item" value="600" aria-label="Notify 10 minutes before"><span>10 m</span></label>
               <label class="chip"><input type="checkbox" class="reminder-item" value="300" aria-label="Notify 5 minutes before"><span>5 m</span></label>
@@ -571,7 +578,7 @@
         <div class="card keys-card">
           <div class="key-row"><span>Start / pause the session</span><kbd>space</kbd></div>
           <div class="key-row"><span>Reset the session</span><kbd>R</kbd></div>
-          <div class="key-row"><span>Switch tabs</span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></div>
+          <div class="key-row"><span>Switch tabs</span><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd></div>
           <div class="key-row"><span>Return to timer</span><kbd>Esc</kbd></div>
         </div>
       </section>

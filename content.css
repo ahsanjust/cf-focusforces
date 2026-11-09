@@ -956,7 +956,12 @@ body.ff-zen-mode-active div.part section pre {
 
 /* Eliminate empty or fully hidden cards in the rail */
 .ff-zen-rail-card:empty,
-.ff-zen-rail-card:has(> .sidebox[style*="display: none"]):not(:has(> :not([style*="display: none"]))) {
+.ff-zen-rail-card[style*="display: none"],
+.ff-zen-rail-card:has(> .sidebox[style*="none"]):not(:has(> :not([style*="none"]))),
+.ff-zen-rail-card:has(> .sidebox.ff-hidden):not(:has(> :not(.ff-hidden))),
+#ff-zen-rail-tags:empty,
+#ff-zen-rail-scout:empty,
+#ff-zen-rail-tags:has(> .sidebox[style*="none"]) {
   display: none !important;
 }
 
