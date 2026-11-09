@@ -71,82 +71,89 @@
         : null;
 
     // ── SVG Assets ──────────────────────────────────────
-    // Expressive SVG cat facing RIGHT with articulated legs, curving tail,
+    // Expressive, adorable vector cat facing RIGHT with articulated legs, curving tail,
     // head with whiskers, and three eye states (curious open, happy bliss, sleepy shut).
     const CAT_SVG = `
-<svg class="ff-cat-svg" viewBox="0 0 130 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <!-- Expressive animated tail -->
+<svg class="ff-cat-svg" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!-- Expressive animated tail with fluid S-curve -->
   <g class="cat-tail">
-    <path d="M24 48 C 6 44, 2 20, 14 12 C 19 8, 26 11, 26 17 C 26 24, 18 28, 22 42"
-          fill="none" stroke="var(--cat-dark)" stroke-width="7.5" stroke-linecap="round"/>
+    <path d="M16 38 C 6 34, 3 16, 12 10 C 18 6, 23 9, 21 16 C 19 22, 11 26, 15 36"
+          fill="none" stroke="var(--cat-dark)" stroke-width="5.5" stroke-linecap="round"/>
   </g>
 
   <!-- Body core & legs (bobbing group) -->
   <g class="cat-bob">
     <!-- Back legs -->
-    <g class="leg b1"><rect x="36" y="58" width="10" height="26" rx="5" fill="var(--cat-dark)"/></g>
-    <g class="leg b2"><rect x="50" y="58" width="10" height="26" rx="5" fill="var(--cat-dark)"/></g>
+    <path class="leg b1" d="M28 44 Q 26 56, 24 62 Q 28 64, 32 62 Q 34 54, 35 44 Z" fill="var(--cat-dark)"/>
+    <path class="leg b2" d="M38 44 Q 36 56, 34 62 Q 38 64, 42 62 Q 44 54, 45 44 Z" fill="var(--cat-dark)"/>
 
-    <!-- Torso -->
-    <ellipse class="cat-body" cx="58" cy="48" rx="33" ry="17" fill="var(--cat-body)"/>
-    <!-- Cute chest/belly bib accent -->
-    <path class="cat-bib" d="M72 40 C 76 46, 76 56, 68 62 C 60 62, 54 54, 58 44 Z" fill="var(--cat-accent)" opacity="0.85"/>
+    <!-- Torso with outline -->
+    <ellipse class="cat-body" cx="46" cy="38" rx="27" ry="15" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.3"/>
+    
+    <!-- Chest / bib accent -->
+    <path class="cat-bib" d="M58 30 C 64 36, 64 45, 56 50 C 48 50, 44 42, 48 34 Z" fill="var(--cat-accent)" opacity="0.9"/>
 
-    <!-- Front legs -->
-    <g class="leg f1"><rect x="72" y="58" width="10" height="26" rx="5" fill="var(--cat-body)"/></g>
-    <g class="leg f2"><rect x="86" y="58" width="10" height="26" rx="5" fill="var(--cat-body)"/></g>
+    <!-- Front legs with paws -->
+    <path class="leg f1" d="M58 44 Q 59 56, 57 62 Q 62 64, 66 62 Q 66 54, 64 44 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1"/>
+    <path class="leg f2" d="M68 44 Q 69 56, 67 62 Q 72 64, 76 62 Q 76 54, 74 44 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1"/>
+    <!-- Cute little white socks -->
+    <ellipse cx="61.5" cy="61.5" rx="4" ry="2" fill="var(--cat-accent)"/>
+    <ellipse cx="71.5" cy="61.5" rx="4" ry="2" fill="var(--cat-accent)"/>
 
     <!-- Head & Face -->
     <g class="cat-head">
       <!-- Back Ear -->
-      <path d="M84 32 L78 8 L100 24 Z" fill="var(--cat-body)"/>
-      <path d="M82 28 L78 14 L92 24 Z" fill="var(--cat-dark)" opacity="0.7"/>
+      <path d="M65 24 L61 8 L76 18 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.1"/>
+      <path d="M65 21 L62 12 L71 18 Z" fill="var(--cat-snout)" opacity="0.6"/>
 
       <!-- Head Base -->
-      <ellipse cx="100" cy="38" rx="18" ry="16" fill="var(--cat-body)"/>
+      <ellipse cx="78" cy="28" rx="16" ry="14" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.3"/>
 
       <!-- Front Ear -->
-      <path d="M106 24 L114 6 L122 22 Z" fill="var(--cat-body)"/>
-      <path d="M109 22 L114 12 L119 21 Z" fill="var(--cat-accent)" opacity="0.9"/>
+      <path d="M82 17 L91 3 L97 18 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.1"/>
+      <path d="M84 16 L90 8 L94 17 Z" fill="var(--cat-snout)" opacity="0.75"/>
 
-      <!-- Cheek tuft -->
-      <path d="M116 38 C 122 39, 122 43, 116 46 Z" fill="var(--cat-body)"/>
+      <!-- Cute Blushing Cheeks -->
+      <ellipse cx="68" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
+      <ellipse cx="88" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
 
       <!-- Whiskers -->
-      <g class="cat-whiskers" stroke="var(--cat-dark)" stroke-width="1.2" opacity="0.65" stroke-linecap="round">
-        <line x1="110" y1="41" x2="126" y2="39"/>
-        <line x1="110" y1="43" x2="125" y2="45"/>
-        <line x1="90" y1="41" x2="78" y2="40"/>
-        <line x1="90" y1="43" x2="79" y2="45"/>
+      <g class="cat-whiskers" stroke="var(--cat-dark)" stroke-width="1" opacity="0.7" stroke-linecap="round">
+        <line x1="86" y1="32" x2="98" y2="30"/>
+        <line x1="86" y1="34" x2="97" y2="36"/>
+        <line x1="70" y1="32" x2="59" y2="30"/>
+        <line x1="70" y1="34" x2="60" y2="36"/>
       </g>
 
-      <!-- Eyes (State 1: Curious / Normal open) -->
+      <!-- Eyes (State 1: Curious / Normal open with sparkling reflections) -->
       <g class="eye-normal">
-        <ellipse cx="94" cy="35" rx="3.2" ry="4.4" fill="var(--cat-eye)"/>
-        <ellipse cx="106" cy="35" rx="3.2" ry="4.4" fill="var(--cat-eye)"/>
+        <ellipse cx="73" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
+        <ellipse cx="83" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
         <!-- Pupils -->
-        <ellipse cx="94" cy="35" rx="1.8" ry="3.6" fill="#18181b"/>
-        <ellipse cx="106" cy="35" rx="1.8" ry="3.6" fill="#18181b"/>
-        <!-- Catchlights -->
-        <circle cx="93" cy="33.5" r="1.1" fill="#ffffff"/>
-        <circle cx="105" cy="33.5" r="1.1" fill="#ffffff"/>
+        <ellipse cx="73" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
+        <ellipse cx="83" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
+        <!-- Sparkle Catchlights -->
+        <circle cx="72" cy="24.5" r="1.1" fill="#ffffff"/>
+        <circle cx="74" cy="27.5" r="0.6" fill="#ffffff"/>
+        <circle cx="82" cy="24.5" r="1.1" fill="#ffffff"/>
+        <circle cx="84" cy="27.5" r="0.6" fill="#ffffff"/>
       </g>
 
       <!-- Eyes (State 2: Bliss / Purring happy curved ^.^) -->
       <g class="eye-happy" display="none">
-        <path d="M91 37 Q 94 32, 97 37" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M103 37 Q 106 32, 109 37" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M70 28 Q 73 22, 76 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M80 28 Q 83 22, 86 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
       </g>
 
       <!-- Eyes (State 3: Sleepy / Loaf shut) -->
       <g class="eye-sleepy" display="none">
-        <line x1="91" y1="36" x2="97" y2="36" stroke="var(--cat-dark)" stroke-width="2" stroke-linecap="round"/>
-        <line x1="103" y1="36" x2="109" y2="36" stroke="var(--cat-dark)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="70" y1="27" x2="76" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="80" y1="27" x2="86" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
       </g>
 
       <!-- Nose & Sweet Mouth -->
-      <path d="M100 42 L103 42 L101.5 45 Z" fill="var(--cat-snout)"/>
-      <path d="M99 45 Q 101.5 47, 104 45" fill="none" stroke="var(--cat-dark)" stroke-width="1.3" stroke-linecap="round" opacity="0.75"/>
+      <polygon points="77,32 80,32 78.5,34.5" fill="var(--cat-snout)"/>
+      <path class="cat-mouth" d="M76.5 35 Q 78.5 37.5, 80.5 35" fill="none" stroke="var(--cat-dark)" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
     </g>
   </g>
 </svg>`;
@@ -174,25 +181,36 @@
     const OVERLAY_CSS = `
 :host {
   all: initial;
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: ${OVERLAY_Z_INDEX};
   --paws-shadow: rgba(20, 20, 30, 0.28);
+  --paws-cat-shadow: rgba(0, 0, 0, 0.12);
   --paws-mote: rgba(124, 108, 231, 0.55);
-  --paws-bubble-bg: rgba(255, 255, 255, 0.98);
-  --paws-bubble-fg: #374151;
+  --paws-bubble-bg: #ffffff;
+  --paws-bubble-fg: #0f172a;
+  --paws-bubble-border: #e2e8f0;
   --paws-heart: #ef4444;
 }
 :host([data-paws-theme="dark"]),
 :host([data-paws-theme="amoled"]) {
   --paws-shadow: rgba(0, 0, 0, 0.55);
+  --paws-cat-shadow: rgba(0, 0, 0, 0.45);
   --paws-mote: rgba(167, 139, 250, 0.5);
-  --paws-bubble-bg: rgba(30, 30, 46, 0.98);
-  --paws-bubble-fg: #f3f4f6;
+  --paws-bubble-bg: #1e1e2e;
+  --paws-bubble-fg: #f8fafc;
+  --paws-bubble-border: #334155;
   --paws-heart: #f87171;
 }
 :host([data-paws-theme="contrast"]) {
   --paws-shadow: rgba(0, 0, 0, 0.7);
+  --paws-cat-shadow: rgba(0, 0, 0, 0.7);
   --paws-mote: rgba(250, 204, 21, 0.5);
   --paws-bubble-bg: #000000;
   --paws-bubble-fg: #ffffff;
+  --paws-bubble-border: #555555;
   --paws-heart: #fbbf24;
 }
 
@@ -211,17 +229,55 @@
 .ff-toys {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
-/* ── Interactive Playground click band ──────────────── */
+/* ── Interactive Playground click band (pointer-events none so page is never blocked) ── */
 .ff-playground {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: ${CURSOR_BAND_PX}px;
+  pointer-events: none !important;
+}
+
+/* ── Floating Controls Tray (Drop Toy) ───────────────── */
+.ff-paws-tray {
+  position: fixed;
+  bottom: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 2147483647;
   pointer-events: auto;
-  cursor: default;
+}
+
+.ff-paws-tray-btn {
+  background: var(--paws-bubble-bg);
+  color: var(--paws-bubble-fg);
+  border: 1px solid var(--paws-bubble-border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+  user-select: none;
+}
+.ff-paws-tray-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+  border-color: #6366f1;
+}
+.ff-paws-tray-btn:active {
+  transform: scale(0.96);
 }
 
 /* ── Cat Figure & Transitions ───────────────────────── */
@@ -232,6 +288,8 @@
   will-change: transform;
   pointer-events: auto;
   cursor: pointer;
+  filter: drop-shadow(0 2px 5px var(--paws-cat-shadow, rgba(0,0,0,0.12)));
+  transition: filter 0.2s ease;
 }
 
 .ff-cat-figure {
@@ -253,36 +311,55 @@
 .ff-cat-shadow {
   position: absolute;
   left: 50%;
-  bottom: 3px;
-  width: calc(var(--cat-size) * 0.96);
-  height: calc(var(--cat-size) * 0.16);
+  bottom: 2px;
+  width: calc(var(--cat-size) * 0.92);
+  height: calc(var(--cat-size) * 0.14);
   transform: translateX(-50%);
   background: radial-gradient(ellipse at center, var(--paws-shadow) 0%, transparent 72%);
   pointer-events: none;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-/* ── Floating Speech & Purr Bubbles ─────────────────── */
+/* ── Floating Speech & CP Dialogue Bubbles ─────────── */
 .ff-cat-bubble {
   position: absolute;
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px) scale(0.92);
+  transform: translateX(-50%) translateY(6px) scale(0.9);
   background: var(--paws-bubble-bg);
   color: var(--paws-bubble-fg);
+  border: 1px solid var(--paws-bubble-border);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 11.5px;
   font-weight: 700;
-  line-height: 1.25;
-  padding: 4px 10px;
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  white-space: nowrap;
+  line-height: 1.3;
+  padding: 5px 12px;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  white-space: normal;
+  text-align: center;
+  width: max-content;
+  max-width: 240px;
   opacity: 0;
-  transition: opacity 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   z-index: 10;
 }
+
+/* Comic speech bubble tail pointer */
+.ff-cat-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--paws-bubble-bg);
+}
+
 .ff-cat-bubble.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0) scale(1);
@@ -540,7 +617,20 @@
         playground.title = 'Zen Paws: Click here to drop a toy for the cats!';
         playground.addEventListener('click', onPlaygroundClick);
 
-        paws.append(motesEl, printsEl, toysLayer, catsLayer, playground);
+        const tray = document.createElement('div');
+        tray.className = 'ff-paws-tray';
+        const toyBtn = document.createElement('button');
+        toyBtn.type = 'button';
+        toyBtn.className = 'ff-paws-tray-btn';
+        toyBtn.title = 'Drop Yarn Toy for Cats (Alt+T)';
+        toyBtn.innerHTML = `<span>🧶</span><span>Toy</span>`;
+        toyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropToy(viewW * 0.5 + (Math.random() - 0.5) * 160, Math.max(60, viewH * 0.45));
+        });
+        tray.appendChild(toyBtn);
+
+        paws.append(motesEl, printsEl, toysLayer, catsLayer, playground, tray);
         shadow.append(style, paws);
 
         buildMotes();
@@ -594,6 +684,7 @@
             root.style.setProperty('--cat-accent', cat.palette.accent);
             root.style.setProperty('--cat-eye', cat.palette.eye || '#10b981');
             root.style.setProperty('--cat-snout', cat.palette.snout || '#e08a8a');
+            root.style.setProperty('--cat-outline', cat.palette.outline || 'rgba(0, 0, 0, 0.16)');
             root.style.setProperty('--walk-dur', `${cat.walkCycle.toFixed(2)}s`);
 
             // Direct petting interaction
@@ -649,10 +740,8 @@
 
     function onPlaygroundClick(e) {
         if (!enabled || mode !== 'playful') return;
-        // Don't drop toy if user clicked on a cat (handled by cat click)
-        const rect = host.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        const clickX = Number.isFinite(e.clientX) && e.clientX > 0 ? e.clientX : (viewW * 0.5);
+        const clickY = Number.isFinite(e.clientY) && e.clientY > 0 ? e.clientY : (viewH * 0.5);
 
         // If a cat is very close to the click point, pet it instead of dropping a toy
         for (const cat of cats) {
@@ -710,7 +799,7 @@
     }
 
     function updateCats(dt, now) {
-        const ctx = { now, viewportWidth: viewW, rand: Math.random };
+        const ctx = { now, viewportWidth: viewW, viewportHeight: viewH, rand: Math.random };
         const ground = groundY(cats[0]?.size || 50);
 
         // 1. Step Active Toy (if present)
@@ -743,11 +832,13 @@
             }
         }
 
-        // 3. Cursor awareness: near cursor, cat watches user
+        // 3. Cursor awareness: near cursor in 2D space, cat watches user
         for (let i = 0; i < cats.length; i++) {
             const cat = cats[i];
             const el = catEls[i];
-            const near = mouseX !== null && Math.abs(mouseX - cat.x) < CURSOR_NOTICE_PX;
+            const catMidY = (typeof cat.y === 'number' ? cat.y : ground) + (cat.size * 0.5);
+            const near = mouseX !== null && mouseY !== null &&
+                Math.hypot(mouseX - cat.x, mouseY - catMidY) < CURSOR_NOTICE_PX;
             if (near && !isBusy(cat, now)) {
                 cat.hold = true;
                 if (now > el.meowAt) {
@@ -802,18 +893,41 @@
                 if (el.eyesSleepy) el.eyesSleepy.setAttribute('display', desiredEyes === 'sleepy' ? 'inline' : 'none');
             }
 
-            // Speech Bubbles: Meeting greeting vs Cursor meow vs Purr
+            // Speech Bubbles: Sequential CP Dialogue vs Solo CP Thought vs Purr vs Meow
             let bubbleText = '';
             let bubbleUntil = 0;
-            if (cat.meeting && now < cat.meeting.bubbleUntil) {
-                bubbleText = cat.meeting.bubble === 'heart' ? '♥' : cat.meeting.bubble;
-                bubbleUntil = cat.meeting.bubbleUntil;
+            if (cat.meeting && now < cat.meeting.until) {
+                if (cat.meeting.dialogue) {
+                    const elapsed = now - (cat.meeting.startedAt || (cat.meeting.until - 3200));
+                    if (cat.meeting.speaker === 'a') {
+                        if (elapsed < 1500) {
+                            bubbleText = cat.meeting.dialogue.a;
+                            bubbleUntil = (cat.meeting.startedAt || now) + 1500;
+                        } else {
+                            bubbleText = '';
+                        }
+                    } else {
+                        // Speaker B responds once Speaker A finishes
+                        if (elapsed >= 1500) {
+                            bubbleText = cat.meeting.dialogue.b;
+                            bubbleUntil = cat.meeting.until;
+                        } else {
+                            bubbleText = '';
+                        }
+                    }
+                } else {
+                    bubbleText = cat.meeting.bubble === 'heart' ? '♥' : (cat.meeting.bubble || 'meow~');
+                    bubbleUntil = cat.meeting.bubbleUntil || cat.meeting.until;
+                }
             } else if (cat.pettedUntil > now) {
                 bubbleText = 'purr~ ♥';
                 bubbleUntil = cat.pettedUntil;
             } else if (el.meowUntil && now < el.meowUntil) {
                 bubbleText = cat.personality === 'playful' ? 'mew! ✨' : 'meow~';
                 bubbleUntil = el.meowUntil;
+            } else if (cat.thought && cat.thoughtUntil > now) {
+                bubbleText = `💭 ${cat.thought}`;
+                bubbleUntil = cat.thoughtUntil;
             }
             setBubble(el, bubbleText, bubbleUntil);
 
@@ -860,15 +974,10 @@
         }
     }
 
-    // ── Cursor Tracking ─────────────────────────────────
+    // ── Cursor & Interaction Tracking ──────────────────
     function onMouseMove(e) {
-        if (e.clientY > viewH - CURSOR_BAND_PX) {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        } else {
-            mouseX = null;
-            mouseY = null;
-        }
+        mouseX = e.clientX;
+        mouseY = e.clientY;
     }
 
     function onMouseLeave() {
@@ -876,12 +985,25 @@
         mouseY = null;
     }
 
+    function onKeyDown(e) {
+        if (!enabled || mode !== 'playful') return;
+        if (e.altKey && (e.key === 't' || e.key === 'T')) {
+            e.preventDefault();
+            const x = mouseX !== null ? mouseX : (viewW * 0.5 + (Math.random() - 0.5) * 120);
+            const y = mouseY !== null ? mouseY : Math.max(60, viewH * 0.45);
+            dropToy(x, y);
+        }
+    }
+
     // ── Lifecycle ───────────────────────────────────────
     function resetViewport() {
         viewW = window.innerWidth || document.documentElement.clientWidth || 0;
         viewH = window.innerHeight || document.documentElement.clientHeight || 0;
         cats.forEach(cat => {
-            cat.y = groundY(cat.size);
+            cat.baseY = groundY(cat.size);
+            if (!cat.y || cat.y > cat.baseY) {
+                cat.y = cat.baseY;
+            }
             const margin = cat.size * 0.9;
             cat.x = Math.min(Math.max(cat.x, margin), Math.max(margin, viewW - margin));
         });
@@ -900,6 +1022,7 @@
                 el.root.style.setProperty('--cat-accent', palette.accent);
                 el.root.style.setProperty('--cat-eye', palette.eye || '#10b981');
                 el.root.style.setProperty('--cat-snout', palette.snout || '#e08a8a');
+                el.root.style.setProperty('--cat-outline', palette.outline || 'rgba(0, 0, 0, 0.16)');
             }
         });
     }
@@ -923,6 +1046,9 @@
         });
         buildCats();
         applyTheme();
+        if (typeof window !== 'undefined') {
+            window.__ff_cats = cats;
+        }
 
         lastTs = 0;
         rafId = requestAnimationFrame(frame);
@@ -940,6 +1066,9 @@
         }
         cats = [];
         catEls = [];
+        if (typeof window !== 'undefined') {
+            window.__ff_cats = [];
+        }
         activeToy = null;
         toyEl = null;
         printCount = 0;
@@ -965,6 +1094,7 @@
 
     // ── Wiring ──────────────────────────────────────────
     window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
     document.addEventListener('mouseleave', onMouseLeave);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('resize', onResize, { passive: true });

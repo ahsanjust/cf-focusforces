@@ -50,8 +50,8 @@ describe('computeCatCount', () => {
 
 describe('computeCatSize', () => {
     test('scales with viewport height', () => {
-        expect(computeCatSize(1080)).toBe(81);
-        expect(computeCatSize(768)).toBe(58);
+        expect(computeCatSize(1080)).toBe(50);
+        expect(computeCatSize(768)).toBe(35);
     });
 
     test('clamps to the min size on small viewports', () => {
@@ -59,7 +59,7 @@ describe('computeCatSize', () => {
     });
 
     test('clamps to the max size on huge viewports', () => {
-        expect(computeCatSize(2000)).toBe(84);
+        expect(computeCatSize(2000)).toBe(54);
     });
 });
 
@@ -328,16 +328,20 @@ describe('findMeeting / applyMeeting', () => {
         expect(cats[0].cooldowns['0:1']).toBe(1000 + ZEN_PAWS_MEET_COOLDOWN_MS);
     });
 
-    test('applyMeeting picks a deterministic bubble per pair', () => {
+    test('applyMeeting picks a deterministic CP dialogue per pair', () => {
         const catsA = [cat(300, 1), cat(360, -1)];
         applyMeeting(catsA, { a: 0, b: 1 }, { now: 1000 });
-        expect(['meow', 'heart']).toContain(catsA[0].meeting.bubble);
-        expect(catsA[0].meeting.bubble).toBe(catsA[1].meeting.bubble);
+        expect(catsA[0].meeting.dialogue).toBeDefined();
+        expect(catsA[0].meeting.dialogue.a).toBeDefined();
+        expect(catsA[1].meeting.dialogue.b).toBeDefined();
+        expect(catsA[0].meeting.bubble).toBe(catsA[0].meeting.dialogue.a);
+        expect(catsA[1].meeting.bubble).toBe(catsA[1].meeting.dialogue.b);
 
         // same pair → same bubble every time
         const catsB = [cat(300, 1), cat(360, -1)];
         applyMeeting(catsB, { a: 0, b: 1 }, { now: 1000 });
         expect(catsB[0].meeting.bubble).toBe(catsA[0].meeting.bubble);
+        expect(catsB[1].meeting.bubble).toBe(catsA[1].meeting.bubble);
     });
 
     test('end-to-end: meet, freeze, pass each other afterwards', () => {
@@ -351,8 +355,8 @@ describe('findMeeting / applyMeeting', () => {
         expect(cats[1].x).toBe(360);
 
         // meeting ends → resume original headings and walk past each other
-        stepCat(cats[0], 1000, { now: 4000, viewportWidth: 1200 });
-        stepCat(cats[1], 1000, { now: 4000, viewportWidth: 1200 });
+        stepCat(cats[0], 1000, { now: 5000, viewportWidth: 1200 });
+        stepCat(cats[1], 1000, { now: 5000, viewportWidth: 1200 });
         expect(cats[0].dir).toBe(1);
         expect(cats[1].dir).toBe(-1);
         expect(cats[0].x).toBeGreaterThan(300);

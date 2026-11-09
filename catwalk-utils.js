@@ -17,9 +17,9 @@
 const ZEN_PAWS_MIN_CATS = 2;
 const ZEN_PAWS_MAX_CATS = 5;
 const ZEN_PAWS_WIDTH_PER_CAT = 520;   // ~1 cat per 520px of viewport width
-const ZEN_PAWS_SIZE_RATIO = 0.075;    // cat height ≈ 7.5% of viewport height
+const ZEN_PAWS_SIZE_RATIO = 0.046;    // smaller, charming desktop-pet scale
 const ZEN_PAWS_MIN_SIZE = 34;
-const ZEN_PAWS_MAX_SIZE = 84;
+const ZEN_PAWS_MAX_SIZE = 54;
 
 // ── Movement & paces ─────────────────────────────────────
 const ZEN_PAWS_MIN_SPEED = 22;        // px/s — calm, believable pace
@@ -36,15 +36,163 @@ const ZEN_PAWS_STRETCH_DURATION_MS = 2200;
 const ZEN_PAWS_GROOM_DURATION_MS = 2800;
 const ZEN_PAWS_NAP_DURATION_MS = 6000;
 
-// ── Meetings ─────────────────────────────────────────────
+// ── Meetings & CP Dialogues ──────────────────────────────
 const ZEN_PAWS_MEET_DISTANCE_PX = 120;   // how close before a greeting is possible
-const ZEN_PAWS_MEET_DURATION_MS = 2600;  // how long they face each other
-const ZEN_PAWS_MEET_COOLDOWN_MS = 18000; // per-pair cooldown (no instant re-greet)
+const ZEN_PAWS_MEET_DURATION_MS = 3200;  // multi-turn dialogue duration
+const ZEN_PAWS_MEET_COOLDOWN_MS = 14000; // per-pair cooldown
 const ZEN_PAWS_MEET_CHANCE = 0.85;       // odds a close, closing pair actually greets
+
+// ── Competitive Programming (CP) Dialogues between cats ──
+const CP_DIALOGUES = [
+    {
+        a: "Did you use 1-based indexing? :D",
+        b: "1-based... and TLE on test 42 😭 XD"
+    },
+    {
+        a: "Segment tree beats everything! XD",
+        b: "Fenwick tree is only 5 lines though~ :D"
+    },
+    {
+        a: "Just binary search the answer! :D",
+        b: "The function isn't even monotonic bro 💀"
+    },
+    {
+        a: "Did you #define int long long? XD",
+        b: "Always! WA on test 17 is pure trauma :D"
+    },
+    {
+        a: "Tourist solved problem E in 3 mins...",
+        b: "I'm still reading problem A XD 💀"
+    },
+    {
+        a: "Greedy approach will totally pass! :D",
+        b: "Narrator: It was 3D Dynamic Programming XD"
+    },
+    {
+        a: "Proof by AC? :D",
+        b: "The only rigorous math proof cats need! XD"
+    },
+    {
+        a: "Modulo 10^9+7 or 998244353? :D",
+        b: "998244353, the sacred NTT prime! ⚡ XD"
+    },
+    {
+        a: "Why WA on test 2?! 😭",
+        b: "Check N=1 and empty array corner cases :D"
+    },
+    {
+        a: "Pretests passed! Submit & pray! :D",
+        b: "System tests are lurking in the dark... 😈 XD"
+    },
+    {
+        a: "Time limit 1.0s, N = 2·10^5...",
+        b: "Fast I/O: cin.tie(NULL) goes brrrr! ⚡ :D"
+    },
+    {
+        a: "Is `unordered_map` safe here? :D",
+        b: "Codeforces anti-hash tests say NO 💀 XD"
+    },
+    {
+        a: "Two pointers technique? :D",
+        b: "Four paws technique! 🐾 XD"
+    },
+    {
+        a: "DP state: dp[i][j] = happiness! :D",
+        b: "Space complexity: O(1), max purrs! ✨"
+    },
+    {
+        a: "Rating change: +85 today! :D",
+        b: "Pupil to Specialist promotion! Fish time! 🐟 XD"
+    },
+    {
+        a: "Rating change: -45 yesterday...",
+        b: "We don't talk about yesterday's contest 😿 XD"
+    },
+    {
+        a: "Meet me at the Lowest Common Ancestor! :D",
+        b: "Binary lifting all the way up! 🌲 XD"
+    },
+    {
+        a: "Graph was bipartite all along! :D",
+        b: "Color me 2-colorable (black & white) 🐾 XD"
+    },
+    {
+        a: "Can we coordinate compress this? :D",
+        b: "My brain is already coordinate compressed XD"
+    },
+    {
+        a: "Stack overflow on tree recursion!",
+        b: "#pragma comment(linker) saves 9 lives! 🐱 XD"
+    },
+    {
+        a: "Bitwise XOR sum = 0! :D",
+        b: "Nim game won! Second player cleans paws! 🧶"
+    },
+    {
+        a: "I found an O(1) math formula! :D",
+        b: "Proof? Trust me bro XD"
+    },
+    {
+        a: "Queue is empty, front() called...",
+        b: "Undefined behavior has entered the chat 💀 XD"
+    },
+    {
+        a: "Can we greedy this knapsack? :D",
+        b: "Only if you want 0 points! XD"
+    },
+    {
+        a: "Disjoint Set Union with path compression?",
+        b: "Ackermann function is basically O(1) :D ✨"
+    },
+    {
+        a: "Matrix exponentiation for N = 10^18! :D",
+        b: "Fibonacci in O(log N), beautiful! ⚡ XD"
+    },
+    {
+        a: "Trie data structure or Aho-Corasick? :D",
+        b: "Aho-Corasick for multiple string matching! 🧶"
+    },
+    {
+        a: "Did you clear the adjacency list? :D",
+        b: "Multi-testcase memory leak avoided! Phew! XD"
+    },
+    {
+        a: "Off-by-one error on [L, R]! 😭",
+        b: "Fencepost problem claims another victim XD"
+    },
+    {
+        a: "Is this contest rated for Div.1? :D",
+        b: "I'm just a Div.4 kitten solving A & B XD (=^･ω･^=)"
+    }
+];
+
+// Solo CP thoughts when strolling alone or catnapping
+const CP_SOLO_THOUGHTS = [
+    "thinking: dp[i] = max happiness :D",
+    "what if N=1 corner case? 🤔",
+    "cin.tie(NULL) goes brrr ⚡",
+    "proof by AC :D ✨",
+    "rating +75 today!! 🐟",
+    "binary search everything XD",
+    "my code is O(1) in my dreams 💭",
+    "O(N log N) is basically free :D",
+    "purr... Accepted on pretest 4! 🏆",
+    "napping until contest starts 💤",
+    "catnap complexity: O(0) :D",
+    "remember to check 64-bit int! ⚠️",
+    "four paws coordinate compression 🐾",
+    "segment tree lazy propagation ⚡",
+    "fish >> cin; fish >> cout; 🐟 XD"
+];
+
+function pickCpDialogue(idxA, idxB, seed = 0) {
+    const idx = Math.abs(Math.floor(seed + idxA * 7 + idxB * 13)) % CP_DIALOGUES.length;
+    return CP_DIALOGUES[idx];
+}
 
 // ── Petting & Joy ────────────────────────────────────────
 const ZEN_PAWS_PET_DURATION_MS = 2400;   // purr duration after being petted
-const ZEN_PAWS_PURR_BUBBLES = ['purr~', 'prrr ♥', 'meow~', 'mew! ^.^', '♥ ♥'];
+const ZEN_PAWS_PURR_BUBBLES = ['purr~ :D ♥', 'prrr ♥', 'meow~ ^.^', 'mew! :D', '♥ ♥'];
 
 // ── Paw prints ───────────────────────────────────────────
 const ZEN_PAWS_PAWN_PRINT_EVERY_MS = 650;
@@ -57,32 +205,35 @@ const ZEN_PAWS_PERSONALITIES = ['explorer', 'playful', 'loaf', 'sweet'];
 const ZEN_PAWS_PALETTES = [
     {
         id: 'ginger',
-        name: 'Ginger Tabby',
+        name: 'Orange Tabby :D',
         body: '#f59e0b',
         dark: '#d97706',
         accent: '#fef3c7',
         eye: '#10b981', // emerald green eyes
         snout: '#e08a8a',
+        outline: '#b45309',
         pattern: 'tabby'
     },
     {
         id: 'calico',
-        name: 'Calico Patch',
-        body: '#fffbeb',
-        dark: '#374151',
+        name: 'Mochi White :D',
+        body: '#fffdf5',
+        dark: '#334155',
         accent: '#f97316',
-        eye: '#eab308', // amber eyes
+        eye: '#38bdf8', // sparkling sapphire eyes
         snout: '#f43f5e',
+        outline: '#94a3b8', // crisp soft outline so white cat is crisp on white pages!
         pattern: 'calico'
     },
     {
         id: 'tuxedo',
         name: 'Tuxedo Classic',
         body: '#1f2937',
-        dark: '#111827',
+        dark: '#0f172a',
         accent: '#ffffff',
         eye: '#34d399', // bright mint eyes
         snout: '#f472b6',
+        outline: '#020617',
         pattern: 'tuxedo'
     },
     {
@@ -91,18 +242,20 @@ const ZEN_PAWS_PALETTES = [
         body: '#f5ebe0',
         dark: '#4a3728',
         accent: '#d5bdaf',
-        eye: '#38bdf8', // sapphire sky blue eyes
+        eye: '#0284c7', // sapphire blue eyes
         snout: '#854d0e',
+        outline: '#78350f',
         pattern: 'siamese'
     },
     {
         id: 'slate',
         name: 'Blue Shorthair',
-        body: '#94a3b8',
-        dark: '#64748b',
-        accent: '#e2e8f0',
+        body: '#64748b',
+        dark: '#334155',
+        accent: '#cbd5e1',
         eye: '#f59e0b', // golden amber eyes
         snout: '#e08a8a',
+        outline: '#1e293b',
         pattern: 'solid'
     }
 ];
@@ -203,12 +356,20 @@ function createCats(opts) {
         const speedMultiplier = personality === 'playful' ? 1.15 : personality === 'loaf' ? 0.88 : 1.0;
         const speed = randRange(ZEN_PAWS_MIN_SPEED, ZEN_PAWS_MAX_SPEED, rand) * speedMultiplier;
 
+        const baseY = Math.max(0, viewportHeight - size * 0.93 - 8);
+        const y = baseY;
         cats.push({
             index: i,
             personality,
             x: clamp(margin + spread * Math.max(0, viewportWidth - 2 * margin) + jitter,
                 margin, Math.max(margin, viewportWidth - margin)),
-            y: Math.max(0, viewportHeight - size * 0.93 - 8),
+            y,
+            baseY,
+            targetY: baseY,
+            nextWanderYAt: now + randRange(4000, 10000, rand),
+            nextThoughtAt: now + randRange(12000, 24000, rand),
+            thought: null,
+            thoughtUntil: 0,
             dir: i % 2 === 0 ? 1 : -1,
             speed,
             size,
@@ -318,6 +479,34 @@ function stepCat(cat, dtMs, ctx) {
     const margin = cat.size * 0.9;
     cat.x += cat.dir * cat.speed * (dtMs / 1000);
 
+    // 2D Roaming across page heights
+    if (typeof cat.y === 'number' && ctx.viewportHeight) {
+        if (!cat.baseY) cat.baseY = Math.max(0, ctx.viewportHeight - cat.size * 0.93 - 8);
+        if (now >= (cat.nextWanderYAt || 0)) {
+            // Pick new altitude target: either floor (45%) or higher up on the page (55%)
+            const exploreHigher = rand() < 0.55;
+            cat.targetY = exploreHigher
+                ? randRange(Math.max(60, ctx.viewportHeight * 0.28), cat.baseY, rand)
+                : cat.baseY;
+            cat.nextWanderYAt = now + randRange(7000, 18000, rand);
+        }
+
+        const dy = (cat.targetY || cat.baseY) - cat.y;
+        if (Math.abs(dy) > 1) {
+            const stepY = Math.sign(dy) * Math.min(Math.abs(dy), (cat.speed * 0.36) * (dtMs / 1000));
+            cat.y += stepY;
+        }
+        cat.y = clamp(cat.y, 40, cat.baseY);
+    }
+
+    // Solo thought check
+    if (now >= (cat.nextThoughtAt || 0) && !cat.meeting && cat.action !== 'petted') {
+        cat.thought = CP_SOLO_THOUGHTS[Math.floor(rand() * CP_SOLO_THOUGHTS.length)];
+        cat.thoughtUntil = now + 2400;
+        cat.nextThoughtAt = now + randRange(15000, 30000, rand);
+        events.push('SOLO_THOUGHT');
+    }
+
     // Wall collision handling
     if (cat.x >= ctx.viewportWidth - margin) {
         cat.x = ctx.viewportWidth - margin;
@@ -404,6 +593,12 @@ function findMeeting(cats, ctx) {
             const gap = right.x - left.x;
             if (gap > ZEN_PAWS_MEET_DISTANCE_PX) continue;
 
+            // In 2D, check vertical proximity if Y is defined
+            if (typeof a.y === 'number' && typeof b.y === 'number') {
+                const dy = Math.abs(a.y - b.y);
+                if (dy > 80) continue;
+            }
+
             // Closing = the gap shrinks over time (handles a stationary cat
             // being approached, or a faster cat catching up).
             const closing = (left.dir * effSpeed(left, now)) - (right.dir * effSpeed(right, now)) > 0.5;
@@ -439,15 +634,39 @@ function applyMeeting(cats, pair, ctx) {
     if (a.x <= b.x) { a.dir = 1; b.dir = -1; }
     else { a.dir = -1; b.dir = 1; }
 
+    // Align vertical height smoothly if roaming in 2D
+    if (typeof a.y === 'number' && typeof b.y === 'number') {
+        const avgY = (a.y + b.y) / 2;
+        a.y = avgY;
+        b.y = avgY;
+        if (a.targetY) a.targetY = avgY;
+        if (b.targetY) b.targetY = avgY;
+    }
+
     const key = pairKey(pair.a, pair.b);
     const until = now + ZEN_PAWS_MEET_DURATION_MS;
 
-    // Varied friendly greetings: heart, meow, chirp, bonk
-    const greetings = ['meow~', 'heart', 'mew!', '♥'];
-    const bubble = greetings[(pair.a + pair.b) % greetings.length];
+    const dialogue = pickCpDialogue(pair.a, pair.b, (pair.a + pair.b) * 3);
 
-    a.meeting = { until, resumeDir: resumeA, bubble, bubbleUntil: until - 600 };
-    b.meeting = { until, resumeDir: resumeB, bubble, bubbleUntil: until - 600 };
+    a.meeting = {
+        until,
+        resumeDir: resumeA,
+        dialogue,
+        speaker: 'a',
+        startedAt: now,
+        bubble: dialogue.a,
+        bubbleUntil: now + 1500
+    };
+    b.meeting = {
+        until,
+        resumeDir: resumeB,
+        dialogue,
+        speaker: 'b',
+        startedAt: now,
+        bubble: dialogue.b,
+        bubbleStartsAt: now + 1500,
+        bubbleUntil: until - 100
+    };
     a.cooldowns[key] = now + ZEN_PAWS_MEET_COOLDOWN_MS;
     b.cooldowns[key] = now + ZEN_PAWS_MEET_COOLDOWN_MS;
 }
@@ -612,6 +831,9 @@ if (typeof module !== 'undefined' && module.exports) {
         spawnToy,
         stepToy,
         findCatToChaseToy,
-        swatToy
+        swatToy,
+        CP_DIALOGUES,
+        CP_SOLO_THOUGHTS,
+        pickCpDialogue
     };
 }
