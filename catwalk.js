@@ -38,6 +38,7 @@
     const MODE_KEY = 'ff_zenPaws_mode';       // 'ambient' | 'playful'
     const COUNT_KEY = 'ff_zenPaws_count';     // 2 | 3 | 5
     const SIZE_KEY = 'ff_zenPaws_size';       // 'normal' | 'large'
+    const STYLE_KEY = 'ff_zenPaws_style';     // 'faceless' | 'classic'
     const OVERLAY_Z_INDEX = 2147483646;       // just below Chrome's max, above page
     const CURSOR_BAND_PX = 140;               // cats notice cursor near the bottom
     const CURSOR_NOTICE_PX = 95;              // distance for cursor interest
@@ -50,6 +51,7 @@
     let mode = 'playful';                     // 'ambient' | 'playful'
     let preferredCount = null;                // null = auto from viewport width
     let sizeMultiplier = 1.0;
+    let style = 'faceless';                   // 'faceless' (Shariah-compliant) | 'classic'
     let host = null;
     let shadow = null;
     let cats = [];
@@ -87,6 +89,9 @@
     <path class="leg b1" d="M28 44 Q 26 56, 24 62 Q 28 64, 32 62 Q 34 54, 35 44 Z" fill="var(--cat-dark)"/>
     <path class="leg b2" d="M38 44 Q 36 56, 34 62 Q 38 64, 42 62 Q 44 54, 45 44 Z" fill="var(--cat-dark)"/>
 
+    <!-- Seamless Anatomical Neck Bridge connecting torso to skull base -->
+    <path class="cat-neck" d="M50 28 C 58 20, 68 18, 76 22 C 78 32, 70 44, 56 44 Z" fill="var(--cat-body)"/>
+
     <!-- Torso with outline -->
     <ellipse class="cat-body" cx="46" cy="38" rx="27" ry="15" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.3"/>
     
@@ -100,7 +105,7 @@
     <ellipse cx="61.5" cy="61.5" rx="4" ry="2" fill="var(--cat-accent)"/>
     <ellipse cx="71.5" cy="61.5" rx="4" ry="2" fill="var(--cat-accent)"/>
 
-    <!-- Head & Face -->
+    <!-- Head & Face (Anchored at neck pivot 68px 34px) -->
     <g class="cat-head">
       <!-- Back Ear -->
       <path d="M65 24 L61 8 L76 18 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.1"/>
@@ -113,47 +118,50 @@
       <path d="M82 17 L91 3 L97 18 Z" fill="var(--cat-body)" stroke="var(--cat-outline)" stroke-width="1.1"/>
       <path d="M84 16 L90 8 L94 17 Z" fill="var(--cat-snout)" opacity="0.75"/>
 
-      <!-- Cute Blushing Cheeks -->
-      <ellipse cx="68" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
-      <ellipse cx="88" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
+      <!-- Face Features Group (Faceless / Shariah-Compliant mode hides this entire group) -->
+      <g class="cat-face-features">
+        <!-- Cute Blushing Cheeks -->
+        <ellipse cx="68" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
+        <ellipse cx="88" cy="32" rx="2.8" ry="1.8" fill="var(--cat-snout)" opacity="0.35"/>
 
-      <!-- Whiskers -->
-      <g class="cat-whiskers" stroke="var(--cat-dark)" stroke-width="1" opacity="0.7" stroke-linecap="round">
-        <line x1="86" y1="32" x2="98" y2="30"/>
-        <line x1="86" y1="34" x2="97" y2="36"/>
-        <line x1="70" y1="32" x2="59" y2="30"/>
-        <line x1="70" y1="34" x2="60" y2="36"/>
+        <!-- Whiskers -->
+        <g class="cat-whiskers" stroke="var(--cat-dark)" stroke-width="1" opacity="0.7" stroke-linecap="round">
+          <line x1="86" y1="32" x2="98" y2="30"/>
+          <line x1="86" y1="34" x2="97" y2="36"/>
+          <line x1="70" y1="32" x2="59" y2="30"/>
+          <line x1="70" y1="34" x2="60" y2="36"/>
+        </g>
+
+        <!-- Eyes (State 1: Curious / Normal open with sparkling reflections) -->
+        <g class="eye-normal">
+          <ellipse cx="73" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
+          <ellipse cx="83" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
+          <!-- Pupils -->
+          <ellipse cx="73" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
+          <ellipse cx="83" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
+          <!-- Sparkle Catchlights -->
+          <circle cx="72" cy="24.5" r="1.1" fill="#ffffff"/>
+          <circle cx="74" cy="27.5" r="0.6" fill="#ffffff"/>
+          <circle cx="82" cy="24.5" r="1.1" fill="#ffffff"/>
+          <circle cx="84" cy="27.5" r="0.6" fill="#ffffff"/>
+        </g>
+
+        <!-- Eyes (State 2: Bliss / Purring happy curved ^.^) -->
+        <g class="eye-happy" display="none">
+          <path d="M70 28 Q 73 22, 76 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M80 28 Q 83 22, 86 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+        </g>
+
+        <!-- Eyes (State 3: Sleepy / Loaf shut) -->
+        <g class="eye-sleepy" display="none">
+          <line x1="70" y1="27" x2="76" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="80" y1="27" x2="86" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
+        </g>
+
+        <!-- Nose & Sweet Mouth -->
+        <polygon points="77,32 80,32 78.5,34.5" fill="var(--cat-snout)"/>
+        <path class="cat-mouth" d="M76.5 35 Q 78.5 37.5, 80.5 35" fill="none" stroke="var(--cat-dark)" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
       </g>
-
-      <!-- Eyes (State 1: Curious / Normal open with sparkling reflections) -->
-      <g class="eye-normal">
-        <ellipse cx="73" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
-        <ellipse cx="83" cy="26" rx="3.2" ry="4.2" fill="var(--cat-eye)"/>
-        <!-- Pupils -->
-        <ellipse cx="73" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
-        <ellipse cx="83" cy="26" rx="1.6" ry="3.4" fill="#0f172a"/>
-        <!-- Sparkle Catchlights -->
-        <circle cx="72" cy="24.5" r="1.1" fill="#ffffff"/>
-        <circle cx="74" cy="27.5" r="0.6" fill="#ffffff"/>
-        <circle cx="82" cy="24.5" r="1.1" fill="#ffffff"/>
-        <circle cx="84" cy="27.5" r="0.6" fill="#ffffff"/>
-      </g>
-
-      <!-- Eyes (State 2: Bliss / Purring happy curved ^.^) -->
-      <g class="eye-happy" display="none">
-        <path d="M70 28 Q 73 22, 76 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M80 28 Q 83 22, 86 28" fill="none" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
-      </g>
-
-      <!-- Eyes (State 3: Sleepy / Loaf shut) -->
-      <g class="eye-sleepy" display="none">
-        <line x1="70" y1="27" x2="76" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
-        <line x1="80" y1="27" x2="86" y2="27" stroke="var(--cat-dark)" stroke-width="2.2" stroke-linecap="round"/>
-      </g>
-
-      <!-- Nose & Sweet Mouth -->
-      <polygon points="77,32 80,32 78.5,34.5" fill="var(--cat-snout)"/>
-      <path class="cat-mouth" d="M76.5 35 Q 78.5 37.5, 80.5 35" fill="none" stroke="var(--cat-dark)" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
     </g>
   </g>
 </svg>`;
@@ -212,6 +220,13 @@
   --paws-bubble-fg: #ffffff;
   --paws-bubble-border: #555555;
   --paws-heart: #fbbf24;
+}
+
+/* ── Appearance Styles (Classic vs Faceless / Halal) ── */
+:host([data-paws-style="faceless"]) .cat-face-features,
+.ff-paws.style-faceless .cat-face-features,
+.ff-cat.style-faceless .cat-face-features {
+  display: none !important;
 }
 
 .ff-paws {
@@ -323,25 +338,28 @@
 /* ── Floating Speech & CP Dialogue Bubbles ─────────── */
 .ff-cat-bubble {
   position: absolute;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%) translateY(6px) scale(0.9);
+  transform: translateX(-50%) translateY(4px) scale(0.92);
   background: var(--paws-bubble-bg);
   color: var(--paws-bubble-fg);
   border: 1px solid var(--paws-bubble-border);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 11.5px;
-  font-weight: 700;
-  line-height: 1.3;
-  padding: 5px 12px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  padding: 3px 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14), 0 1px 2px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   white-space: normal;
   text-align: center;
   width: max-content;
-  max-width: 240px;
+  max-width: 170px;
   opacity: 0;
-  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
   z-index: 10;
 }
@@ -350,14 +368,14 @@
 .ff-cat-bubble::after {
   content: '';
   position: absolute;
-  bottom: -6px;
+  bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 6px solid var(--paws-bubble-bg);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--paws-bubble-bg);
 }
 
 .ff-cat-bubble.visible {
@@ -474,14 +492,19 @@
 }
 
 /* ── Poses: Grooming / Washing Face ─────────────────── */
+.ff-cat .cat-head {
+  transform-box: view-box;
+  transform-origin: 68px 34px;
+  will-change: transform;
+}
 .ff-cat.is-groom .cat-head {
   animation: paws-groom 2.8s ease-in-out infinite;
 }
 @keyframes paws-groom {
   0%, 100% { transform: rotate(0deg); }
-  25%      { transform: rotate(-10deg) translateY(1px); }
-  50%      { transform: rotate(4deg); }
-  75%      { transform: rotate(-8deg); }
+  25%      { transform: rotate(-5deg) translateY(0.5px); }
+  50%      { transform: rotate(3deg); }
+  75%      { transform: rotate(-4deg); }
 }
 
 /* ── Poses: Petting Bliss ───────────────────────────── */
@@ -594,11 +617,12 @@
         host.id = 'ff-zen-paws';
         shadow = host.attachShadow({ mode: 'open' });
 
-        const style = document.createElement('style');
-        style.textContent = OVERLAY_CSS;
+        const styleNode = document.createElement('style');
+        styleNode.textContent = OVERLAY_CSS;
 
+        host.setAttribute('data-paws-style', style);
         const paws = document.createElement('div');
-        paws.className = 'ff-paws';
+        paws.className = `ff-paws ${style === 'faceless' ? 'style-faceless' : ''}`;
 
         motesEl = document.createElement('div');
         motesEl.className = 'ff-motes';
@@ -631,7 +655,7 @@
         tray.appendChild(toyBtn);
 
         paws.append(motesEl, printsEl, toysLayer, catsLayer, playground, tray);
-        shadow.append(style, paws);
+        shadow.append(styleNode, paws);
 
         buildMotes();
         (document.documentElement || document.body).appendChild(host);
@@ -659,7 +683,7 @@
 
         catEls = cats.map(cat => {
             const root = document.createElement('div');
-            root.className = 'ff-cat';
+            root.className = `ff-cat ${style === 'faceless' ? 'style-faceless' : ''}`;
             root.title = `Pet ${cat.palette.name || 'Cat'} (${cat.personality})`;
 
             const figure = document.createElement('div');
@@ -1121,6 +1145,17 @@
             sizeMultiplier = changes.ff_zenPaws_size.newValue === 'large' ? 1.25 : 1.0;
             if (enabled) { stop(); start(); }
         }
+        if (changes.ff_zenPaws_style) {
+            style = changes.ff_zenPaws_style.newValue || 'faceless';
+            if (host) host.setAttribute('data-paws-style', style);
+            if (shadow) {
+                const paws = shadow.querySelector('.ff-paws');
+                if (paws) paws.classList.toggle('style-faceless', style === 'faceless');
+                shadow.querySelectorAll('.ff-cat').forEach(catNode => {
+                    catNode.classList.toggle('style-faceless', style === 'faceless');
+                });
+            }
+        }
         if (changes.ff_theme && enabled) {
             applyTheme();
         }
@@ -1133,11 +1168,13 @@
                 [STORAGE_KEY]: false,
                 [MODE_KEY]: 'playful',
                 [COUNT_KEY]: null,
-                [SIZE_KEY]: 'normal'
+                [SIZE_KEY]: 'normal',
+                [STYLE_KEY]: 'faceless'
             });
             mode = stored[MODE_KEY] || 'playful';
             preferredCount = stored[COUNT_KEY] || null;
             sizeMultiplier = stored[SIZE_KEY] === 'large' ? 1.25 : 1.0;
+            style = stored[STYLE_KEY] || 'faceless';
             if (stored[STORAGE_KEY]) start();
         } catch (e) {
             console.debug('FocusForces: failed to load Zen Paws state', e);

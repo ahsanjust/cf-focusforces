@@ -2642,7 +2642,8 @@ const PageFXModule = (() => {
             [PAWS_KEY]: false,
             ff_zenPaws_mode: 'playful',
             ff_zenPaws_count: 3,
-            ff_zenPaws_size: 'normal'
+            ff_zenPaws_size: 'normal',
+            ff_zenPaws_style: 'faceless'
         });
 
         if (pawsToggle) {
@@ -2660,7 +2661,13 @@ const PageFXModule = (() => {
             });
         }
 
-        // Paws radios: mode, count, size
+        // Paws radios: style, mode, count, size
+        document.querySelectorAll('input[name="paws_style"]').forEach(radio => {
+            radio.checked = radio.value === (pawsStored.ff_zenPaws_style || 'faceless');
+            radio.addEventListener('change', () => {
+                chrome.storage.local.set({ ff_zenPaws_style: radio.value }).catch(() => {});
+            });
+        });
         document.querySelectorAll('input[name="paws_mode"]').forEach(radio => {
             radio.checked = radio.value === pawsStored.ff_zenPaws_mode;
             radio.addEventListener('change', () => {
