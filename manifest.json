@@ -42,25 +42,68 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ]
   },
   "content_scripts": [
     {
-      "matches": ["https://codeforces.com/*"],
-      "js": ["zen-utils.js", "timer-utils.js", "scout-utils.js", "content.js", "submitify-utils.js", "submitify.js", "catwalk-utils.js", "catwalk.js", "ac-utils.js", "accelebrate.js"],
-      "css": ["content.css", "cf-theme.css"],
+      "matches": [
+        "https://codeforces.com/*"
+      ],
+      "js": [
+        "zen-utils.js",
+        "timer-utils.js",
+        "scout-utils.js",
+        "content.js",
+        "submitify-utils.js",
+        "submitify.js",
+        "catwalk-utils.js",
+        "catwalk.js",
+        "ac-utils.js",
+        "accelebrate.js"
+      ],
+      "css": [
+        "content.css",
+        "cf-theme.css"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://atcoder.jp/*"],
-      "js": ["zen-utils.js", "timer-utils.js", "scout-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
-      "css": ["content.css", "atcoder-theme.css"],
+      "matches": [
+        "https://atcoder.jp/*"
+      ],
+      "js": [
+        "zen-utils.js",
+        "timer-utils.js",
+        "scout-utils.js",
+        "content.js",
+        "catwalk-utils.js",
+        "catwalk.js"
+      ],
+      "css": [
+        "content.css",
+        "atcoder-theme.css"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["https://www.codechef.com/*"],
-      "js": ["zen-utils.js", "timer-utils.js", "scout-utils.js", "content.js", "catwalk-utils.js", "catwalk.js"],
-      "css": ["content.css", "codechef-theme.css"],
+      "matches": [
+        "https://www.codechef.com/*"
+      ],
+      "js": [
+        "zen-utils.js",
+        "timer-utils.js",
+        "scout-utils.js",
+        "content.js",
+        "catwalk-utils.js",
+        "catwalk.js"
+      ],
+      "css": [
+        "content.css",
+        "codechef-theme.css"
+      ],
       "run_at": "document_start"
     }
   ],
@@ -69,7 +112,12 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["assets/notify.wav", "cf-theme.css", "atcoder-theme.css", "codechef-theme.css"],
+      "resources": [
+        "assets/notify.wav",
+        "cf-theme.css",
+        "atcoder-theme.css",
+        "codechef-theme.css"
+      ],
       "matches": [
         "https://codeforces.com/*",
         "https://atcoder.jp/*",
