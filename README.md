@@ -11,7 +11,7 @@ An ultra-refined, distraction-free browser extension built for competitive progr
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-6366f1?style=for-the-badge&logo=googlechrome&logoColor=white)](https://developer.chrome.com/docs/extensions/mv3/intro/)
 [![Firefox Add-on](https://img.shields.io/badge/Firefox%20Add--on-Official%20Store-ff7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/focusforces/)
 [![Version](https://img.shields.io/badge/Version-2.1.0-emerald?style=for-the-badge)](package.json)
-[![Tests Passing](https://img.shields.io/badge/Tests-160%2F160%20Passed-success?style=for-the-badge&logo=jest&logoColor=white)](tests/)
+[![Tests Passing](https://img.shields.io/badge/Tests-237%2F237%20Passed-success?style=for-the-badge&logo=jest&logoColor=white)](tests/)
 [![Code Quality](https://img.shields.io/badge/Linter-web--ext%200%20errors-blue?style=for-the-badge)](https://github.com/mozilla/web-ext)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -181,7 +181,7 @@ FocusForces maintains a test suite covering timer state transitions, milestone a
 # Install dependencies
 npm install
 
-# Run Jest unit test suite (160 tests)
+# Run Jest unit test suite (237 tests)
 npm test
 
 # Run tests in watch mode

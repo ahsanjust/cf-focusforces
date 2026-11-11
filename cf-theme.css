@@ -1071,6 +1071,19 @@
   background-color: var(--ff-card-bg) !important;
 }
 
+/* Fix: CF wraps standings/status tables in a .datatable whose inner div has
+   an inline `background-color: white` (plus the gray outer box). Those
+   wrappers are not rows, so the table rules above never touched them and a
+   white slab showed behind otherwise-themed rows. */
+[data-ff-theme] .datatable,
+[data-ff-theme] .datatable > div {
+  background: var(--ff-card-bg) !important;
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+  border-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
 /* Fix: "Practice" / virtual-participation link box — CF uses white <td> in a table inside .roundbox */
 [data-ff-theme] .roundbox td,
 [data-ff-theme] .roundbox tr,
@@ -1157,6 +1170,81 @@
 [data-ff-theme] .menu-list li a:visited,
 [data-ff-theme] .menu-list li a:active {
   color: var(--ff-fg) !important;
+}
+
+/* ── Mobile Codeforces chrome ──────────────────────────
+   Mobile layout (phones / ?mobile=true) uses a light toolbar, a white
+   swipe drawer and black menu links, none of which exist on desktop.
+   Theme them with the same tokens as the desktop header. */
+[data-ff-theme] .mobile-toolbar,
+[data-ff-theme] .mobile-toolbar > div,
+[data-ff-theme] #swipe-sidebar,
+[data-ff-theme] .swipe-sidebar,
+[data-ff-theme] .mobile-menu,
+[data-ff-theme] #swipe-sidebar .menu-box,
+[data-ff-theme] .menu-box .menu-list-container {
+  background-color: var(--ff-card-bg) !important;
+  background-image: none !important;
+  border-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme] .mobile-toolbar a,
+[data-ff-theme] .mobile-toolbar span,
+[data-ff-theme] .mobile-toolbar .icon,
+[data-ff-theme] .mobile-toolbar .menu-icon,
+[data-ff-theme] .mobile-toolbar svg,
+[data-ff-theme] #swipe-sidebar a,
+[data-ff-theme] #swipe-sidebar .menu-list li a,
+[data-ff-theme] #swipe-sidebar .menu-list li a:visited,
+[data-ff-theme] #body .menu-box .menu-list li a,
+[data-ff-theme] #body .menu-box .menu-list li a:visited,
+[data-ff-theme] #body .menu-box .menu-list li a:hover,
+[data-ff-theme] #body .menu-box .menu-list li a:active {
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme] .mobile-toolbar .search,
+[data-ff-theme] input.search,
+[data-ff-theme] #swipe-sidebar input,
+[data-ff-theme] #swipe-sidebar input[type="text"],
+[data-ff-theme] #swipe-sidebar input[type="search"] {
+  background-color: var(--ff-input-bg) !important;
+  border-color: var(--ff-card-bd) !important;
+  color: var(--ff-fg) !important;
+}
+
+[data-ff-theme] input.search::placeholder {
+  color: var(--ff-subtle) !important;
+  opacity: 1 !important;
+}
+
+/* ── Zen HUD buttons ───────────────────────────────────
+   The global button rule paints every label with --ff-btn-fg (dark, meant
+   for accent-filled buttons), but the HUD's ghost buttons sit on a dark
+   card surface. Restore their intended per-theme colors. */
+[data-ff-theme] .ff-zen-hud .ff-zen-btn {
+  color: var(--ff-text-secondary) !important;
+}
+
+[data-ff-theme] .ff-zen-hud .ff-zen-btn:hover {
+  color: var(--ff-text) !important;
+}
+
+[data-ff-theme] .ff-zen-hud .ff-zen-btn-exit {
+  color: var(--ff-danger) !important;
+}
+
+[data-ff-theme] .ff-zen-hud .ff-zen-btn-submit {
+  color: var(--ff-btn-primary-text, #ffffff) !important;
+}
+
+/* CF paints #sidebar white; on mobile it is reused inside the swipe drawer,
+   so let the themed drawer surface show through instead. */
+[data-ff-theme] #sidebar,
+[data-ff-theme] #swipe-sidebar #sidebar {
+  background-color: transparent !important;
+  background-image: none !important;
 }
 
 /* ════════════════════════════════════════════════════

@@ -78,6 +78,7 @@
     let zenTargetOrigParent = null;
     let zenTargetOrigSibling = null;
     let zenRelocated = [];
+    let zenPageType = 'other';
     let problemCachePromise = null;
     let cachedAudioCtx = null;
     let currentTheme = 'default';
@@ -495,6 +496,107 @@
         return boxes;
     }
 
+    // ── Page-aware Zen layouts ─────────────────────────
+    // Zen is not only a problem reader: editorials, blogs, standings and
+    // submission lists are opened in it too. Each page family gets the
+    // structure that fits it (reading measure vs. data width) instead of
+    // forcing the problem-statement geometry onto every page.
+    const ZEN_PAGE_LABELS = {
+        problem: 'Problem',
+        blogEntry: 'Blog Post',
+        blogIndex: 'Blog Feed',
+        standings: 'Standings',
+        status: 'Submissions',
+        contest: 'Contest',
+        profile: 'Profile',
+        other: ''
+    };
+
+    function detectZenPageType() {
+        const path = window.location.pathname;
+        if (document.querySelector('.problem-statement, #task-statement, .problem-description')) {
+            return 'problem';
+        }
+        if (PLATFORM !== 'codeforces') return 'other';
+
+        if (/^\/blog\/entry\//.test(path)) return 'blogEntry';
+        if (/^\/blog(\/|$)/.test(path)) return 'blogIndex';
+        if (/\/standings\b/.test(path)) return 'standings';
+        if (/\/status\b/.test(path) || /^\/(submissions|status|my)\b/.test(path)) return 'status';
+        if (/^\/(contest|gym)\b/.test(path)) return 'contest';
+        if (/^\/profile\b/.test(path)) return 'profile';
+        return 'other';
+    }
+
+    function pickZenTargetNode(pageType) {
+        if (pageType === 'problem') {
+            return document.querySelector('.problem-statement')
+                || document.getElementById('task-statement')
+                || document.querySelector('.problem-description')
+                || document.getElementById('content');
+        }
+        // Lists and tables keep their own wrapper; blog entries keep comments
+        // inside the canvas so the whole reading flow stays in one column.
+        return document.getElementById('content')
+            || document.getElementById('pageContent')
+            || document.querySelector('.content-with-sidebar')
+            || document.querySelector('main');
+    }
+
+    function getZenPageTitle(pageType) {
+        const clean = el => (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
+        const docTitle = (document.title || '').split(' - ')[0].trim();
+
+        if (pageType === 'problem') {
+            return clean(document.querySelector('.ff-zen-title'))
+                || clean(document.querySelector('.problem-statement .header .title'))
+                || clean(document.querySelector('#task-statement .h2'))
+                || docTitle;
+        }
+        if (pageType === 'blogEntry' || pageType === 'blogIndex') {
+            return clean(document.querySelector('.topic .title')) || docTitle;
+        }
+        if (pageType === 'contest') {
+            return clean(document.querySelector('.contest-name')) || docTitle;
+        }
+        return docTitle;
+    }
+
+    function zenHasCompanionContent() {
+        if (zenPageType === 'problem') return true;
+        if (zenPageType === 'blogEntry') {
+            return Boolean(document.querySelector('#ff-zen-toc .ff-zen-toc-link')
+                || document.querySelector('.ff-zen-readtime'));
+        }
+        return false;
+    }
+
+    function updateZenHudMeta() {
+        const kindEl = document.getElementById('ff-zen-kind');
+        if (kindEl) {
+            const label = ZEN_PAGE_LABELS[zenPageType] || '';
+            kindEl.textContent = label;
+            kindEl.hidden = !label;
+        }
+        const snippet = document.getElementById('ff-zen-prob-title');
+        if (snippet) snippet.textContent = getZenPageTitle(zenPageType);
+
+        // Submission is a top-level action: it must not depend on the
+        // companion rail (which the user may have hidden).
+        const submitBtn = document.getElementById('ff-zen-submit-btn');
+        if (submitBtn) submitBtn.hidden = zenPageType !== 'problem';
+
+        const hasRail = zenHasCompanionContent();
+        const railBtn = document.getElementById('ff-zen-rail-btn');
+        if (railBtn) railBtn.hidden = !hasRail;
+
+        if (zenWorkspaceEl) {
+            const showRail = hasRail && zenCompanionVisible && window.innerWidth >= 1360;
+            zenWorkspaceEl.classList.toggle('rail-hidden', !showRail);
+            zenWorkspaceEl.classList.toggle('has-companion', showRail);
+        }
+    }
+
     // ── FocusForces Zen Mode 2.0: Distraction-Free Problem Workspace ──
     function escapeHtml(str) {
         return String(str || '')
@@ -584,6 +686,11 @@
                 window.location.href = `/problemset/submit`;
                 return;
             }
+            const g = window.location.pathname.match(/\/gym\/(\d+)\/problem\/([A-Za-z0-9]+)/);
+            if (g) {
+                window.location.href = `/gym/${g[1]}/submit/${g[2]}`;
+                return;
+            }
         }
     }
 
@@ -632,12 +739,13 @@
     function updateActiveTocSection() {
         const links = document.querySelectorAll('.ff-zen-toc-link');
         if (!links.length) return;
-        const scrollPos = (window.scrollY || document.documentElement.scrollTop) + 140;
+        // Viewport-relative check: nested sections (blog headings) have
+        // offsetParents, so offsetTop is not a document position.
         let activeLink = null;
         links.forEach(link => {
             const targetId = link.getAttribute('href')?.replace('#', '');
             const target = targetId ? document.getElementById(targetId) : null;
-            if (target && target.offsetTop <= scrollPos) {
+            if (target && target.getBoundingClientRect().top <= 140) {
                 activeLink = link;
             }
         });
@@ -878,36 +986,63 @@
         if (!tocEl) return;
         tocEl.replaceChildren();
 
-        const sections = [
-            { id: 'ff-sec-statement', label: 'Statement', selector: '.legend, div.part:first-of-type' },
-            { id: 'ff-sec-input', label: 'Input Spec', selector: '.input-specification, div.part:has(h3)' },
-            { id: 'ff-sec-output', label: 'Output Spec', selector: '.output-specification' },
-            { id: 'ff-sec-samples', label: 'Examples', selector: '.sample-test, .sample-tests, div.part:has(pre)' },
-            { id: 'ff-sec-note', label: 'Notes', selector: '.note' },
-            { id: 'ff-zen-submit-dock', label: 'Submit Solution', selector: '#ff-zen-submit-dock' }
-        ];
-
         let foundAny = false;
-        sections.forEach(({ id, label, selector }) => {
-            const el = document.querySelector(selector);
-            if (el) {
-                if (!el.id) el.id = id;
-                const targetId = el.id;
-                const link = document.createElement('a');
-                link.href = `#${targetId}`;
-                link.className = 'ff-zen-toc-link';
-                link.textContent = label;
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                });
-                tocEl.appendChild(link);
-                foundAny = true;
+        const addLink = (label, el) => {
+            if (!el || !label) return;
+            if (!el.id) el.id = `ff-zen-sec-${tocEl.children.length + 1}`;
+            const link = document.createElement('a');
+            link.href = `#${el.id}`;
+            link.className = 'ff-zen-toc-link';
+            link.textContent = label;
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            tocEl.appendChild(link);
+            foundAny = true;
+        };
+
+        if (zenPageType === 'blogEntry') {
+            // Long-form reading: outline the post from its own headings.
+            document.querySelectorAll('.ttypography h2, .ttypography h3').forEach(heading => {
+                const text = (heading.textContent || '').trim();
+                if (text) addLink(text.length > 52 ? `${text.slice(0, 50)}…` : text, heading);
+            });
+
+            const body = document.querySelector('.ttypography');
+            const words = body ? (body.textContent || '').trim().split(/\s+/).filter(Boolean).length : 0;
+            if (words > 60) {
+                const head = tocEl.closest('.ff-zen-rail-card')?.querySelector('.ff-zen-rail-head');
+                if (head && !head.querySelector('.ff-zen-readtime')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'ff-zen-readtime';
+                    badge.textContent = `${Math.max(1, Math.round(words / 220))} min read`;
+                    head.appendChild(badge);
+                }
             }
-        });
+        } else if (zenPageType === 'problem') {
+            const sections = [
+                { id: 'ff-sec-statement', label: 'Statement', selector: '.legend, div.part:first-of-type' },
+                { id: 'ff-sec-input', label: 'Input Spec', selector: '.input-specification, div.part:has(h3)' },
+                { id: 'ff-sec-output', label: 'Output Spec', selector: '.output-specification' },
+                { id: 'ff-sec-samples', label: 'Examples', selector: '.sample-test, .sample-tests, div.part:has(pre)' },
+                { id: 'ff-sec-note', label: 'Notes', selector: '.note' },
+                { id: 'ff-zen-submit-dock', label: 'Submit Solution', selector: '#ff-zen-submit-dock' }
+            ];
+
+            sections.forEach(({ id, label, selector }) => {
+                const el = document.querySelector(selector);
+                if (!el) return;
+                if (!el.id) el.id = id;
+                addLink(label, el);
+            });
+        }
 
         const tocCard = tocEl.closest('.ff-zen-rail-card');
-        if (tocCard) tocCard.style.display = foundAny ? '' : 'none';
+        const hasReadtime = Boolean(tocCard?.querySelector('.ff-zen-readtime'));
+        if (tocCard) tocCard.style.display = (foundAny || hasReadtime) ? '' : 'none';
+        const tocTitle = tocCard?.querySelector('.ff-zen-rail-title');
+        if (tocTitle) tocTitle.textContent = zenPageType === 'blogEntry' ? 'In this post' : 'Jump to Section';
     }
 
     function buildZenRail() {
@@ -915,7 +1050,7 @@
         zenRailEl = document.createElement('aside');
         zenRailEl.id = 'ff-zen-rail';
         zenRailEl.className = 'ff-zen-rail';
-        zenRailEl.setAttribute('aria-label', 'Problem Companion');
+        zenRailEl.setAttribute('aria-label', zenPageType === 'blogEntry' ? 'Reading Companion' : 'Problem Companion');
 
         // 0. Drawer Header (shown on viewports < 1360px when opened as drawer)
         const drawerHead = document.createElement('div');
@@ -923,13 +1058,17 @@
         drawerHead.innerHTML = `
             <div style="display:flex; align-items:center; gap:8px;">
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
-                <span class="ff-zen-rail-title" style="margin-bottom:0;">Problem Overview</span>
+                <span class="ff-zen-rail-title" style="margin-bottom:0;">Overview</span>
             </div>
             <button type="button" class="ff-zen-btn" id="ff-zen-drawer-close-btn" title="Close Overview (Esc)" style="padding:2px 8px; font-weight:700;">✕</button>
         `;
         drawerHead.querySelector('#ff-zen-drawer-close-btn')?.addEventListener('click', () => {
             zenWorkspaceEl?.classList.remove('drawer-open');
         });
+        const drawerTitle = drawerHead.querySelector('.ff-zen-rail-title');
+        if (drawerTitle) {
+            drawerTitle.textContent = zenPageType === 'blogEntry' ? 'Post Overview' : 'Problem Overview';
+        }
         zenRailEl.appendChild(drawerHead);
 
         // 1. Table of Contents / Section Jump
@@ -965,7 +1104,11 @@
         `;
         submitCard.querySelector('#ff-zen-quick-submit')?.addEventListener('click', onQuickSubmitClick);
 
-        zenRailEl.append(tocCard, scoutDock, tagsDock, submitCard);
+        zenRailEl.append(tocCard);
+        // Scout, native tags and submission only belong to a problem workspace.
+        if (zenPageType === 'problem') {
+            zenRailEl.append(scoutDock, tagsDock, submitCard);
+        }
         return zenRailEl;
     }
 
@@ -1015,6 +1158,7 @@
                 <span class="ff-zen-timer-dot" id="ff-zen-timer-dot" aria-hidden="true"></span>
                 <span class="ff-zen-timer-val" id="ff-zen-timer-val">25:00</span>
             </div>
+            <span class="ff-zen-kind" id="ff-zen-kind" hidden></span>
         `;
 
         // Center: Problem title snippet
@@ -1026,6 +1170,10 @@
         const right = document.createElement('div');
         right.className = 'ff-zen-hud-right';
         right.innerHTML = `
+            <button type="button" class="ff-zen-btn ff-zen-btn-submit" id="ff-zen-submit-btn" title="Submit Solution" hidden>
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <span>Submit</span>
+            </button>
             <button type="button" class="ff-zen-btn" id="ff-zen-width-btn" title="Reading Canvas Width (Shortcut: [ or ])">
                 <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3m0 0 4-4m-4 4 4 4m14-4-4-4m4 4-4 4"/></svg>
                 <span id="ff-zen-width-label">Comfortable</span>
@@ -1056,6 +1204,7 @@
         inner.append(left, center, right);
         zenHudEl.append(inner, progressBar);
 
+        inner.querySelector('#ff-zen-submit-btn')?.addEventListener('click', onQuickSubmitClick);
         inner.querySelector('#ff-zen-width-btn')?.addEventListener('click', cycleWidthMode);
         inner.querySelector('#ff-zen-font-btn')?.addEventListener('click', cycleFontSize);
         inner.querySelector('#ff-zen-rail-btn')?.addEventListener('click', toggleCompanionRail);
@@ -1076,10 +1225,10 @@
         if (enabled) {
             if (zenWorkspaceEl && zenWorkspaceEl.isConnected) return;
 
-            zenTargetNode = document.querySelector('.problem-statement')
-                || document.getElementById('task-statement')
-                || document.querySelector('.problem-description')
-                || document.getElementById('content');
+            zenPageType = detectZenPageType();
+            document.body.setAttribute('data-ff-zen-page', zenPageType);
+
+            zenTargetNode = pickZenTargetNode(zenPageType);
 
             if (!zenTargetNode) return;
 
@@ -1099,12 +1248,18 @@
             zenCanvasEl.appendChild(zenTargetNode);
             zenWorkspaceEl.appendChild(zenCanvasEl);
 
-            zenRailEl = buildZenRail();
-            zenWorkspaceEl.appendChild(zenRailEl);
+            const wantsRail = zenPageType === 'problem' || zenPageType === 'blogEntry';
+            if (wantsRail) {
+                zenRailEl = buildZenRail();
+                zenWorkspaceEl.appendChild(zenRailEl);
 
-            const isWide = window.innerWidth >= 1360;
-            zenWorkspaceEl.classList.toggle('has-companion', isWide && zenCompanionVisible);
-            zenWorkspaceEl.classList.toggle('rail-hidden', !isWide || !zenCompanionVisible);
+                const isWide = window.innerWidth >= 1360;
+                zenWorkspaceEl.classList.toggle('has-companion', isWide && zenCompanionVisible);
+                zenWorkspaceEl.classList.toggle('rail-hidden', !isWide || !zenCompanionVisible);
+            } else {
+                zenRailEl = null;
+                zenWorkspaceEl.classList.add('rail-hidden');
+            }
 
             const submitDock = document.createElement('section');
             submitDock.id = 'ff-zen-submit-dock';
@@ -1113,9 +1268,12 @@
             zenCanvasEl.appendChild(submitDock);
 
             buildTableOfContents();
-            relocateZenBoxes(true);
-            enhanceProblemHeader();
-            attachSampleCopyButtons();
+            if (zenPageType === 'problem') {
+                relocateZenBoxes(true);
+                enhanceProblemHeader();
+                attachSampleCopyButtons();
+            }
+            updateZenHudMeta();
         } else {
             if (zenTargetNode && zenTargetOrigParent && zenTargetOrigParent.isConnected) {
                 zenTargetOrigParent.insertBefore(zenTargetNode, zenWorkspaceEl);
@@ -1237,6 +1395,8 @@
         } else {
             document.body.removeAttribute('data-ff-zen-width');
             document.body.removeAttribute('data-ff-zen-size');
+            document.body.removeAttribute('data-ff-zen-page');
+            zenPageType = 'other';
         }
 
         CONFIG.ZEN_SELECTORS.forEach(sel => {
@@ -1262,11 +1422,7 @@
                 zenTimerInterval = setInterval(() => updateZenTimerDisplay(), 1000);
             }
 
-            const titleEl = document.querySelector('.ff-zen-title') || document.querySelector('.title') || document.querySelector('h2');
-            const snippet = document.getElementById('ff-zen-prob-title');
-            if (snippet && titleEl) {
-                snippet.textContent = titleEl.textContent.trim();
-            }
+            updateZenHudMeta();
         } else {
             setupZenWorkspace(false);
             relocateZenBoxes(false);

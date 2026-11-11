@@ -456,6 +456,9 @@ body.ff-zen-mode-active .footer,
 body.ff-zen-mode-active #sidebar,
 body.ff-zen-mode-active .navbar,
 body.ff-zen-mode-active #footer,
+body.ff-zen-mode-active .mobile-toolbar,
+body.ff-zen-mode-active #swipe-sidebar,
+body.ff-zen-mode-active .swipe-sidebar,
 body.ff-zen-mode-active .alert-info,
 body.ff-zen-mode-active .alert-warning,
 body.ff-zen-mode-active #top-bar,
@@ -634,12 +637,20 @@ body.ff-zen-mode-active div.part > section > h3::before {
 }
 
 /* ── Sample Tests Overhaul ─────────────────────────────── */
-body.ff-zen-mode-active .sample-test,
+/* .sample-tests is the section wrapper (it contains the "Example"
+   .section-title plus the .sample-test pairs). Only the inner pair
+   container may be a grid — gridding the wrapper split the section title
+   and the examples into two unrelated columns. */
 body.ff-zen-mode-active .sample-tests {
+  display: block !important;
+  margin: 20px 0 !important;
+}
+
+body.ff-zen-mode-active .sample-test {
   display: grid !important;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
   gap: 16px !important;
-  margin: 20px 0 !important;
+  margin: 12px 0 20px !important;
 }
 
 body.ff-zen-mode-active .sample-test .input,
@@ -667,6 +678,68 @@ body.ff-zen-mode-active .sample-tests .title {
   text-transform: uppercase !important;
   letter-spacing: 0.4px !important;
   color: var(--ff-text-secondary, #4b5563) !important;
+}
+
+/* Interactive problems render <div class="interaction-log"> instead of the
+   .input/.output pair. Native styles paint it with light #efefef / #eef4ff /
+   #d3d3d3 backgrounds, which turn into a white slab on dark themes. */
+body.ff-zen-mode-active .sample-test .interaction-log,
+body.ff-zen-mode-active .sample-test .interactionLog {
+  display: flex !important;
+  flex-direction: column !important;
+  background: var(--ff-code-bg, #f3f4f6) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  color: var(--ff-text, #111827) !important;
+}
+
+body.ff-zen-mode-active .sample-test .interaction-log .title,
+body.ff-zen-mode-active .sample-test .interactionLog .title {
+  border-bottom: 1px solid var(--ff-border, #e2e8f0) !important;
+}
+
+body.ff-zen-mode-active .sample-test .interaction-log pre,
+body.ff-zen-mode-active .sample-test .interactionLog pre {
+  margin: 0 !important;
+  padding: 10px 0 !important;
+  background: transparent !important;
+  color: var(--ff-text, #111827) !important;
+  white-space: pre-wrap !important;
+  overflow-x: auto !important;
+}
+
+body.ff-zen-mode-active .sample-test .interaction-log-line,
+body.ff-zen-mode-active .sample-test .interaction-log-line.IN,
+body.ff-zen-mode-active .sample-test .interaction-log-line.OUT {
+  display: block !important;
+  padding: 2px 14px !important;
+  background: transparent !important;
+  color: var(--ff-text, #111827) !important;
+}
+
+/* Responses/queries get a subtle accent stripe so the dialogue reads as a
+   conversation without the harsh native grey. */
+body.ff-zen-mode-active .sample-test .interaction-log-line.OUT {
+  background: var(--ff-accent-soft, rgba(108, 92, 231, 0.12)) !important;
+}
+
+body.ff-zen-mode-active .sample-test .interaction-log .direction,
+body.ff-zen-mode-active .sample-test .interactionLog .direction {
+  color: var(--ff-accent, #6c5ce7) !important;
+  font-weight: 700 !important;
+}
+
+/* High-specificity overrides: cf-theme.css styles sample <pre> with
+   [data-ff-theme] .sample-test .input pre, which outranks the shorter
+   zen selectors and would otherwise reintroduce the native light slab. */
+body.ff-zen-mode-active .problem-statement .sample-tests .sample-test .input pre,
+body.ff-zen-mode-active .problem-statement .sample-tests .sample-test .output pre,
+body.ff-zen-mode-active .problem-statement .sample-tests .sample-test .interaction-log pre,
+body.ff-zen-mode-active .problem-statement .sample-tests .sample-test .interactionLog pre {
+  background: transparent !important;
+  color: var(--ff-text, #111827) !important;
+  padding: 12px 14px !important;
 }
 
 body.ff-zen-mode-active .sample-test pre,
@@ -1212,31 +1285,41 @@ body.ff-zen-mode-active div.part section pre {
 }
 
 /* ── Submitify (Production-Quality Inline Code Editor & Draft Safety) ── */
+.ff-submitify-row > .ff-submitify-cell {
+  padding: 2px 0 10px !important;
+}
+
 .ff-submitify-container {
   width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   border: 1px solid var(--ff-border, #d1d5db) !important;
-  border-radius: 8px !important;
-  background: var(--ff-bg-card, #ffffff) !important;
-  overflow: hidden !important;
-  margin: 8px 0 14px 0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 10px !important;
+  background: var(--ff-card, #ffffff) !important;
+  overflow: visible !important;
+  margin: 6px 0 14px 0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
   transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  container-type: inline-size;
 }
 
 .ff-submitify-container:focus-within {
   border-color: var(--ff-accent, #6366f1) !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14) !important;
 }
 
 .ff-submitify-toolbar {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding: 6px 10px !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
   background: var(--ff-surface-hover, #f8fafc) !important;
   border-bottom: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 9px 9px 0 0 !important;
   font-size: 11px !important;
   user-select: none !important;
   position: relative !important;
@@ -1245,20 +1328,27 @@ body.ff-zen-mode-active div.part section pre {
 .ff-submitify-tool-group {
   display: flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  gap: 8px !important;
   position: relative !important;
+  min-width: 0 !important;
 }
 
 .ff-submitify-tool-btn {
-  background: transparent !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 26px !important;
+  padding: 0 10px !important;
+  white-space: nowrap !important;
+  background: var(--ff-card, #ffffff) !important;
   border: 1px solid var(--ff-border, #cbd5e1) !important;
-  border-radius: 4px !important;
-  padding: 3px 8px !important;
-  font-size: 11px !important;
-  font-weight: 500 !important;
+  border-radius: 6px !important;
+  font-family: inherit !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
   color: var(--ff-text, #334155) !important;
   cursor: pointer !important;
-  line-height: 1.4 !important;
+  line-height: 1 !important;
   transition: background 0.12s ease, border-color 0.12s ease !important;
 }
 
@@ -1269,17 +1359,16 @@ body.ff-zen-mode-active div.part section pre {
 
 .ff-submitify-dropdown {
   position: absolute !important;
-  top: 100% !important;
+  top: calc(100% + 4px) !important;
   left: 0 !important;
-  margin-top: 4px !important;
-  background: var(--ff-bg-card, #ffffff) !important;
+  background: var(--ff-card, #ffffff) !important;
   border: 1px solid var(--ff-border, #cbd5e1) !important;
-  border-radius: 6px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
   display: flex !important;
   flex-direction: column !important;
   z-index: 9999 !important;
-  min-width: 140px !important;
+  min-width: 160px !important;
   overflow: hidden !important;
 }
 
@@ -1288,8 +1377,8 @@ body.ff-zen-mode-active div.part section pre {
 }
 
 .ff-submitify-dropdown-item {
-  padding: 6px 12px !important;
-  font-size: 11px !important;
+  padding: 8px 12px !important;
+  font-size: 11.5px !important;
   text-align: left !important;
   border: none !important;
   background: transparent !important;
@@ -1302,14 +1391,46 @@ body.ff-zen-mode-active div.part section pre {
   background: var(--ff-surface-hover, #f1f5f9) !important;
 }
 
+/* Keep the editor above the site-wide themed button/input resets. */
+[data-ff-theme] .ff-submitify-container .ff-submitify-tool-btn {
+  background: var(--ff-card, #ffffff) !important;
+  border-color: var(--ff-border, #cbd5e1) !important;
+  color: var(--ff-text, #334155) !important;
+}
+
+[data-ff-theme] .ff-submitify-container .ff-submitify-tool-btn:hover {
+  background: var(--ff-well, #e2e8f0) !important;
+  border-color: var(--ff-subtle, #94a3b8) !important;
+  color: var(--ff-text, #334155) !important;
+}
+
+[data-ff-theme] .ff-submitify-container .ff-submitify-dropdown-item {
+  background: transparent !important;
+  border: none !important;
+  color: var(--ff-text, #334155) !important;
+}
+
+[data-ff-theme] .ff-submitify-container .ff-submitify-dropdown-item:hover {
+  background: var(--ff-surface-hover, #f1f5f9) !important;
+  color: var(--ff-text, #334155) !important;
+}
+
+[data-ff-theme] .ff-submitify-container .ff-submitify-textarea {
+  background: var(--ff-bg-input, #fcfcfd) !important;
+  color: var(--ff-text, #111827) !important;
+  border-radius: 0 !important;
+}
+
 .ff-submitify-draft-badge {
-  font-size: 10px !important;
-  font-weight: 500 !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
   color: var(--ff-muted, #64748b) !important;
-  padding: 2px 6px !important;
-  border-radius: 4px !important;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
   background: var(--ff-well, #f1f5f9) !important;
-  transition: all 0.2s ease !important;
+  transition: color 0.2s ease, background 0.2s ease !important;
 }
 
 .ff-submitify-draft-badge.restored {
@@ -1322,13 +1443,14 @@ body.ff-zen-mode-active div.part section pre {
 }
 
 .ff-submitify-textarea {
+  display: block !important;
   width: 100% !important;
-  min-height: 240px !important;
+  min-height: 220px !important;
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace !important;
-  font-size: 13px !important;
-  line-height: 1.55 !important;
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
   tab-size: 4 !important;
-  padding: 12px !important;
+  padding: 12px 14px !important;
   border: none !important;
   border-radius: 0 !important;
   background: var(--ff-bg-input, #fcfcfd) !important;
@@ -1338,20 +1460,409 @@ body.ff-zen-mode-active div.part section pre {
   outline: none !important;
 }
 
+.ff-submitify-textarea::placeholder {
+  font-style: normal !important;
+  color: var(--ff-muted, #94a3b8) !important;
+  opacity: 0.7 !important;
+}
+
 .ff-submitify-statusbar {
   display: flex !important;
-  justify-content: space-between !important;
   align-items: center !important;
-  padding: 4px 10px !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  padding: 6px 10px !important;
   background: var(--ff-surface-hover, #f8fafc) !important;
   border-top: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 0 0 9px 9px !important;
   font-size: 10.5px !important;
   color: var(--ff-muted, #64748b) !important;
   user-select: none !important;
 }
 
+.ff-submitify-stats {
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
 .ff-submitify-hint {
+  margin-left: auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
   font-weight: 500 !important;
   opacity: 0.85 !important;
+}
+
+@container (max-width: 460px) {
+  .ff-submitify-toolbar {
+    padding: 7px 8px !important;
+  }
+
+  .ff-submitify-tool-btn {
+    padding: 0 8px !important;
+    font-size: 11px !important;
+  }
+
+  .ff-submitify-textarea {
+    min-height: 200px !important;
+    font-size: 12px !important;
+  }
+
+  .ff-submitify-statusbar {
+    padding: 5px 9px !important;
+  }
+
+  .ff-submitify-hint {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Zen Mode 3.0 — Page-aware Workspace
+   One reading system, three structures: problems keep the full
+   workspace, blog entries become an editorial column, and data
+   pages (standings/submissions) get the width they need.
+   ══════════════════════════════════════════════════════ */
+
+/* ── HUD: stable three-zone grid ──────────────────────── */
+.ff-zen-hud-inner {
+  display: grid !important;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) minmax(0, auto) !important;
+}
+
+.ff-zen-hud-left {
+  justify-self: start !important;
+  min-width: 0 !important;
+}
+
+.ff-zen-hud-center {
+  justify-self: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.ff-zen-hud-right {
+  justify-self: end !important;
+  min-width: 0 !important;
+}
+
+.ff-zen-kind {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 999px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--ff-text-tertiary, #6b7280) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  white-space: nowrap !important;
+}
+
+.ff-zen-kind[hidden],
+.ff-zen-btn[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 1240px) {
+  .ff-zen-kind {
+    display: none !important;
+  }
+}
+
+/* ── Per-family canvas widths ────────────────────────── */
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas {
+  max-width: min(calc(var(--ff-zen-width, 920px) + 40px), 940px) !important;
+}
+
+body[data-ff-zen-page="blogIndex"] .ff-zen-canvas {
+  max-width: min(calc(var(--ff-zen-width, 920px) + 140px), 1080px) !important;
+}
+
+body[data-ff-zen-page="contest"] .ff-zen-canvas,
+body[data-ff-zen-page="profile"] .ff-zen-canvas {
+  max-width: min(calc(var(--ff-zen-width, 920px) + 280px), 1240px) !important;
+}
+
+body[data-ff-zen-page="standings"] .ff-zen-canvas,
+body[data-ff-zen-page="status"] .ff-zen-canvas {
+  max-width: min(calc(var(--ff-zen-width, 920px) + 560px), 1560px) !important;
+}
+
+body[data-ff-zen-page="other"] .ff-zen-canvas {
+  max-width: min(var(--ff-zen-width, 920px), 1080px) !important;
+}
+
+/* ── Blog entry: editorial reading column ────────────── */
+/* The canvas is the article surface, so byline, title and body always share
+   one card no matter how Codeforces nests .topic / .ttypography. */
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas {
+  padding: clamp(24px, 3.6vw, 44px) clamp(22px, 4.4vw, 52px) !important;
+  background: var(--ff-card, #ffffff) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 20px -2px var(--ff-shadow, rgba(0, 0, 0, 0.05)) !important;
+  box-sizing: border-box !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .topic {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .info,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .title,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography {
+  max-width: 72ch !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .info {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 0 !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px dashed var(--ff-border, #e2e8f0) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  color: var(--ff-text-secondary, #4b5563) !important;
+  text-transform: none !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .info a {
+  color: var(--ff-accent, #6c5ce7) !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .title {
+  margin: 16px auto 0 !important;
+  font-size: clamp(24px, 2.6vw, 32px) !important;
+  font-weight: 800 !important;
+  line-height: 1.22 !important;
+  letter-spacing: -0.022em !important;
+  color: var(--ff-text, #111827) !important;
+  text-align: left !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography {
+  margin-top: 14px !important;
+  padding: 0 !important;
+  font-size: var(--ff-zen-font-size, 15px) !important;
+  line-height: var(--ff-zen-line-height, 1.72) !important;
+  color: var(--ff-text, #111827) !important;
+  /* The canvas is the article surface; .ttypography must not paint a
+     second card (cf-theme.css gives it its own background + border). */
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  overflow-wrap: break-word !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography p {
+  margin: 1.05em 0 !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h2,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h3,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h4 {
+  margin: 1.7em 0 0.6em !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.01em !important;
+  color: var(--ff-text, #111827) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h2 {
+  font-size: 1.42em !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h3 {
+  font-size: 1.2em !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography h4 {
+  font-size: 1.05em !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography a {
+  color: var(--ff-accent, #6c5ce7) !important;
+  text-decoration: underline !important;
+  text-decoration-thickness: 1px !important;
+  text-underline-offset: 2px !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography ul,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography ol {
+  margin: 1em 0 !important;
+  padding-left: 1.5em !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography li {
+  margin: 0.35em 0 !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography img {
+  max-width: 100% !important;
+  height: auto !important;
+  border-radius: 10px !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography pre {
+  margin: 1.1em 0 !important;
+  padding: 12px 14px !important;
+  background: var(--ff-code-bg, #f3f4f6) !important;
+  border: 1px solid var(--ff-code-border, #e5e7eb) !important;
+  border-radius: 10px !important;
+  overflow-x: auto !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+  color: var(--ff-code-text, #0f172a) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography code {
+  padding: 1px 5px !important;
+  background: var(--ff-code-bg, #f3f4f6) !important;
+  border: 1px solid var(--ff-code-border, #e5e7eb) !important;
+  border-radius: 5px !important;
+  font-size: 0.92em !important;
+  color: var(--ff-code-text, #0f172a) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography pre code {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography blockquote {
+  margin: 1.2em 0 !important;
+  padding: 10px 18px !important;
+  border-left: 3px solid var(--ff-accent, #6c5ce7) !important;
+  background: var(--ff-accent-soft, rgba(108, 92, 231, 0.12)) !important;
+  border-radius: 0 10px 10px 0 !important;
+  color: var(--ff-text-secondary, #4b5563) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.2em 0 !important;
+  font-size: 0.94em !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography th,
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography td {
+  padding: 7px 10px !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography hr {
+  margin: 2em 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--ff-border, #e2e8f0) !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography .spoiler {
+  margin: 1.1em 0 !important;
+  padding: 8px 14px !important;
+  background: var(--ff-bg, #f8f9fa) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 10px !important;
+}
+
+body[data-ff-zen-page="blogEntry"] .ff-zen-canvas .ttypography .spoiler-title {
+  color: var(--ff-accent, #6c5ce7) !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+/* ── Blog feed: lightweight cards instead of a wall of text ── */
+body[data-ff-zen-page="blogIndex"] .ff-zen-canvas .topic {
+  margin: 0 0 14px !important;
+  padding: 18px 22px !important;
+  background: var(--ff-card, #ffffff) !important;
+  border: 1px solid var(--ff-border, #e2e8f0) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 10px var(--ff-shadow, rgba(0, 0, 0, 0.05)) !important;
+  box-sizing: border-box !important;
+}
+
+body[data-ff-zen-page="blogIndex"] .ff-zen-canvas .topic .title {
+  margin: 6px 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  color: var(--ff-text, #111827) !important;
+}
+
+body[data-ff-zen-page="blogIndex"] .ff-zen-canvas .topic .info {
+  font-size: 12px !important;
+  color: var(--ff-text-secondary, #4b5563) !important;
+}
+
+body[data-ff-zen-page="blogIndex"] .ff-zen-canvas .ttypography {
+  padding: 0 !important;
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  color: var(--ff-text-secondary, #4b5563) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Data pages: give tables the room they need ───────── */
+body[data-ff-zen-page="standings"] .ff-zen-canvas table,
+body[data-ff-zen-page="status"] .ff-zen-canvas table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 13px !important;
+}
+
+body[data-ff-zen-page="standings"] .ff-zen-canvas th,
+body[data-ff-zen-page="standings"] .ff-zen-canvas td,
+body[data-ff-zen-page="status"] .ff-zen-canvas th,
+body[data-ff-zen-page="status"] .ff-zen-canvas td {
+  padding: 7px 10px !important;
+  border-bottom: 1px solid var(--ff-border-soft, #edf2f7) !important;
+}
+
+/* ── HUD primary submit action ───────────────────────── */
+.ff-zen-btn-submit {
+  background: var(--ff-btn-primary-bg, #6c5ce7) !important;
+  color: var(--ff-btn-primary-text, #ffffff) !important;
+  border-color: var(--ff-btn-primary-border, #5a48d6) !important;
+}
+
+.ff-zen-btn-submit:hover {
+  background: var(--ff-btn-primary-bg, #6c5ce7) !important;
+  color: var(--ff-btn-primary-text, #ffffff) !important;
+  border-color: var(--ff-btn-primary-border, #5a48d6) !important;
+  filter: brightness(1.08) !important;
+}
+
+/* ── Rail reading-time badge ─────────────────────────── */
+.ff-zen-readtime {
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  color: var(--ff-accent, #6c5ce7) !important;
+  background: var(--ff-accent-soft, rgba(108, 92, 231, 0.12)) !important;
 }
 

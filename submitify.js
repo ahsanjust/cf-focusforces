@@ -49,7 +49,7 @@
             : `ff_draft_${contestId}_${index}`;
 
         // Resolve wrapping label before DOM detachment
-        const label = input.closest('.field')?.querySelector('label') || input.labels?.[0];
+        const label = input.closest('.field')?.querySelector('label') || input.labels?.[0] || input.closest('tr')?.querySelector('label');
         if (label) label.textContent = 'Solution Code:';
 
         // ── Container Setup ─────────────────────────────
@@ -67,8 +67,10 @@
         const templateBtn = document.createElement('button');
         templateBtn.type = 'button';
         templateBtn.className = 'ff-submitify-tool-btn';
-        templateBtn.textContent = '📄 Template ▾';
+        templateBtn.textContent = 'Template ▾';
         templateBtn.title = 'Insert boilerplate template';
+        templateBtn.setAttribute('aria-haspopup', 'true');
+        templateBtn.setAttribute('aria-expanded', 'false');
 
         const templateMenu = document.createElement('div');
         templateMenu.className = 'ff-submitify-dropdown';
@@ -96,8 +98,12 @@
         templateBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             templateMenu.hidden = !templateMenu.hidden;
+            templateBtn.setAttribute('aria-expanded', String(!templateMenu.hidden));
         });
-        document.addEventListener('click', () => { templateMenu.hidden = true; });
+        document.addEventListener('click', () => {
+            templateMenu.hidden = true;
+            templateBtn.setAttribute('aria-expanded', 'false');
+        });
 
         toolLeft.append(templateBtn, templateMenu);
 
@@ -107,30 +113,31 @@
         // Draft Status Badge
         const draftBadge = document.createElement('span');
         draftBadge.className = 'ff-submitify-draft-badge';
-        draftBadge.textContent = 'Draft ready';
+        draftBadge.textContent = 'Auto-save on';
 
         // Copy Code Button
         const copyBtn = document.createElement('button');
         copyBtn.type = 'button';
         copyBtn.className = 'ff-submitify-tool-btn';
-        copyBtn.textContent = '📋 Copy';
+        copyBtn.textContent = 'Copy';
         copyBtn.title = 'Copy all code to clipboard';
 
         // Clear Code Button
         const clearBtn = document.createElement('button');
         clearBtn.type = 'button';
         clearBtn.className = 'ff-submitify-tool-btn';
-        clearBtn.textContent = '🗑️ Clear';
+        clearBtn.textContent = 'Clear';
         clearBtn.title = 'Clear code and discard saved draft';
 
-        toolRight.append(draftBadge, copyBtn, clearBtn);
+        toolRight.append(copyBtn, clearBtn);
         toolbar.append(toolLeft, toolRight);
 
         // ── Textarea ───────────────────────────────────
         const textarea = document.createElement('textarea');
         textarea.className = 'ff-submitify-textarea';
-        textarea.placeholder = '// Paste or write your solution here (Ctrl+Enter to submit)\n// FocusForces auto-saves your draft in real-time';
+        textarea.placeholder = '// Paste or write your solution here…';
         textarea.spellcheck = false;
+        textarea.setAttribute('aria-label', 'Solution code');
 
         // Copy attributes from original file input
         input.getAttributeNames().forEach(name => {
@@ -151,10 +158,26 @@
         shortcutHint.className = 'ff-submitify-hint';
         shortcutHint.textContent = 'Ctrl+Enter to submit · Tab to indent';
 
-        statusBar.append(statsText, shortcutHint);
+        statusBar.append(statsText, draftBadge, shortcutHint);
 
         container.append(toolbar, textarea, statusBar);
-        input.replaceWith(container);
+
+        // Give the editor the full width of the submit table instead of trapping
+        // it in the narrow file-input cell next to a stray "Choose file" label.
+        const row = input.closest('tr');
+        const rowControls = row ? row.querySelectorAll('input, select, textarea, button').length : 0;
+        if (row && row.parentElement && rowControls <= 1) {
+            const editorRow = document.createElement('tr');
+            editorRow.className = 'ff-submitify-row';
+            const editorCell = document.createElement('td');
+            editorCell.className = 'ff-submitify-cell';
+            editorCell.colSpan = row.children.length >= 2 ? row.children.length : 2;
+            editorCell.appendChild(container);
+            editorRow.appendChild(editorCell);
+            row.replaceWith(editorRow);
+        } else {
+            input.replaceWith(container);
+        }
 
         // ── Form Target Setup ───────────────────────────
         const form = document.querySelector('.submitForm') || container.closest('form');
@@ -193,8 +216,8 @@
             if (!textarea.value) return;
             try {
                 await navigator.clipboard.writeText(textarea.value);
-                copyBtn.textContent = '✓ Copied';
-                setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 1600);
+                copyBtn.textContent = 'Copied';
+                setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1600);
             } catch (_) {}
         });
 
@@ -226,13 +249,13 @@
                                 ts: Date.now()
                             }
                         });
-                        draftBadge.textContent = '✓ Saved';
+                        draftBadge.textContent = 'Saved';
                     } else {
                         await chrome.storage.local.remove(storageKey);
-                        draftBadge.textContent = 'Empty';
+                        draftBadge.textContent = 'Auto-save on';
                     }
                 } catch (_) {
-                    draftBadge.textContent = 'Save error';
+                    draftBadge.textContent = 'Save failed';
                 } finally {
                     draftBadge.classList.remove('saving');
                 }

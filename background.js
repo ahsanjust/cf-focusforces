@@ -92,18 +92,53 @@ function stopBadgeUpdateInterval() {
 }
 
 let inflightCheck = null;
+let recoveryPromise = null;
 
 // ══════════════════════════════════════════════════════
 // ALARM SETUP
 // ══════════════════════════════════════════════════════
 
-function setupAlarms() {
-    chrome.alarms.create('checkContests', { periodInMinutes: CONTEST_CHECK_INTERVAL });
-    chrome.alarms.create('pruneStaleKeys', { periodInMinutes: 1440 });
+/**
+ * Create the periodic alarms only when they are missing. `alarms.create`
+ * replaces a same-name alarm, so re-creating them blindly on every worker
+ * boot would keep pushing the next contest check another 30 minutes out.
+ * @returns {Promise<{names: Set<string>, lost: boolean}>}
+ */
+async function setupAlarms() {
+    let names = new Set();
+    let lost = false;
+    try {
+        const existing = await chrome.alarms.getAll();
+        names = new Set(existing.map(a => a.name));
+        if (!names.has('checkContests')) {
+            lost = true;
+            names.add('checkContests');
+            chrome.alarms.create('checkContests', { periodInMinutes: CONTEST_CHECK_INTERVAL }).catch(() => {});
+        }
+        if (!names.has('pruneStaleKeys')) {
+            lost = true;
+            names.add('pruneStaleKeys');
+            chrome.alarms.create('pruneStaleKeys', { periodInMinutes: 1440 }).catch(() => {});
+        }
+    } catch (e) {
+        console.warn('Alarm setup failed:', e);
+    }
+    return { names, lost };
 }
 
+// Chrome does not guarantee alarm persistence before v150, and this worker is
+// started by many events that never fire onStartup/onInstalled (messages,
+// alarm fires, notification clicks). Re-assert the periodic alarms on every
+// worker boot, and rebuild the timer alarms when they look lost.
+(async () => {
+    const { names, lost } = await setupAlarms();
+    if (lost || !names.has(BADGE_REFRESH_ALARM)) {
+        await recoverTimerAlarms();
+    }
+})();
+
 chrome.runtime.onStartup.addListener(async () => {
-    setupAlarms();
+    await setupAlarms();
     await Promise.allSettled([
         checkUpcomingContests(),
         pruneStaleKeys(),
@@ -120,23 +155,29 @@ chrome.runtime.onInstalled.addListener(async () => {
     ]);
 });
 
-chrome.alarms.onAlarm.addListener(alarm => {
-    if (alarm.name === 'checkContests') {
-        checkUpcomingContests();
-    } else if (alarm.name.startsWith(CONTEST_REMINDER_ALARM_PREFIX)) {
-        handleContestReminderAlarm(alarm.name);
-    } else if (alarm.name.startsWith('timer_')) {
-        handleTimerAlarm(alarm.name);
-        updateTimerBadge();
-    } else if (alarm.name.startsWith('dismiss_')) {
-        const notificationId = alarm.name.slice('dismiss_'.length);
-        chrome.notifications.clear(notificationId).catch(() => {});
-    } else if (alarm.name === BADGE_REFRESH_ALARM) {
-        // Safety net for the 1s badge interval: chrome can terminate the
-        // service worker, freezing the badge. A periodic alarm re-arms it.
-        updateTimerBadge();
-    } else if (alarm.name === 'pruneStaleKeys') {
-        pruneStaleKeys();
+chrome.alarms.onAlarm.addListener(async alarm => {
+    // Await the handler so the alarm event stays alive for the async work it
+    // starts (fetch + storage writes can outlive the synchronous callback).
+    try {
+        if (alarm.name === 'checkContests') {
+            await checkUpcomingContests();
+        } else if (alarm.name.startsWith(CONTEST_REMINDER_ALARM_PREFIX)) {
+            await handleContestReminderAlarm(alarm.name);
+        } else if (alarm.name.startsWith('timer_')) {
+            await handleTimerAlarm(alarm.name);
+            await updateTimerBadge();
+        } else if (alarm.name.startsWith('dismiss_')) {
+            const notificationId = alarm.name.slice('dismiss_'.length);
+            await chrome.notifications.clear(notificationId).catch(() => {});
+        } else if (alarm.name === BADGE_REFRESH_ALARM) {
+            // Safety net for the 1s badge interval: chrome can terminate the
+            // service worker, freezing the badge. A periodic alarm re-arms it.
+            await updateTimerBadge();
+        } else if (alarm.name === 'pruneStaleKeys') {
+            await pruneStaleKeys();
+        }
+    } catch (e) {
+        console.warn('Alarm handler failed:', alarm.name, e);
     }
 });
 
@@ -505,6 +546,16 @@ function sendContestNotification(contest, interval) {
         // Namespace the notification id by interval so two reminders for the
         // same contest don't clear-and-replace each other.
         const notificationId = `contest_${contest.site}_${contest.id}_${interval}`;
+
+        // Arm the auto-dismiss alarm up front instead of inside the
+        // notifications.create() callback: a worker teardown between create()
+        // and its callback would otherwise leave a requireInteraction toast on
+        // screen forever. The id is deterministic, so the callback buys nothing.
+        scheduleNotificationDismiss(notificationId, CONTEST_NOTIFICATION_AUTO_DISMISS_MS);
+        chrome.storage.local.set({
+            [`notification_${notificationId}`]: contest.url
+        }).catch(() => {});
+
         chrome.notifications.clear(notificationId).catch(() => {}).then(() => {
             chrome.notifications.create(notificationId, {
                 type: 'basic',
@@ -518,18 +569,7 @@ function sendContestNotification(contest, interval) {
                 // CONTEST_NOTIFICATION_AUTO_DISMISS_MS (5s) as a safety net.
                 requireInteraction: true,
                 buttons: [{ title: 'Open Contest' }]
-            }, createdId => {
-                try {
-                    if (createdId) {
-                        chrome.storage.local.set({
-                            [`notification_${createdId}`]: contest.url
-                        }).catch(() => {});
-                        scheduleNotificationDismiss(createdId, CONTEST_NOTIFICATION_AUTO_DISMISS_MS);
-                    }
-                } catch {} finally {
-                    resolve();
-                }
-            });
+            }, () => resolve());
         });
     });
 }
@@ -538,24 +578,29 @@ function sendContestNotification(contest, interval) {
 // TIMER ALARM SYSTEM
 // ══════════════════════════════════════════════════════
 
-async function recoverTimerAlarms() {
-    try {
-        const { [TIMER_STORAGE_KEY]: state } = await chrome.storage.local.get(TIMER_STORAGE_KEY);
-        if (!state || state.status !== 'RUNNING') return;
+function recoverTimerAlarms() {
+    // Collapse concurrent recoveries (boot-time ensure + onStartup can overlap).
+    if (recoveryPromise) return recoveryPromise;
+    recoveryPromise = (async () => {
+        try {
+            const { [TIMER_STORAGE_KEY]: state } = await chrome.storage.local.get(TIMER_STORAGE_KEY);
+            if (!state || state.status !== 'RUNNING') return;
 
-        if (state.mode === 'countdown') {
-            if (Date.now() >= state.endTime) {
-                // Timer expired while browser was closed
-                await handleTimerFinished(state);
-                return;
+            if (state.mode === 'countdown') {
+                if (Date.now() >= state.endTime) {
+                    // Timer expired while browser was closed
+                    await handleTimerFinished(state);
+                    return;
+                }
+                // Re-schedule alarms for remaining milestones
+                await scheduleTimerAlarms(state);
             }
-            // Re-schedule alarms for remaining milestones
-            await scheduleTimerAlarms(state);
-        }
-        // Start badge updates for both countdown and stopwatch
-        startBadgeRefresh();
-        updateTimerBadge();
-    } catch (e) { console.warn('Timer recovery failed:', e); }
+            // Start badge updates for both countdown and stopwatch
+            startBadgeRefresh();
+            await updateTimerBadge();
+        } catch (e) { console.warn('Timer recovery failed:', e); }
+    })().finally(() => { recoveryPromise = null; });
+    return recoveryPromise;
 }
 
 async function scheduleTimerAlarms(state) {
@@ -573,7 +618,7 @@ async function scheduleTimerAlarms(state) {
     // finalizes the timer state and clears the badge, and the notification
     // itself is gated separately inside handleTimerFinished/notifyTimerFinishedOnce.
     const schedules = computeTimerAlarmSchedules(state, enabledMilestones, Date.now());
-    schedules.forEach(s => chrome.alarms.create(s.name, { when: s.when }));
+    schedules.forEach(s => { chrome.alarms.create(s.name, { when: s.when }).catch(() => {}); });
 }
 
 async function clearTimerAlarms() {
@@ -809,6 +854,11 @@ async function sendTimerNotification(title, message) {
     if (ff_timer_notifications_enabled === false) return;
 
     const notificationId = `timer_${title.replace(/\s/g, '_').toLowerCase()}`;
+    // Arm the auto-dismiss safety net before creating the toast so a worker
+    // teardown can't leave a requireInteraction notification on screen.
+    // requireInteraction keeps the toast up until dismissed; without this
+    // alarm an ignored timer milestone would linger indefinitely.
+    scheduleNotificationDismiss(notificationId, TIMER_NOTIFICATION_AUTO_DISMISS_MS);
     chrome.notifications.clear(notificationId).catch(() => {});
     chrome.notifications.create(notificationId, {
         type: 'basic',
@@ -817,13 +867,6 @@ async function sendTimerNotification(title, message) {
         message,
         priority: 2,
         requireInteraction: true
-    }, createdId => {
-        // Schedule an auto-dismiss safety net. requireInteraction keeps the
-        // toast on screen until dismissed, but without this alarm a dismissed
-        // timer milestone would linger indefinitely. Matches the contest path.
-        if (createdId) {
-            scheduleNotificationDismiss(createdId, TIMER_NOTIFICATION_AUTO_DISMISS_MS);
-        }
     }).catch(() => {});
     playTimerSound();
 }
@@ -861,7 +904,7 @@ chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
         // A new timer run begins: clear the finish-notification dedup flag.
         chrome.storage.local.remove(TIMER_FINISH_SENT_KEY).catch(() => {});
         startBadgeRefresh();
-        scheduleTimerAlarms(req.state).then(() => updateTimerBadge());
+        scheduleTimerAlarms(req.state).then(() => updateTimerBadge()).catch(() => {});
     } else if (req.type === 'TIMER_PAUSED') {
         stopBadgeRefresh();
         clearTimerAlarms().then(() => {
